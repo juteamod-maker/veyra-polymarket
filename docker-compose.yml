@@ -1,0 +1,51 @@
+# =============================================================================
+# Veyra.Trade V2 — one-command deployment (user site + PostgreSQL)
+#
+#   cp polymarket_bot_v2/.env.example polymarket_bot_v2/.env   # then fill values
+#   docker compose up -d --build
+#
+# The user site is served on http://localhost:8080.
+# The private Admin V3 console is intentionally NOT part of this compose file.
+# =============================================================================
+
+name: veyra-polymarket
+
+services:
+  dashboard:
+    build:
+      context: ./polymarket_bot_v2
+      dockerfile: Dockerfile
+    container_name: veyra-dashboard
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./polymarket_bot_v2/.env
+    environment:
+      # Point the app at the postgres service in this compose network.
+      PG_HOST: postgres
+      PG_PORT: "5432"
+      GUNICORN_WORKERS: "2"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: veyra-postgres
+    environment:
+      # Must match PG_DATABASE / PG_USER / PG_PASSWORD in polymarket_bot_v2/.env
+      POSTGRES_DB: ${PG_DATABASE:-polymarket}
+      POSTGRES_USER: ${PG_USER:-polymarket}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:-polymarket}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-polymarket} -d ${PG_DATABASE:-polymarket}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:

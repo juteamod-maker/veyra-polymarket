@@ -1,0 +1,30 @@
+# Runtime secrets — never bake into the image
+.env
+*.pem
+config/privy_verification_key.pem
+
+# Private modules — not part of the public distribution
+admin_v3_spa/
+src/services/admin_v3/
+
+# V1 archive
+_archive_v1/
+
+# Runtime state / caches
+logs/
+data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Internal sync snapshots
+_prod_sync_*/
+
+# Editor / tooling
+.git/
+.vscode/
+.idea/

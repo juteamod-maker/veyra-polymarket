@@ -186,6 +186,37 @@ uvicorn scripts.web_dashboard:app --host 127.0.0.1 --port 8080 --proxy-headers
 
 That is all that is needed — this distribution runs the user site on its own.
 
+### Docker / 一键部署 (one-command deployment)
+
+No Python toolchain required — a single `docker compose up` brings up the user
+site plus its PostgreSQL database:
+
+```bash
+# 1. prepare the environment (fill in your real keys)
+cp polymarket_bot_v2/.env.example polymarket_bot_v2/.env
+
+# 2. start everything (builds the image on first run)
+docker compose up -d --build
+
+# 3. the user site is live at
+#    http://localhost:8080
+```
+
+What the compose stack runs:
+
+| Service | Image | Purpose |
+|---|---|---|
+| `dashboard` | built from `polymarket_bot_v2/Dockerfile` | FastAPI user site + API (`scripts.web_dashboard:app`, port 8080) |
+| `postgres` | `postgres:16-alpine` | multi-tenant database (schema init on first boot) |
+
+Notes:
+
+- `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` in `docker-compose.yml`
+  default to `polymarket` and must match `PG_DATABASE` / `PG_USER` / `PG_PASSWORD`
+  in `polymarket_bot_v2/.env`.
+- Scale workers with `GUNICORN_WORKERS` (default 2, sized for a 2-core VPS).
+- The private Admin V3 console is **not** part of the image or the compose file.
+
 ### Admin console (only if you have the private module)
 
 ```bash
