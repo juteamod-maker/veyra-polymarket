@@ -679,15 +679,6 @@ async def favicon():
     return Response(status_code=204)
 
 
-@app.get("/privy-diag", include_in_schema=False)
-async def privy_diag():
-    """Privy 诊断页面 — 用官方 getAccessToken() 模式隔离登录问题根因。"""
-    diag_path = STATIC_DIR / "privy_diag.html"
-    if not diag_path.exists():
-        return HTMLResponse("<h1>privy_diag.html not found</h1>", status_code=500)
-    return HTMLResponse(diag_path.read_text(encoding="utf-8"))
-
-
 # ── T547 性能埋点中间件 ─────────────────────────────────────────────────
 # Lightweight per-request timing into an in-memory ring buffer. Surfaced via
 # `/api/admin/perf/metrics` (admin-only). No DB writes; bounded memory.

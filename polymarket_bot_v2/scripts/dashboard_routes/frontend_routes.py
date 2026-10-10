@@ -99,7 +99,6 @@ def _asset_version() -> str:
         FRONTEND_DIR / "static" / "js" / "runtime" / "htmx_bootstrap.js",
         FRONTEND_DIR / "static" / "js" / "runtime" / "htmx_pages" / "go.js",
         FRONTEND_DIR / "static" / "js" / "runtime" / "htmx_pages" / "deposit.js",
-        FRONTEND_DIR / "static" / "js" / "runtime" / "htmx_pages" / "fix_native_usdc.js",
         FRONTEND_DIR / "static" / "js" / "runtime" / "htmx_pages" / "refer.js",
         FRONTEND_DIR / "static" / "js" / "runtime" / "htmx_pages" / "withdraw.js",
         # T524 #524/#525/#526 — these per-page modules previously lacked
@@ -146,7 +145,6 @@ def _asset_version() -> str:
         FRONTEND_DIR / "static" / "seaz" / "assets" / "index-dYjrTTEm.js",
         FRONTEND_DIR / "templates" / "weather_event_map.html",
         FRONTEND_DIR / "templates" / "withdraw.html",
-        FRONTEND_DIR / "templates" / "fix_native_usdc.html",
         # T855/T856 — unified landing page assets (helmetz-cloned, viewport card)
         FRONTEND_DIR / "templates" / "landing.html",
         FRONTEND_DIR / "static" / "css" / "landing.css",
@@ -172,15 +170,6 @@ def _is_admin(request: Request) -> bool:
     user_info = verify_user_session(user_session_token) if user_session_token else None
     user_role = str((user_info or {}).get("role") or "").strip().lower()
     return user_role in {"admin", "super_admin"}
-
-
-def _fix_native_usdc_enabled() -> bool:
-    return str(os.environ.get("ENABLE_T892_FIX_NATIVE_USDC_PAGE") or "").strip().lower() in {
-        "1",
-        "true",
-        "yes",
-        "on",
-    }
 
 
 def _detect_lang(request: Request) -> str:
@@ -623,24 +612,6 @@ async def deposit_page(request: Request):
 async def withdraw_page(request: Request):
     """T460: USDC 提现页 — 从平台交易钱包提现至外部地址。"""
     return _tpl_response(request, "withdraw.html")
-
-
-@router.get("/fix-native-usdc", response_class=HTMLResponse)
-async def fix_native_usdc_page(request: Request):
-    """T892: one-time temporary page for native USDC -> bridge signing flow."""
-    if not _fix_native_usdc_enabled():
-        return HTMLResponse("Not Found", status_code=404)
-    identity = get_request_identity(request)
-    wallet = str((identity or {}).get("wallet_address") or "").strip().lower()
-    if wallet != "0x62afb2e2e2a7f667729f424fc8c00be6da10e3a3":
-        return HTMLResponse("Not Found", status_code=404)
-    return _tpl_response(request, "fix_native_usdc.html")
-
-
-@router.get("/debug/privy-bind", response_class=HTMLResponse)
-async def debug_privy_bind_page(request: Request):
-    """Isolated diagnostics page for Privy authorization key + signer binding workflow."""
-    return _tpl_response(request, "debug_privy_bind.html")
 
 
 @router.get("/go", response_class=HTMLResponse)

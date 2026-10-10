@@ -112,11 +112,12 @@ Veyra.Trade V2 是一个自托管的 [Polymarket](https://polymarket.com) 多用
 > 并自动跳过后台步骤。见
 > [§10 获取 Admin V3 后台](#admin-v3-console)。
 >
-> **Also removed from this distribution:** the archived V1 code, internal design scratch
-> files, and all generated runtime state (caches, IP allow/deny lists and security
-> events, which contain real addresses).
-> **同样已从本发行版移除：** 归档的 V1 代码、内部设计草稿文件，以及所有运行时生成状态
-> （缓存、IP 黑白名单与安全事件——其中包含真实地址）。
+> **Also removed from this distribution:** the archived V1 code, the test suite, internal
+> diagnostics pages, one-time hotfix scripts, internal migration plans, and all generated
+> runtime state (caches, IP allow/deny lists and security events, which contain real
+> addresses).
+> **同样已从本发行版移除：** 归档的 V1 代码、测试套件、内部诊断页面、一次性热修复脚本、
+> 内部迁移计划，以及所有运行时生成状态（缓存、IP 黑白名单与安全事件——其中包含真实地址）。
 >
 > **Brand assets are not included.** The Veyra logo and mascot artwork
 > (`scripts/static/Veyra.png`, `Vgril_left.png`, …) are deliberately left out — the
@@ -219,6 +220,11 @@ documented in `config/config_docs.json`.
 策略参数位于 `config/config.json`（已被 git 忽略；请自带副本），并在 `config/config_docs.json`
 中说明。
 
+The Privy verification key is **not** shipped with this distribution. Provide your own via
+`config/privy_verification_key.pem` or the `PRIVY_VERIFICATION_KEY` environment variable.
+Privy 验证密钥**不随本发行版提供**。请通过 `config/privy_verification_key.pem` 或环境变量
+`PRIVY_VERIFICATION_KEY` 提供你自己的密钥。
+
 > **V1 is gone.** `main.py`, the `polymarket-bot*` systemd units and the old single-user
 > bot lifecycle are removed. Do not reintroduce them.
 >
@@ -300,16 +306,9 @@ npm run build      # 产出 dist/，由 src/services/admin_v3/app.py 消费 · e
 
 ## 6. Tests · 测试
 
-```bash
-cd polymarket_bot_v2
-pytest -q                      # 见 pytest.ini 的路径/markers · see pytest.ini for paths/markers
-pytest -q tests/test_user_privy_token_priority.py   # 聚焦的认证回归测试 · focused auth regression tests
-```
-
-Many tests require a live PostgreSQL database and a populated `config/config.json`;
-without them they fail to connect (this is expected in a bare checkout).
-许多测试需要可用的 PostgreSQL 数据库与已填充的 `config/config.json`；没有它们测试会连接失败
-（在裸 checkout 中属预期行为）。
+The test suite is kept in the private development repository and is not shipped in this
+distribution. If you need the regression tests, contact the author (see §10).
+测试套件保留在私有开发仓库中，不随本发行版提供。如需回归测试，请联系作者（见 §10）。
 
 ---
 
