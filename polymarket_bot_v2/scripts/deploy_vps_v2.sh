@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VPS_HOST="vaguspoly-sp"
+VPS_HOST="${VPS_HOST:-}"
 VPS_DIR="/opt/polymarket_bot_v2"
 LOCAL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PACK_FILE="/tmp/vaguspoly_v2_deploy.tar.gz"
@@ -25,6 +25,15 @@ NC='\033[0m'
 log()  { echo -e "${GREEN}[V2-DEPLOY]${NC} $*"; }
 warn() { echo -e "${YELLOW}[V2-WARN]${NC} $*"; }
 err()  { echo -e "${RED}[V2-ERROR]${NC} $*"; exit 1; }
+
+# Deployment target is injected via the VPS_HOST environment variable.
+# It is intentionally NOT hardcoded so the public repository never carries
+# an internal SSH alias.
+require_host() {
+    if [ -z "$VPS_HOST" ]; then
+        err "VPS_HOST is not set. Export it before deploying, e.g.: export VPS_HOST=my-vps"
+    fi
+}
 
 check_syntax() {
     log "Running syntax checks"
@@ -376,6 +385,7 @@ case "$CMD" in
         ;;
 
     update)
+        require_host
         check_syntax
         if [ "$HAS_ADMIN_V3" = "1" ]; then
             build_admin_v3_spa
@@ -390,6 +400,7 @@ case "$CMD" in
         ;;
 
     status)
+        require_host
         ssh "$VPS_HOST" "sudo systemctl status $DASHBOARD_SERVICE --no-pager || true"
         ssh "$VPS_HOST" "sudo systemctl status $COPYTRADER_SERVICE --no-pager || true"
         if [ "$HAS_ADMIN_V3" = "1" ]; then
@@ -398,6 +409,7 @@ case "$CMD" in
         ;;
 
     logs)
+        require_host
         if [ "$HAS_ADMIN_V3" = "1" ]; then
             ssh "$VPS_HOST" "sudo journalctl -u $DASHBOARD_SERVICE -u $COPYTRADER_SERVICE -u $ADMIN_V3_SERVICE -n 100 --no-pager"
         else
@@ -406,6 +418,7 @@ case "$CMD" in
         ;;
 
     dry_check)
+        require_host
         ssh "$VPS_HOST" "grep 'dry_run' $VPS_DIR/config/config.json | head -5"
         ;;
 
