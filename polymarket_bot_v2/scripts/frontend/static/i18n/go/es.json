@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "Cartera PM vinculada",
+  "go.badge.unbound": "Cartera PM no vinculada",
+  "go.btn.authorize": "Autorizar cartera",
+  "go.btn.dashboard": "Ir al panel",
+  "go.contentLoading": "Cargando contenido…",
+  "go.heading": "Guía de usuario V e Y r a",
+  "go.loadFailedPrefix": "Error al cargar:",
+  "go.loading": "Redirigiendo, por favor espera…",
+  "go.title": "Redirigiendo",
+  "go.toc": "Contenido",
+  "go.toc.empty": "(sin encabezados)"
+}

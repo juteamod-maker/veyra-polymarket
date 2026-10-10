@@ -1,0 +1,17 @@
+{
+  "futures.title": "선물 시장",
+  "futures.subtitle": "Polymarket에서 선물 시장을 거래하세요.",
+  "futures.filter.sport": "스포츠",
+  "futures.filter.all": "전체",
+  "futures.loading": "선물 시장 로딩 중…",
+  "futures.empty": "현재 이용 가능한 선물 시장이 없습니다.",
+  "futures.error": "선물 시장 로드 실패. 다시 시도하세요.",
+  "futures.summary.results": "결과",
+  "futures.card.ends": "종료",
+  "futures.drawer.close": "닫기",
+  "futures.drawer.loading": "시장 세부 정보 로딩 중…",
+  "futures.drawer.empty": "이용 가능한 결과 없음.",
+  "futures.drawer.error": "세부 정보 로드 실패.",
+  "futures.drawer.subtitle": "시장 세부 정보",
+  "futures.drawer.no_outcomes": "이 시장에 결과 없음."
+}

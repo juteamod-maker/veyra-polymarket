@@ -1,0 +1,17 @@
+{
+  "futures.title": "期货市场",
+  "futures.subtitle": "在 Polymarket 交易期货市场——预测价格走势和结果。",
+  "futures.filter.sport": "体育",
+  "futures.filter.all": "全部",
+  "futures.loading": "加载期货市场中…",
+  "futures.empty": "目前暂无期货市场。",
+  "futures.error": "加载期货市场失败，请重试。",
+  "futures.summary.results": "条结果",
+  "futures.card.ends": "结束",
+  "futures.drawer.close": "关闭",
+  "futures.drawer.loading": "加载市场详情中…",
+  "futures.drawer.empty": "暂无可用结果。",
+  "futures.drawer.error": "加载市场详情失败。",
+  "futures.drawer.subtitle": "市场详情",
+  "futures.drawer.no_outcomes": "该市场暂无结果。"
+}

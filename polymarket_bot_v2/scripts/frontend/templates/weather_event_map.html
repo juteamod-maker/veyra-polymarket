@@ -1,0 +1,4634 @@
+{% extends "base.html" %}
+{% block title %}V e Y r a - Weather Event Map{% endblock %}
+{% block head %}
+<script>/* T419: set data-requires-pm after DOM ready so document.body is not null */
+  document.addEventListener('DOMContentLoaded', function () {
+    if (document.body) document.body.setAttribute('data-requires-pm', '1');
+  });
+</script>
+<link rel="stylesheet" href="/v2/static/css/vendor/leaflet.min.css" />
+<script defer src="/v2/static/js/vendor/leaflet.min.js"></script>
+<script defer src="/v2/static/js/vendor/chart.umd.min.js"></script>
+<script defer src="/static/js/price_monitor.js?v={{ asset_version | default('0') }}"></script>
+<script>
+  if (typeof api === "undefined") {
+    window.api = function (path, opts) {
+      opts = opts || {};
+      var sep = path.indexOf("?") >= 0 ? "&" : "?";
+      var fetchOpts = { credentials: "include" };
+      if (opts.method) fetchOpts.method = opts.method;
+      if (opts.body) { fetchOpts.body = opts.body; fetchOpts.headers = { "Content-Type": "application/json" }; }
+      if (opts.signal) fetchOpts.signal = opts.signal;
+      return fetch(path + sep + "key=", fetchOpts).then(function (r) { return r.json(); });
+    };
+  }
+</script>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: #0f1117;
+    color: #e2e8f0;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  #top-header {
+    height: 64px;
+    background: rgba(13, 15, 22, 0.97);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid #2a2d3a;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 12px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 110px;
+    user-select: none;
+  }
+
+  .nav-brand svg {
+    flex-shrink: 0;
+  }
+
+  .nav-brand-text {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .nav-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1;
+    justify-content: center;
+    min-width: 0;
+    padding: 4px 6px;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tab {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #9CA3AF;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: 8px;
+    border-bottom: 3px solid transparent;
+    transition: all 200ms ease-in-out;
+    user-select: none;
+    gap: 6px;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+  }
+
+  .nav-tab:hover {
+    color: #D1D5DB;
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px) scale(1.03);
+  }
+
+  .nav-tab.active {
+    color: #3B82F6;
+    background: rgba(59, 130, 246, 0.09);
+    border-bottom-color: #3B82F6;
+    transform: none;
+  }
+
+  .nav-tab svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .nav-status-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    font-size: 0.7rem;
+    color: #64748b;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600
+  }
+
+  .badge-green {
+    background: #22c55e20;
+    color: #22c55e
+  }
+
+  .badge-red {
+    background: #ef444420;
+    color: #ef4444
+  }
+
+  .badge-yellow {
+    background: #eab30820;
+    color: #eab308
+  }
+
+  .badge-gray {
+    background: #64748b20;
+    color: #94a3b8
+  }
+
+  #wm-refresh-paused {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.1);
+    white-space: nowrap;
+    animation: wm-pulse 2s ease-in-out infinite
+  }
+
+  @keyframes wm-pulse {
+
+    0%,
+    100% {
+      opacity: 1
+    }
+
+    50% {
+      opacity: 0.5
+    }
+  }
+
+  @media(max-width:1100px) {
+    .nav-tab {
+      padding: 6px 7px;
+      font-size: 0.7rem;
+      gap: 5px;
+    }
+
+    .nav-tab svg {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  @media(max-width:768px) {
+    .nav-tab .nav-label {
+      display: none;
+    }
+
+    .nav-tab {
+      padding: 8px 9px;
+      flex-shrink: 0;
+    }
+
+    .nav-tab svg {
+      width: 17px;
+      height: 17px;
+    }
+
+    .nav-tabs {
+      justify-content: flex-start;
+    }
+  }
+
+  #map-wrapper {
+    flex: 1;
+    position: relative;
+  }
+
+  #weather-map {
+    width: 100%;
+    height: 100%;
+  }
+
+  .leaflet-container {
+    background: #0f1117;
+  }
+
+  .leaflet-tile {
+    filter: brightness(0.7) saturate(1.2) contrast(1.1);
+  }
+
+  .leaflet-control-zoom a {
+    background: #1a1d29 !important;
+    color: #e2e8f0 !important;
+    border-color: #2a2d3a !important;
+  }
+
+  .leaflet-control-zoom a:hover {
+    background: #2a2d3a !important;
+  }
+
+  .wm-pin {
+    width: 36px;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .wm-pin:hover {
+    transform: scale(1.15);
+  }
+
+  .wm-pin .circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #0284c7;
+    border: 3px solid #38bdf8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.5);
+    position: relative;
+  }
+
+  .wm-pin .stem {
+    width: 3px;
+    height: 10px;
+    background: #0284c7;
+    border-radius: 2px;
+    margin-top: -2px;
+  }
+
+  .wm-pin.has-bets .circle {
+    background: #dc2626;
+    border-color: #f87171;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.5);
+  }
+
+  .wm-pin .bet-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #eab308;
+    color: #000;
+    font-size: 9px;
+    font-weight: 700;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #0f1117;
+  }
+
+  .wm-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    padding: 20px;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+  }
+
+  .wm-overlay.open {
+    display: flex;
+  }
+
+  .wm-overlay-inner {
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 1280px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.8);
+  }
+
+  .wm-overlay-header {
+    padding: 14px 18px;
+    flex-shrink: 0;
+    border-bottom: 1px solid #1e3a5f;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(180deg, rgba(30, 58, 95, 0.28), rgba(15, 23, 42, 0.72));
+  }
+
+  .wm-overlay-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wm-top-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px;
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.7);
+  }
+
+  .wm-top-tab {
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #9fb4cf;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.16s ease;
+  }
+
+  .wm-top-tab:hover {
+    color: #dbeafe;
+    background: rgba(30, 58, 95, 0.55);
+    border-color: rgba(96, 165, 250, 0.35);
+  }
+
+  .wm-top-tab.active {
+    color: #eaf2ff;
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.32), rgba(30, 64, 175, 0.28));
+    border-color: rgba(96, 165, 250, 0.65);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  }
+
+  .wm-overlay-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wm-overlay-subtitle {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .wm-overlay-icon-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .wm-overlay-icon-btn:hover {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #475569;
+  }
+
+  .wm-overlay-refresh-btn {
+    background: #16a34a;
+    border-color: #22c55e;
+    color: #ef4444;
+    font-weight: 900;
+    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.35), 0 6px 18px rgba(22, 163, 74, 0.28);
+  }
+
+  .wm-overlay-refresh-btn:hover {
+    background: #15803d;
+    border-color: #4ade80;
+    color: #fecaca;
+  }
+
+  .wm-sub-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-top: 0;
+  }
+
+  .wm-pm-link-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 10px 10px;
+    border-radius: 10px;
+    background: #0f172a;
+    border: 1px solid #f59e0b40;
+    color: #f59e0b;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+
+  .wm-pm-link-btn .wm-pm-link-arrow {
+    font-size: 10px;
+    opacity: 0.6;
+  }
+
+  .wm-pm-link-btn:hover {
+    background: #1a2030;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 1px #f59e0b20;
+  }
+
+  .wm-pm-link-btn.wm-pm-link-low {
+    border-color: #3b82f640;
+    color: #60a5fa;
+  }
+
+  .wm-pm-link-btn.wm-pm-link-low:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f620;
+  }
+
+  .wm-chart-card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .wm-local-clock {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ef4444;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+  }
+
+  .wm-tab-bar {
+    display: none;
+    gap: 0;
+    padding: 0 24px;
+    border-bottom: 1px solid #1e3a5f;
+    flex-shrink: 0;
+  }
+
+  .wm-tab-btn {
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    border: none;
+    background: none;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.15s;
+  }
+
+  .wm-tab-btn:hover {
+    color: #94a3b8;
+  }
+
+  .wm-tab-btn.active {
+    color: #3b82f6;
+  }
+
+  .wm-tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #3b82f6;
+    border-radius: 1px;
+  }
+
+  .wm-overlay-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .wm-tab-content {
+    display: none;
+    padding: 20px 24px;
+  }
+
+  .wm-tab-content.active {
+    display: block;
+  }
+
+  .wm-intraday-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  @media(max-width: 960px) {
+    .wm-intraday-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .wm-left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    height: 100%;
+  }
+
+  .wm-anchor-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .wm-anchor-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .wm-anchor-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .wm-anchor-city-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #e2e8f0;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 2px 8px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .wm-anchor-hero {
+    display: flex;
+    align-items: stretch;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .wm-anchor-temp-col {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 18px 22px;
+    border-right: 1px solid #1e3a5f;
+    min-width: 108px;
+  }
+
+  .wm-anchor-temp {
+    font-size: 52px;
+    font-weight: 800;
+    color: #38bdf8;
+    line-height: 1;
+  }
+
+  .wm-anchor-temp a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .wm-anchor-temp a:hover {
+    text-decoration: underline;
+    text-decoration-style: dashed;
+  }
+
+  .wm-anchor-source-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 6px;
+  }
+
+  .wm-anchor-info-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+    padding: 16px 18px;
+  }
+
+  .wm-anchor-cond-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .wm-anchor-weather-icon {
+    font-size: 24px;
+  }
+
+  .wm-anchor-weather-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #e2e8f0;
+  }
+
+  .wm-anchor-time-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .wm-anchor-time-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    flex-shrink: 0;
+    animation: wmBlink 1.8s ease-in-out infinite;
+  }
+
+  @keyframes wmBlink {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  .wm-anchor-time-label {
+    font-size: 10px;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .wm-anchor-time {
+    font-size: 12px;
+    font-weight: 700;
+    color: #fca5a5;
+  }
+
+  .wm-forecast-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .wm-forecast-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+  }
+
+  .wm-forecast-pill.high {
+    background: rgba(249, 115, 22, 0.12);
+    border-color: rgba(249, 115, 22, 0.35);
+    color: #fb923c;
+  }
+
+  .wm-forecast-pill.low {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #60a5fa;
+  }
+
+  .wm-forecast-pill.dev-up {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.35);
+    color: #fbbf24;
+  }
+
+  .wm-forecast-pill.dev-down {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+  }
+
+  .wm-forecast-pill.dev-ok {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: #4ade80;
+  }
+
+  .wm-forecast-pill.model {
+    background: rgba(100, 116, 139, 0.12);
+    border-color: rgba(100, 116, 139, 0.3);
+    color: #94a3b8;
+  }
+
+  .wm-referral-section {
+    margin-top: 0;
+  }
+
+  .wm-referral-header {
+    margin-bottom: 8px;
+  }
+
+  .wm-referral-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .wm-referral-btns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .wm-mini-signals {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-top: 1px solid #1e3a5f;
+    padding-top: 12px;
+  }
+
+  .wm-mini-signal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 8px;
+    gap: 8px;
+  }
+
+  .wm-mini-signal-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .wm-mini-signal-left {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+  }
+
+  .wm-mini-signal-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .wm-mini-signal-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #94a3b8;
+    white-space: nowrap;
+  }
+
+  .wm-mini-signal-badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .wm-mini-signal-badge.up {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+  }
+
+  .wm-mini-signal-badge.down {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+  }
+
+  .wm-mini-signal-badge.neutral {
+    background: rgba(100, 116, 139, 0.15);
+    color: #94a3b8;
+  }
+
+  .wm-mini-signal-badge.warn {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+  }
+
+  .wm-peak-section {
+    margin-top: 16px;
+  }
+
+  .wm-peak-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .wm-peak-label {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .wm-peak-status-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .wm-peak-status-badge.active {
+    background: #22c55e20;
+    color: #22c55e;
+  }
+
+  .wm-peak-status-badge.done {
+    background: #64748b20;
+    color: #94a3b8;
+  }
+
+  .wm-peak-status-badge.waiting {
+    background: #eab30820;
+    color: #eab308;
+  }
+
+  .wm-peak-track {
+    height: 8px;
+    background: #0f172a;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 1px solid #1e3a5f;
+  }
+
+  .wm-peak-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  .wm-peak-fill.active {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+  }
+
+  .wm-peak-fill.done {
+    background: #64748b;
+  }
+
+  .wm-peak-fill.waiting {
+    background: transparent;
+  }
+
+  .wm-peak-times {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #475569;
+    margin-top: 4px;
+  }
+
+  .wm-sub-stats {
+    display: block;
+    margin-top: 14px;
+  }
+
+  .wm-sub-stat {
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .wm-sub-stat-label {
+    font-size: 11px;
+    color: #64748b;
+  }
+
+  .wm-sub-stat-value {
+    font-size: 20px;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-top: 2px;
+  }
+
+  .wm-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .wm-chart-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .wm-chart-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 4px;
+  }
+
+  .wm-chart-card-sub {
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 12px;
+  }
+
+  .wm-chart-container {
+    position: relative;
+    flex: 1;
+    min-height: 200px;
+  }
+
+  .wm-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  @media(max-width: 760px) {
+    .wm-anchor-hero {
+      flex-direction: column;
+    }
+
+    .wm-anchor-temp-col {
+      border-right: none;
+      border-bottom: 1px solid #1e3a5f;
+      padding: 14px;
+    }
+
+    .wm-referral-btns {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .wm-chart-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #334155;
+  }
+
+  .wm-chart-pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: #94a3b8;
+  }
+
+  .wm-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .wm-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+
+  .wm-judgment {
+    background: linear-gradient(135deg, #1a1f2e, #1e293b);
+    border: 1px solid #f59e0b40;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 16px;
+  }
+
+  .wm-judgment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .wm-judgment-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f59e0b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .wm-judgment-text {
+    font-size: 13px;
+    color: #e2e8f0;
+    line-height: 1.7;
+    margin-bottom: 10px;
+  }
+
+  .wm-judgment-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .wm-judgment-tag {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: #334155;
+    color: #94a3b8;
+  }
+
+  .wm-action-btn {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 14px;
+    border-radius: 8px;
+    border: 1.5px solid;
+    cursor: default;
+    margin-left: auto;
+  }
+
+  .wm-action-btn.hold {
+    background: #3b82f620;
+    color: #3b82f6;
+    border-color: #3b82f640;
+  }
+
+  .wm-action-btn.watch {
+    background: #eab30820;
+    color: #eab308;
+    border-color: #eab30840;
+  }
+
+  .wm-action-btn.sell {
+    background: #ef444420;
+    color: #ef4444;
+    border-color: #ef444440;
+  }
+
+  .wm-action-btn.buy {
+    background: #22c55e20;
+    color: #22c55e;
+    border-color: #22c55e40;
+  }
+
+  .wm-bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  @media(max-width: 960px) {
+    .wm-bottom-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .wm-signal-card {
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .wm-signal-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .wm-signal-icon {
+    font-size: 16px;
+  }
+
+  .wm-signal-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+
+  .wm-signal-strength {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    display: inline-block;
+  }
+
+  .wm-signal-strength.up {
+    background: #22c55e20;
+    color: #22c55e;
+  }
+
+  .wm-signal-strength.neutral {
+    background: #3b82f620;
+    color: #3b82f6;
+  }
+
+  .wm-signal-strength.down {
+    background: #ef444420;
+    color: #ef4444;
+  }
+
+  .wm-signal-desc {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.6;
+  }
+
+  .wm-model-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .wm-model-row:last-child {
+    border-bottom: none;
+  }
+
+  .wm-model-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    width: 80px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+
+  .wm-model-bar-track {
+    flex: 1;
+    height: 16px;
+    background: #0f172a;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .wm-model-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s;
+  }
+
+  .wm-model-bar-fill.ecmwf {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+  }
+
+  .wm-model-bar-fill.gfs {
+    background: linear-gradient(90deg, #3b82f6, #2563eb);
+  }
+
+  .wm-model-bar-fill.icon {
+    background: linear-gradient(90deg, #a855f7, #7c3aed);
+  }
+
+  .wm-model-bar-fill.gem {
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+  }
+
+  .wm-model-bar-fill.jma {
+    background: linear-gradient(90deg, #ec4899, #db2777);
+  }
+
+  .wm-model-temp {
+    font-size: 12px;
+    font-weight: 700;
+    color: #e2e8f0;
+    width: 55px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .wm-model-stats {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #334155;
+    font-size: 11px;
+    color: #64748b;
+  }
+
+  .wm-model-stats span {
+    color: #e2e8f0;
+    font-weight: 600;
+  }
+
+  .wm-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+
+  .wm-metric-item {
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .wm-metric-icon {
+    font-size: 14px;
+    margin-right: 4px;
+  }
+
+  .wm-metric-label {
+    color: #64748b;
+    font-size: 10px;
+    display: block;
+  }
+
+  .wm-metric-value {
+    color: #e2e8f0;
+    font-weight: 600;
+    font-size: 13px;
+    margin-top: 2px;
+  }
+
+  .wm-metar-text {
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .metar-temp {
+    color: #f59e0b;
+    font-weight: 600;
+  }
+
+  .metar-wind {
+    color: #38bdf8;
+  }
+
+  .wm-taf-text {
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+
+  .wm-taf-struct-card {
+    margin-top: 16px;
+  }
+
+  .wm-taf-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+  }
+
+  .wm-taf-table th {
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    color: #93c5fd;
+    padding: 0 10px 4px;
+  }
+
+  .wm-taf-table td {
+    padding: 9px 10px;
+    font-size: 12px;
+    color: #dbe4f3;
+    background: #0b1730;
+    border: 1px solid #1e3a5f;
+  }
+
+  .wm-taf-table tr td:first-child {
+    width: 128px;
+    color: #94a3b8;
+    font-weight: 700;
+    border-radius: 8px 0 0 8px;
+  }
+
+  .wm-taf-table tr td:last-child {
+    border-radius: 0 8px 8px 0;
+  }
+
+  .wm-hourly-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .wm-hourly-table th {
+    color: #64748b;
+    font-weight: 600;
+    text-align: center;
+    padding: 4px 6px;
+    border-bottom: 1px solid #334155;
+  }
+
+  .wm-hourly-table td {
+    color: #cbd5e1;
+    text-align: center;
+    padding: 4px 6px;
+    border-bottom: 1px solid #1e293b;
+  }
+
+  .wm-bet-item {
+    background: #0f172a;
+    border: 1px solid #1e3a5f;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-top: 8px;
+    transition: border-color 0.15s;
+  }
+
+  .wm-bet-item:hover {
+    border-color: #3b82f6;
+  }
+
+  .wm-bet-question {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e2e8f0;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .wm-bet-question a {
+    color: #e2e8f0;
+    text-decoration: none;
+    transition: color 0.15s;
+    flex: 1;
+  }
+
+  .wm-bet-question a:hover {
+    color: #3b82f6;
+  }
+
+  .wm-bet-link-icon {
+    color: #475569;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .wm-bet-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .wm-bet-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .wm-bet-badge.direction-yes {
+    background: #22c55e18;
+    color: #22c55e;
+    border: 1px solid #22c55e30;
+  }
+
+  .wm-bet-badge.direction-no {
+    background: #ef444418;
+    color: #ef4444;
+    border: 1px solid #ef444430;
+  }
+
+  .wm-bet-badge.info {
+    background: #3b82f618;
+    color: #3b82f6;
+    border: 1px solid #3b82f630;
+  }
+
+  .wm-bet-badge.neutral {
+    background: #64748b18;
+    color: #94a3b8;
+    border: 1px solid #64748b30;
+  }
+
+  .wm-history-stats {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  @media(max-width: 960px) {
+    .wm-history-stats {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .wm-hist-stat {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .wm-hist-stat-label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .wm-hist-stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #e2e8f0;
+    margin-top: 4px;
+  }
+
+  .wm-hist-stat-sub {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .wm-history-chart-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .wm-history-chart-container {
+    position: relative;
+    height: 280px;
+  }
+
+  .wm-history-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .wm-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .wm-history-table th {
+    text-align: left;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid #334155;
+    background: #1a1f2e;
+  }
+
+  .wm-history-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #1e293b;
+    color: #e2e8f0;
+  }
+
+  .wm-history-table tr:hover td {
+    background: #1e293b;
+  }
+
+  .wm-hist-error {
+    color: #ef4444;
+    font-weight: 600;
+  }
+
+  .wm-hist-good {
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  .wm-loading {
+    text-align: center;
+    padding: 60px 0;
+    color: #64748b;
+    font-size: 13px;
+  }
+
+  .wm-loading-spinner {
+    width: 28px;
+    height: 28px;
+    border: 2px solid #334155;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .map-legend {
+    position: fixed;
+    left: var(--sidebar-width, 200px);
+    transform: translateX(56px);
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    z-index: 1000;
+    background: #1a1d29ee;
+    border: 1px solid #2a2d3a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  @media (max-width: 960px) {
+    .map-legend {
+      left: 12px;
+      bottom: 12px;
+      transform: none;
+    }
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .legend-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid;
+  }
+
+  .legend-dot.normal {
+    background: #0284c7;
+    border-color: #38bdf8;
+  }
+
+  .legend-dot.active {
+    background: #dc2626;
+    border-color: #f87171;
+  }
+
+  .stats-bar {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    z-index: 1000;
+    display: flex;
+    gap: 8px;
+  }
+
+  .stat-chip {
+    background: #1a1d29ee;
+    border: 1px solid #2a2d3a;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  .stat-chip .stat-num {
+    color: #e2e8f0;
+    font-weight: 700;
+  }
+
+  .pnl-pos {
+    color: #22c55e
+  }
+
+  .pnl-neg {
+    color: #ef4444
+  }
+
+  .text-green {
+    color: #22c55e
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #3b82f6;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin .6s linear infinite
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg)
+    }
+  }
+
+  .bc-item {
+    background: #1a1d29;
+    border: 1px solid #2a2d3a;
+    border-radius: 8px;
+    transition: border-color .15s, box-shadow .15s
+  }
+
+  .bc-item:hover {
+    border-color: #3a3d4a;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .15)
+  }
+
+  .bc-item-pinned {
+    border-left: 3px solid #eab308
+  }
+
+  .bc-item-active {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 1px #8b5cf640
+  }
+
+  .bc-row {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    gap: 10px;
+    cursor: pointer
+  }
+
+  .bc-r-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #0f1117;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0
+  }
+
+  .bc-r-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px
+  }
+
+  .bc-r-title {
+    font-size: .88rem;
+    font-weight: 500;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+  }
+
+  .bc-q-link {
+    color: #cbd5e1;
+    text-decoration: none;
+    transition: color .15s
+  }
+
+  .bc-q-link:hover {
+    color: #a78bfa
+  }
+
+  .bc-link-arrow {
+    font-size: .45rem;
+    opacity: .4;
+    margin-left: 2px
+  }
+
+  .bc-link-internal {
+    color: #a78bfa;
+    opacity: .7
+  }
+
+  .bc-r-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap
+  }
+
+  .bc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: .65rem;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap
+  }
+
+  .bc-badge-yes {
+    background: #22c55e14;
+    color: #22c55e
+  }
+
+  .bc-badge-no {
+    background: #94a3b814;
+    color: #94a3b8
+  }
+
+  .bc-badge-open {
+    background: #eab30810;
+    color: #eab308
+  }
+
+  .bc-badge-sold {
+    background: #06b6d410;
+    color: #06b6d4
+  }
+
+  .bc-badge-win {
+    background: #22c55e10;
+    color: #22c55e
+  }
+
+  .bc-badge-loss {
+    background: #ef444410;
+    color: #ef4444
+  }
+
+  .bc-badge-time {
+    background: #1e2130;
+    color: #64748b;
+    font-weight: 500;
+    font-size: .58rem
+  }
+
+  .bc-badge-id {
+    background: #1e2130;
+    color: #475569;
+    font-weight: 500;
+    font-size: .56rem;
+    font-family: monospace;
+    letter-spacing: .02em
+  }
+
+  .bc-badge-shares {
+    background: #1e2130;
+    color: #64748b;
+    font-weight: 500;
+    font-size: .58rem
+  }
+
+  .bc-pulse {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #22c55e;
+    animation: bc-pulse-anim 1.8s ease-in-out infinite
+  }
+
+  @keyframes bc-pulse-anim {
+
+    0%,
+    100% {
+      opacity: .4
+    }
+
+    50% {
+      opacity: 1
+    }
+  }
+
+  .bc-r-data {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0
+  }
+
+  .bc-r-col {
+    text-align: right;
+    min-width: 58px
+  }
+
+  .bc-r-entry {
+    font-size: .92rem;
+    font-weight: 600;
+    color: #64748b;
+    font-variant-numeric: tabular-nums
+  }
+
+  .bc-r-entry s {
+    text-decoration: line-through;
+    text-decoration-color: #475569
+  }
+
+  .bc-r-live {
+    font-size: 1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums
+  }
+
+  .bc-r-pnl {
+    min-width: 76px
+  }
+
+  .bc-r-pnl-val {
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1
+  }
+
+  .bc-r-pnl-pct {
+    font-size: .75rem;
+    font-weight: 600
+  }
+
+  .bc-price-flash {
+    animation: bc-flash .5s ease
+  }
+
+  @keyframes bc-flash {
+    0% {
+      opacity: .5
+    }
+
+    100% {
+      opacity: 1
+    }
+  }
+
+  .bc-pin {
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: .8rem;
+    opacity: .25;
+    transition: opacity .15s;
+    padding: 2px 4px
+  }
+
+  .bc-pin:hover,
+  .bc-pin.pinned {
+    opacity: 1
+  }
+
+  .bc-detail-panel {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease
+  }
+
+  .bc-detail-panel.active {
+    max-height: 2000px;
+    border-top: 1px solid #1e2130
+  }
+
+  .bc-detail-loading,
+  .bc-detail-error {
+    padding: 16px;
+    text-align: center;
+    color: #64748b;
+    font-size: .75rem
+  }
+
+  .bc-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 4px 48px 4px 12px;
+    gap: 20px;
+    color: #475569;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    font-weight: 600
+  }
+
+  .bc-col-header span {
+    text-align: right;
+    min-width: 58px
+  }
+
+  .bc-col-header .bc-h-pnl {
+    min-width: 76px
+  }
+
+  .bc-empty {
+    padding: 60px 20px;
+    text-align: center
+  }
+
+  .bc-empty-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+    opacity: .5
+  }
+
+  .bc-empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 4px
+  }
+
+  .bc-empty-desc {
+    font-size: .75rem;
+    color: #475569
+  }
+
+  .bc-skeleton {
+    pointer-events: none
+  }
+
+  .bc-skel-block {
+    background: linear-gradient(90deg, #1e2130 25%, #252840 50%, #1e2130 75%);
+    background-size: 200% 100%;
+    border-radius: 6px;
+    animation: bc-skel-shimmer 1.5s infinite
+  }
+
+  @keyframes bc-skel-shimmer {
+    0% {
+      background-position: 200% 0
+    }
+
+    100% {
+      background-position: -200% 0
+    }
+  }
+
+  .bets-card-list {
+    transition: opacity .15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 20px
+  }
+
+  .pm-range-btn {
+    background: #1e2130;
+    color: #94a3b8;
+    border: 1px solid #2a2d3a;
+    cursor: pointer;
+    transition: all .15s;
+    border-radius: 4px;
+    padding: 2px 10px;
+    font-size: 11px;
+    margin: 0 2px
+  }
+
+  .pm-range-btn:hover {
+    color: #e2e8f0;
+    border-color: #3b82f6
+  }
+
+  .pm-range-btn.active {
+    background: #3b82f620;
+    color: #3b82f6;
+    border-color: #3b82f6
+  }
+
+  .dp-root {
+    padding: 0
+  }
+
+  .dp-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #111422 0%, #161a2e 100%);
+    border-bottom: 1px solid #2a2d3a;
+    gap: 16px
+  }
+
+  .dp-banner-left {
+    flex: 1;
+    min-width: 0
+  }
+
+  .dp-banner-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    flex-wrap: wrap
+  }
+
+  .dp-banner-question {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #e2e8f0;
+    line-height: 1.4;
+    margin-bottom: 4px
+  }
+
+  .dp-banner-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0
+  }
+
+  .dp-banner-pnl {
+    text-align: right;
+    flex-shrink: 0;
+    padding-top: 4px
+  }
+
+  .dp-market-link {
+    color: #cbd5e1;
+    text-decoration: none;
+    transition: color .15s
+  }
+
+  .dp-market-link:hover {
+    color: #3b82f6;
+    text-decoration: underline
+  }
+
+  .dp-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 0
+  }
+
+  .dp-col {
+    padding: 16px 20px;
+    border-right: 1px solid #1e2130
+  }
+
+  .dp-col:last-child {
+    border-right: none
+  }
+
+  .dp-card {
+    background: #0d1019;
+    border: 1px solid #1e2130;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 12px
+  }
+
+  .dp-card-sm {
+    padding: 10px 14px
+  }
+
+  .dp-card-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1e2130
+  }
+
+  .dp-metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px
+  }
+
+  .dp-metric {
+    text-align: center;
+    padding: 8px 4px;
+    background: #111422;
+    border-radius: 6px
+  }
+
+  .dp-metric-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: #e2e8f0;
+    font-weight: 600
+  }
+
+  .dp-metric-label {
+    font-size: 0.65rem;
+    color: #64748b;
+    margin-top: 2px
+  }
+
+  .dp-kv-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0
+  }
+
+  .dp-kv {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #1a1d2a;
+    font-size: 0.78rem
+  }
+
+  .dp-kv:last-child {
+    border-bottom: none
+  }
+
+  .dp-kv-k {
+    color: #64748b
+  }
+
+  .dp-kv-v {
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    text-align: right;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis
+  }
+
+  .dp-chain-label {
+    font-size: 0.68rem;
+    color: #64748b;
+    margin: 10px 0 4px;
+    font-weight: 600
+  }
+
+  .dp-chain-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #111422;
+    border-radius: 6px;
+    margin-bottom: 3px;
+    font-size: 0.76rem;
+    border-left: 3px solid #2a2d3a
+  }
+
+  .dp-chain-node.dp-chain-current {
+    border-left-color: #22d3ee;
+    background: #111a2a
+  }
+
+  .dp-chain-amt {
+    color: #94a3b8
+  }
+
+  .dp-chain-price {
+    color: #64748b
+  }
+
+  .dp-chain-time {
+    color: #475569;
+    font-size: 0.68rem
+  }
+
+  .dp-chain-connector {
+    width: 2px;
+    height: 10px;
+    background: #2a2d3a;
+    margin-left: 16px
+  }
+
+  .dp-code-block {
+    background: #0a0d14;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.74rem;
+    color: #94a3b8;
+    max-height: 140px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'JetBrains Mono', monospace;
+    border: 1px solid #1a1d2a
+  }
+
+  .dp-code-block.dp-reasoning-full {
+    max-height: none;
+    overflow-y: visible
+  }
+
+  .dp-result-badge {
+    display: inline-block;
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700
+  }
+
+  .dp-result-win {
+    background: #22c55e20;
+    color: #22c55e;
+    border: 1px solid #22c55e40
+  }
+
+  .dp-result-loss {
+    background: #ef444420;
+    color: #ef4444;
+    border: 1px solid #ef444440
+  }
+
+  .dp-collapsible .dp-collapse-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .3s ease
+  }
+
+  .dp-collapsible.dp-expanded .dp-collapse-body {
+    max-height: 500px
+  }
+
+  .dp-chevron {
+    font-size: 0.6rem;
+    color: #475569;
+    transition: transform .2s;
+    display: inline-block;
+    margin-left: 4px
+  }
+
+  .dp-collapsible.dp-expanded .dp-chevron {
+    transform: rotate(90deg)
+  }
+</style>
+<style>
+  /* ── Map page layout: fill main-content completely, no padding/scroll ── */
+  .main-content {
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  #app {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #map-wrapper {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  #weather-map {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Overlay: fixed to viewport, above sidebar (z-index 50) and header (z-index 40) */
+  .wm-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+  }
+
+  /* Legend and stats: absolute within map-wrapper */
+  .stats-bar {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    z-index: 1000;
+  }
+
+  .map-legend {
+    position: fixed;
+    left: var(--sidebar-width, 200px);
+    transform: translateX(56px);
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    z-index: 1000;
+  }
+
+  @media (max-width: 960px) {
+    .map-legend {
+      left: 12px;
+      bottom: 12px;
+      transform: none;
+    }
+  }
+
+  .wm-sk-shell {
+    display: grid;
+    gap: 14px;
+  }
+
+  .wm-sk-row {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 12px;
+  }
+
+  .wm-sk-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 14px;
+  }
+
+  .wm-sk-line {
+    display: block;
+    height: 12px;
+    border-radius: 7px;
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, #1f2937 0%, #334155 50%, #1f2937 100%);
+    background-size: 220% 100%;
+    animation: wmSkPulse 1.05s ease-in-out infinite;
+  }
+
+  .wm-sk-line:last-child {
+    margin-bottom: 0;
+  }
+
+  .wm-sk-line.lg {
+    height: 20px;
+    width: 52%;
+  }
+
+  .wm-sk-line.md {
+    width: 76%;
+  }
+
+  .wm-sk-line.sm {
+    width: 44%;
+  }
+
+  .wm-sk-line.full {
+    width: 100%;
+  }
+
+  .wm-sk-line.w70 {
+    width: 70%;
+  }
+
+  .wm-sk-line.w60 {
+    width: 60%;
+  }
+
+  .wm-sk-line.w50 {
+    width: 50%;
+  }
+
+  @keyframes wmSkPulse {
+    0% {
+      background-position: 0% 0;
+    }
+
+    100% {
+      background-position: 100% 0;
+    }
+  }
+
+  /* T903: mobile fullscreen city overlay (phone portrait) */
+  @media (max-width: 768px) {
+    .wm-overlay {
+      padding: 0 !important;
+      align-items: stretch !important;
+      justify-content: stretch !important;
+    }
+
+    .wm-overlay-inner {
+      max-width: 100% !important;
+      max-height: 100vh !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      border-radius: 0 !important;
+      border: 0 !important;
+    }
+
+    .wm-overlay-header {
+      padding: 10px 12px !important;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .wm-overlay-title {
+      font-size: 16px !important;
+    }
+
+    .wm-overlay-subtitle {
+      font-size: 11px !important;
+    }
+
+    .wm-top-tabs {
+      flex: 1 1 100%;
+      order: 3;
+      overflow-x: auto;
+      justify-content: flex-start;
+    }
+
+    .wm-top-tab {
+      padding: 6px 10px !important;
+      font-size: 11px !important;
+      white-space: nowrap;
+    }
+
+    .wm-overlay-icon-btn {
+      width: 32px !important;
+      height: 32px !important;
+      font-size: 16px !important;
+    }
+
+    .wm-tab-content {
+      padding: 12px !important;
+    }
+
+    .wm-intraday-grid {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    .wm-sk-row {
+      grid-template-columns: 1fr !important;
+    }
+
+    .wm-pm-link-btn {
+      padding: 12px !important;
+      font-size: 13px !important;
+    }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div id="app">
+
+  <div id="map-wrapper">
+    <div id="weather-map"></div>
+    <div class="stats-bar">
+      <div class="stat-chip"><span data-i18n="weatherMap.stats.cities">Cities</span> <span class="stat-num"
+          id="stat-cities">0</span></div>
+      <div class="stat-chip"><span data-i18n="weatherMap.stats.activeBets">Active positions</span> <span
+          class="stat-num" id="stat-bets">0</span></div>
+    </div>
+    <div class="map-legend">
+      <div class="legend-item">
+        <div class="legend-dot normal"></div> <span data-i18n="weatherMap.legend.weatherCity">Weather city</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot active"></div> <span data-i18n="weatherMap.legend.hasBets">Has active positions</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="wm-overlay" id="city-overlay">
+    <div class="wm-overlay-inner">
+      <div class="wm-overlay-header">
+        <div class="wm-top-tabs">
+          <button class="wm-top-tab active" data-tab="intraday" onclick="switchOverlayTab('intraday')"><span
+              data-i18n="weatherMap.tab.intraday">📊 Today Analysis</span></button>
+          <button class="wm-top-tab" data-tab="history" onclick="switchOverlayTab('history')"><span
+              data-i18n="weatherMap.tab.history">📈 History Reconciliation</span></button>
+          <button class="wm-top-tab" data-tab="bets" onclick="switchOverlayTab('bets')"><span
+              data-i18n="weatherMap.tab.bets">🎯 My Positions</span></button>
+        </div>
+        <div class="wm-overlay-header-actions">
+          <button class="wm-overlay-icon-btn wm-overlay-refresh-btn" onclick="refreshCurrentOverlayTab()"
+            data-i18n-attr="title:weatherMap.btn.refreshTip" title="Refresh current page">⟳</button>
+          <button class="wm-overlay-icon-btn" onclick="closeOverlay()" data-i18n-attr="title:weatherMap.btn.close"
+            title="Close">✕</button>
+        </div>
+      </div>
+      <div class="wm-tab-bar">
+        <button class="wm-tab-btn active" data-tab="intraday" onclick="switchOverlayTab('intraday')"><span
+            data-i18n="weatherMap.tab.intraday">📊 Today Analysis</span></button>
+        <button class="wm-tab-btn" data-tab="history" onclick="switchOverlayTab('history')"><span
+            data-i18n="weatherMap.tab.history">📈 History Reconciliation</span></button>
+        <button class="wm-tab-btn" data-tab="bets" onclick="switchOverlayTab('bets')"><span
+            data-i18n="weatherMap.tab.bets">🎯 My Positions</span></button>
+      </div>
+      <div class="wm-overlay-body">
+        <div class="wm-tab-content active" id="tab-intraday">
+          <div class="wm-loading" id="intraday-loading">
+            <div class="wm-loading-spinner"></div>
+            <span data-i18n="weatherMap.loading.intraday">AI is analyzing weather data...</span>
+          </div>
+          <div id="intraday-content" style="display:none"></div>
+        </div>
+        <div class="wm-tab-content" id="tab-history">
+          <div class="wm-loading" id="history-loading">
+            <div class="wm-loading-spinner"></div>
+            <span data-i18n="weatherMap.loading.history">Loading history data...</span>
+          </div>
+          <div id="history-content" style="display:none"></div>
+        </div>
+        <div class="wm-tab-content" id="tab-bets">
+          <div class="wm-loading" id="bets-loading">
+            <div class="wm-loading-spinner"></div>
+            <span data-i18n="weatherMap.loading.bets">Loading position data...</span>
+          </div>
+          <div id="bets-content" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* T483: 延后初始化到 DOMContentLoaded，配合 leaflet/chart 脚本的 defer（defer 脚本保证在 DCL 之前按顺序执行完毕），
+     首屏不被渲染阅本阻塞。 */
+  document.addEventListener('DOMContentLoaded', function () {
+    'use strict';
+    function t(k, fb) {
+      try { return (window.veyraI18n && window.veyraI18n.t) ? window.veyraI18n.t(k, fb) : fb; }
+      catch (_e) { return fb; }
+    }
+
+    var southWest = L.latLng(-85, -Infinity);
+    var northEast = L.latLng(85, Infinity);
+    var mapBounds = L.latLngBounds(southWest, northEast);
+
+    var map = L.map('weather-map', {
+      center: [20, 0],
+      zoom: 3,
+      minZoom: 3,
+      maxZoom: 5,
+      zoomControl: true,
+      attributionControl: false,
+      worldCopyJump: true,
+      maxBounds: mapBounds,
+      maxBoundsViscosity: 1.0,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      noWrap: false,
+    }).addTo(map);
+
+    // 刷新地图尺寸（关键：容器高度确认）
+    setTimeout(function () {
+      map.invalidateSize();
+    }, 100);
+    window.addEventListener('resize', function () {
+      map.invalidateSize();
+    });
+
+    var markers = {};
+    var currentCityData = null;
+    var cityDetailAbortCtrl = null;
+    var cityDetailReqSeq = 0;
+
+    function loadCities() {
+      fetch('/api/weather-map/cities')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.status !== 'ok') return;
+          document.getElementById('stat-cities').textContent = data.count;
+          var totalBets = 0;
+
+          data.cities.forEach(function (city) {
+            if (!city.lat || !city.lon) return;
+            totalBets += city.active_bets || 0;
+
+            var hasBets = (city.active_bets || 0) > 0;
+            var pinClass = hasBets ? 'wm-pin has-bets' : 'wm-pin';
+            var betBadge = hasBets ? '<div class="bet-badge">' + city.active_bets + '</div>' : '';
+
+            var icon = L.divIcon({
+              className: '',
+              html: '<div class="' + pinClass + '"><div class="circle">⛅' + betBadge + '</div><div class="stem"></div></div>',
+              iconSize: [36, 44],
+              iconAnchor: [18, 44],
+            });
+
+            var marker = L.marker([city.lat, city.lon], { icon: icon }).addTo(map);
+            marker.on('click', (function (name) {
+              return function () { openOverlay(name); };
+            })(city.name));
+
+            markers[city.name.toLowerCase()] = marker;
+          });
+
+          document.getElementById('stat-bets').textContent = totalBets;
+        })
+        .catch(function (e) {
+          console.error('[WeatherMap] Failed to load cities:', e);
+        });
+    }
+
+    var overlayHistoryLoaded = {};
+    var currentOverlayTab = 'intraday';
+
+    window.openOverlay = function (cityName) {
+      var overlay = document.getElementById('city-overlay');
+      overlay.classList.add('open');
+
+      switchOverlayTab('intraday');
+      overlayHistoryLoaded[cityName] = false;
+
+      document.getElementById('intraday-loading').style.display = 'none';
+      document.getElementById('intraday-content').style.display = '';
+      document.getElementById('intraday-content').innerHTML = buildIntradaySkeleton(cityName);
+      document.getElementById('history-loading').style.display = '';
+      document.getElementById('history-content').style.display = 'none';
+      document.getElementById('history-content').innerHTML = '';
+
+      currentCityData = { name: cityName };
+      cityDetailReqSeq += 1;
+      loadCityDetail(cityName, cityDetailReqSeq);
+    };
+
+    window.closeOverlay = function () {
+      if (cityDetailAbortCtrl) {
+        cityDetailAbortCtrl.abort();
+        cityDetailAbortCtrl = null;
+      }
+      document.getElementById('city-overlay').classList.remove('open');
+      currentCityData = null;
+      if (typeof WmBetsModule !== 'undefined') WmBetsModule.cleanup();
+      if (_clockTimer) { clearInterval(_clockTimer); _clockTimer = null; }
+    };
+
+    (function () {
+      var _ov = document.getElementById('city-overlay');
+      if (_ov && _ov.parentElement !== document.body) document.body.appendChild(_ov);
+    })();
+
+    document.getElementById('city-overlay').addEventListener('click', function (e) {
+      if (e.target === this) closeOverlay();
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') closeOverlay();
+    });
+
+    window.switchOverlayTab = function (tab) {
+      currentOverlayTab = tab;
+      document.querySelectorAll('.wm-top-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+      document.querySelectorAll('.wm-tab-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+      document.querySelectorAll('.wm-tab-content').forEach(function (c) { c.classList.toggle('active', c.id === 'tab-' + tab); });
+
+      var cityName = currentCityData ? currentCityData.name : '--';
+      if (tab === 'history') {
+        if (currentCityData && !overlayHistoryLoaded[cityName]) {
+          loadCityHistory(cityName);
+        }
+      } else if (tab === 'bets') {
+        if (currentCityData && currentCityData.name) {
+          WmBetsModule.loadCityBets(currentCityData.name);
+        }
+      }
+    };
+
+    function loadCityDetail(cityName, reqSeq) {
+      if (cityDetailAbortCtrl) {
+        cityDetailAbortCtrl.abort();
+      }
+      cityDetailAbortCtrl = new AbortController();
+      fetch('/api/weather-map/city-detail/' + encodeURIComponent(cityName), { signal: cityDetailAbortCtrl.signal })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (reqSeq !== cityDetailReqSeq) return;
+          document.getElementById('intraday-loading').style.display = 'none';
+          if (d.status !== 'ok') {
+            document.getElementById('intraday-content').style.display = '';
+            document.getElementById('intraday-content').innerHTML = '<div style="color:#ef4444">⚠️ ' + esc(d.reason || t('weatherMap.err.dataUnavailable', 'Data unavailable')) + '</div>';
+            return;
+          }
+          currentCityData = Object.assign(currentCityData || {}, d);
+          document.getElementById('intraday-content').style.display = '';
+          document.getElementById('intraday-content').innerHTML = buildIntradayContent(d);
+          setTimeout(function () { renderTempChart(d); }, 100);
+          setTimeout(function () { _startLocalClock(); }, 150);
+        })
+        .catch(function (e) {
+          if (e && e.name === 'AbortError') return;
+          if (reqSeq !== cityDetailReqSeq) return;
+          console.error('[WeatherMap] City detail error:', e);
+          document.getElementById('intraday-loading').style.display = 'none';
+          document.getElementById('intraday-content').style.display = '';
+          document.getElementById('intraday-content').innerHTML = t("weatherMap.lit.8be63e3086", "<div style=\"color:#ef4444\">⚠️ Network error</div>");
+        });
+    }
+
+    function buildIntradaySkeleton(cityName) {
+      return '' +
+        '<div class="wm-sk-shell">' +
+        '<div class="wm-sk-row">' +
+        '<div class="wm-sk-card">' +
+        '<span class="wm-sk-line lg"></span>' +
+        '<span class="wm-sk-line md"></span>' +
+        '<span class="wm-sk-line sm"></span>' +
+        '</div>' +
+        '<div class="wm-sk-card">' +
+        '<span class="wm-sk-line full"></span>' +
+        '<span class="wm-sk-line w70"></span>' +
+        '<span class="wm-sk-line w50"></span>' +
+        '</div>' +
+        '</div>' +
+        '<div class="wm-sk-card">' +
+        '<span class="wm-sk-line w60"></span>' +
+        '<span class="wm-sk-line full"></span>' +
+        '<span class="wm-sk-line full"></span>' +
+        '<span class="wm-sk-line w70"></span>' +
+        '</div>' +
+        '<div style="font-size:12px;color:#94a3b8;padding:0 2px">' + esc(cityName || '') + ' · ' + t('weatherMap.loading.intraday', 'AI is analyzing weather data...') + '</div>' +
+        '</div>';
+    }
+
+    function buildIntradayContent(d) {
+      var isUS = _isUSCity(d.timezone, d.city);
+      var tempC = d.current_temp_c != null ? Math.round(d.current_temp_c) : null;
+      var tempF = d.current_temp_f != null ? Math.round(d.current_temp_f) : null;
+      var primaryTemp = isUS ? (tempF != null ? tempF + '°F' : '--') : (tempC != null ? tempC + '°C' : '--');
+      var secondaryTemp = isUS ? (tempC != null ? tempC + '°C' : '') : (tempF != null ? tempF + '°F' : '');
+      var metarAnchorTime = (d.metar_observed_time || '').trim();
+      if (!metarAnchorTime) metarAnchorTime = (d.local_time || '').slice(11, 16);
+      var pw = d.peak_window || {};
+      var tw = d.trough_window || {};
+      var aw = d.window_context || {};
+      var currentWindow = aw.type === 'trough' ? tw : pw;
+      var currentWindowLabel = aw.label || (aw.type === 'trough' ? t('weatherMap.chart.troughLabel', 'Trough Window') : t('weatherMap.chart.peakLabel', 'Peak Window'));
+      var currentWindowProgress = currentWindow.progress != null ? currentWindow.progress : 0;
+      var currentWindowActive = !!currentWindow.is_active;
+      var ecmwf = d.ecmwf || {};
+      var jdg = d.judgment || {};
+      var sigContribs = d.signal_contributions || [];
+      var modelComp = d.model_comparison || [];
+      var stMetrics = (d.short_term || {}).metrics || [];
+
+      var cloudIcon = '☀️';
+      var cloudMetric = stMetrics.find(function (m) { return m.label === t('weatherMap.metric.cloudCoverLabel', 'Cloud Cover'); });
+      if (cloudMetric) {
+        if (cloudMetric.value.indexOf(t('weatherMap.metric.cloudOvercast', 'Overcast')) >= 0) cloudIcon = '☁️';
+        else if (cloudMetric.value.indexOf(t('weatherMap.metric.cloudMostly', 'Mostly Cloudy')) >= 0) cloudIcon = '⛅';
+        else if (cloudMetric.value.indexOf(t('weatherMap.metric.cloudFew', 'Few Clouds')) >= 0) cloudIcon = '\ud83c\udf24️';
+      }
+
+      var pwStatusClass = currentWindowActive ? 'active' : (currentWindowProgress >= 100 ? 'done' : 'waiting');
+      var pwStatusText = currentWindowActive ? t('weatherMap.auto.f9fbd356', '\ud83d\udfe2 \u8fdb\u884c\u4e2d ') + currentWindowProgress + '%' : (currentWindowProgress >= 100 ? t('weatherMap.status.ended', '⚪ Ended') : t('weatherMap.auto.c9bd1fa1', '\ud83d\udfe1 \u7b49\u5f85\u4e2d'));
+
+      var actionLabel = t('weatherMap.action.waiting', '⏳ Waiting');
+      var actionClass = 'watch';
+      var hasBets = d.bets && d.bets.length > 0;
+      if (hasBets) {
+        if (jdg.rain_risk || jdg.cloud_suppression) { actionLabel = t('weatherMap.action.watchStop', '⚠️ Watch Stop-loss'); actionClass = 'sell'; }
+        else if (currentWindowProgress >= 100) { actionLabel = t('weatherMap.auto.2eb5131d', '\ud83d\udcca \u7b49\u5f85\u7ed3\u7b97'); actionClass = 'hold'; }
+        else if (currentWindowActive) { actionLabel = t('weatherMap.action.holding', '✅ Holding'); actionClass = 'hold'; }
+      } else {
+        if (jdg.rain_risk || jdg.cloud_suppression) { actionLabel = t('weatherMap.auto.1ff1b5e5', '\ud83d\udc40 \u89c2\u671b'); actionClass = 'watch'; }
+        else if (!currentWindowActive && currentWindowProgress < 100) { actionLabel = t('weatherMap.auto.12b5845c', '\ud83d\udd0d \u5173\u6ce8\u5165\u573a'); actionClass = 'buy'; }
+      }
+
+      var html = '';
+
+      html += '<div class="wm-intraday-grid">';
+
+      html += '<div class="wm-left-col">';
+      html += '<div class="wm-anchor-card">';
+
+      html += '<div class="wm-anchor-card-header">';
+      html += t("weatherMap.lit.b0152b35a2", "<div class=\"wm-anchor-card-title\">METAR Live Anchor</div>");
+      html += '<div class="wm-anchor-city-badge">' + esc(d.city || '') + '</div>';
+      html += '</div>';
+
+      html += '<div class="wm-anchor-hero">';
+      html += '<div class="wm-anchor-temp-col">';
+      if (d.settlement_url) {
+        html += '<div class="wm-anchor-temp"><a href="' + esc(d.settlement_url) + '" target="_blank" rel="noopener">' + primaryTemp + '</a></div>';
+      } else {
+        html += '<div class="wm-anchor-temp">' + primaryTemp + '</div>';
+      }
+      html += '<div class="wm-anchor-source-label">' + esc(d.temp_source || 'OBS') + '</div>';
+      html += '</div>';
+      html += '<div class="wm-anchor-info-col">';
+      html += '<div class="wm-anchor-cond-row"><span class="wm-anchor-weather-icon">' + cloudIcon + '</span><span class="wm-anchor-weather-text">' + secondaryTemp + '</span></div>';
+      html += t("weatherMap.lit.50e7ba9f34", "<div class=\"wm-anchor-time-row\"><span class=\"wm-anchor-time-dot\"></span><span class=\"wm-anchor-time-label\">Obs Time</span><span class=\"wm-anchor-time\">") + esc(metarAnchorTime) + '</span></div>';
+      html += '</div>';
+      html += '</div>';
+
+      html += '<div class="wm-sub-stats">';
+      var _citySlug = _slugifyCityName(d.city || '');
+      var _localDate = (d.local_time || '').slice(0, 10);
+      var _dateParts = _localDate.split('-');
+      var _months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+      var _monthName = _dateParts[1] ? _months[parseInt(_dateParts[1], 10) - 1] : '';
+      var _day = _dateParts[2] ? parseInt(_dateParts[2], 10) : '';
+      var _year = _dateParts[0] || '';
+      var _fallbackHigh = 'https://veyra.trade/discover?p=weather&t=highest-temperature';
+      var _fallbackLow = 'https://veyra.trade/discover?p=weather&t=lowest-temperature';
+      var _pmHighUrl = ((d.market_links || {}).highest_url) || (_citySlug && _monthName ? 'https://veyra.trade/event/highest-temperature-in-' + _citySlug + '-on-' + _monthName + '-' + _day + '-' + _year : _fallbackHigh);
+      var _pmLowUrl = ((d.market_links || {}).lowest_url) || (_citySlug && _monthName ? 'https://veyra.trade/event/lowest-temperature-in-' + _citySlug + '-on-' + _monthName + '-' + _day + '-' + _year : _fallbackLow);
+      if (_pmHighUrl || _pmLowUrl) {
+        html += '<div class="wm-referral-section">';
+        html += t("weatherMap.lit.fa0bd3be5f", "<div class=\"wm-referral-header\"><div class=\"wm-referral-title\">\ud83d\udcca Bet on this city at Polymarket</div></div>");
+        html += '<div class="wm-referral-btns">';
+        if (_pmHighUrl) html += '<a class="wm-pm-link-btn" href="' + _pmHighUrl + t("weatherMap.lit.55e64cf037", "\" target=\"_blank\" rel=\"noopener\">\ud83c\udf21\ufe0f Highest Temp Market<span class=\"wm-pm-link-arrow\">\u2197</span></a>");
+        if (_pmLowUrl) html += '<a class="wm-pm-link-btn wm-pm-link-low" href="' + _pmLowUrl + t("weatherMap.lit.1fd7494782", "\" target=\"_blank\" rel=\"noopener\">\u2744\ufe0f Lowest Temp Market<span class=\"wm-pm-link-arrow\">\u2197</span></a>");
+        html += '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+
+      html += '<div class="wm-peak-section">';
+      html += '<div class="wm-peak-header">';
+      html += '<span class="wm-peak-label">' + esc(currentWindowLabel) + ' ' + (currentWindow.start_time || '--') + ' - ' + (currentWindow.end_time || '--') + '</span>';
+      html += '<span class="wm-peak-status-badge ' + pwStatusClass + '">' + pwStatusText + '</span>';
+      html += '</div>';
+      html += '<div class="wm-peak-track"><div class="wm-peak-fill ' + pwStatusClass + '" style="width:' + currentWindowProgress + '%"></div></div>';
+      html += '<div class="wm-peak-times"><span>' + (currentWindow.start_time || '--') + '</span><span>' + (currentWindow.end_time || '--') + '</span></div>';
+      html += '</div>';
+
+      if (sigContribs.length > 0) {
+        html += '<div class="wm-mini-signals">';
+        sigContribs.forEach(function (s) {
+          var st = (s.strength || '').toLowerCase();
+          var bClass = st.indexOf(t('weatherMap.auto.ecb25c00', '\u538b\u5236')) >= 0 ? 'down' :
+            (st.indexOf(t('weatherMap.auto.262b0b07', '\u652f\u6301')) >= 0 || st.indexOf(t('weatherMap.auto.f100b6eb', '\u5347\u6e29')) >= 0 || st.indexOf(t('weatherMap.auto.cc00d920', '\u504f\u5f3a')) >= 0) ? 'up' :
+              (st.indexOf(t('weatherMap.auto.eab21ea7', '\u504f\u5f31')) >= 0 || st.indexOf(t('weatherMap.auto.b04f6fd4', '\u964d\u6e29')) >= 0) ? 'warn' : 'neutral';
+          html += '<div class="wm-mini-signal-row">';
+          html += '<div class="wm-mini-signal-left">';
+          html += '<span class="wm-mini-signal-icon">' + (s.icon || '\ud83d\udcca') + '</span>';
+          html += '<span class="wm-mini-signal-title">' + esc(s.title) + '</span>';
+          html += '</div>';
+          html += '<span class="wm-mini-signal-badge ' + bClass + '">' + esc(s.strength) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      html += '</div>';
+      html += '</div>';
+
+      html += '<div class="wm-right-col">';
+      html += '<div class="wm-chart-card">';
+      html += '<div class="wm-chart-card-title-row">';
+      html += t("weatherMap.lit.e553d450b1", "<div class=\"wm-chart-card-title\">Today Temp Path (Anchor Obs + Model)</div>");
+      html += '<div class="wm-local-clock" id="wm-local-clock" data-tz="' + esc(d.timezone || '') + '">--:--</div>';
+      html += '</div>';
+      html += '<div class="wm-chart-container"><canvas id="wm-temp-chart"></canvas></div>';
+
+      if (ecmwf.daily_max != null || jdg.deviation != null) {
+        html += '<div class="wm-chart-pills">';
+        if (ecmwf.daily_max != null) {
+          var _bl = isUS ? _c2f(ecmwf.daily_max - 0.5) : (ecmwf.daily_max - 0.5).toFixed(1);
+          var _bu = isUS ? _c2f(ecmwf.daily_max + 0.5) : (ecmwf.daily_max + 0.5).toFixed(1);
+          html += t("weatherMap.lit.241953c397", "<div class=\"wm-chart-pill\">Base: [") + _bl + '~' + _bu + ']</div>';
+        }
+        if (ecmwf.daily_max != null) html += t("weatherMap.lit.7493d1dbf0", "<div class=\"wm-chart-pill\">Updated: ") + _tempStr(ecmwf.daily_max, isUS) + '</div>';
+        html += t("weatherMap.lit.06c1582e33", "<div class=\"wm-chart-pill\">Expire watch: ") + (currentWindow.end_time || '--') + '</div>';
+        html += '</div>';
+      }
+      html += '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      if (jdg.summary) {
+        html += '<div class="wm-judgment">';
+        html += '<div class="wm-judgment-header">';
+
+        html += '</div>';
+        html += '<div class="wm-judgment-text">' + esc(jdg.summary) + '</div>';
+        html += '<div class="wm-judgment-footer">';
+        (jdg.tags || []).forEach(function (t) {
+          html += '<span class="wm-judgment-tag">' + esc(t) + '</span>';
+        });
+        html += '<span class="wm-action-btn ' + actionClass + '">' + actionLabel + '</span>';
+        html += '</div></div>';
+      }
+
+      if (sigContribs.length > 0) {
+        html += '<div class="wm-bottom-row">';
+        sigContribs.forEach(function (s) {
+          var sClass = (s.strength || '').indexOf(t('weatherMap.auto.f100b6eb', '\u5347\u6e29')) >= 0 || (s.strength || '').indexOf(t('weatherMap.auto.cc00d920', '\u504f\u5f3a')) >= 0 ? 'up'
+            : (s.strength || '').indexOf(t('weatherMap.auto.ecb25c00', '\u538b\u5236')) >= 0 || (s.strength || '').indexOf(t('weatherMap.auto.eab21ea7', '\u504f\u5f31')) >= 0 ? 'down' : 'neutral';
+          html += '<div class="wm-signal-card">';
+          html += '<div class="wm-signal-header"><span class="wm-signal-icon">' + (s.icon || '\ud83d\udcca') + '</span><span class="wm-signal-title">' + esc(s.title) + '</span></div>';
+          html += '<div class="wm-signal-strength ' + sClass + '">' + esc(s.strength) + '</div>';
+          html += '<div class="wm-signal-desc">' + esc(s.description) + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      var tafItems = _toStructuredTafItems(d.taf_decoded || '');
+      if (tafItems.length > 0) {
+        html += '<div class="wm-card wm-taf-struct-card">';
+        html += t("weatherMap.lit.ac45a2d80e", "<div class=\"wm-card-title\">TAF Forecast (Structured)</div>");
+        html += t("weatherMap.lit.07ae3670ed", "<table class=\"wm-taf-table\"><thead><tr><th>Field</th><th>Decoded</th></tr></thead><tbody>");
+        tafItems.forEach(function (it) {
+          html += '<tr><td>' + esc(it.label) + '</td><td>' + esc(it.value) + '</td></tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+
+      if (modelComp.length > 0) {
+        var allMaxes = modelComp.map(function (m) { return m.daily_max; });
+        var barMin = Math.floor(Math.min.apply(null, allMaxes) - 2);
+        var barMax = Math.ceil(Math.max.apply(null, allMaxes) + 2);
+        var barRange = barMax - barMin || 1;
+        var fusion = _tempStr(allMaxes.reduce(function (a, b) { return a + b; }, 0) / allMaxes.length, isUS);
+        var divC = Math.max.apply(null, allMaxes) - Math.min.apply(null, allMaxes);
+        var divergence = isUS ? (divC * 9 / 5).toFixed(1) : divC.toFixed(1);
+        var divUnit = isUS ? '°F' : '°C';
+        var modelColors = { 'ECMWF IFS': 'ecmwf', 'ECMWF': 'ecmwf', GFS: 'gfs', ICON: 'icon', GEM: 'gem', JMA: 'jma' };
+
+        html += '<div class="wm-card" style="margin-top:16px">';
+        html += t("weatherMap.lit.bad4e9bdc1", "<div class=\"wm-card-title\">Model Range & Divergence</div>");
+        html += '<div class="wm-model-list">';
+        modelComp.forEach(function (m) {
+          var pct = ((m.daily_max - barMin) / barRange * 100).toFixed(1);
+          var cls = modelColors[m.model] || '';
+          html += '<div class="wm-model-row">';
+          html += '<div class="wm-model-name">' + esc(m.model) + '</div>';
+          html += '<div class="wm-model-bar-track"><div class="wm-model-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>';
+          html += '<div class="wm-model-temp">' + _tempStr(m.daily_max, isUS) + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+        html += '<div class="wm-model-stats">';
+        html += t("weatherMap.lit.5a9c61314e", "Fusion Mean: <span>") + fusion + '</span>&nbsp;&nbsp;|&nbsp;&nbsp;';
+        html += t("weatherMap.lit.4911fe99ad", "Divergence: <span>") + divergence + divUnit + '</span>&nbsp;&nbsp;|&nbsp;&nbsp;';
+        html += t("weatherMap.lit.14c3135638", "Models: <span>") + modelComp.length + '</span>';
+        html += '</div></div>';
+      }
+
+      if (stMetrics.length > 0) {
+        html += '<div class="wm-card" style="margin-top:16px">';
+        html += t("weatherMap.lit.ee0645b541", "<div class=\"wm-card-title\">Key Trend Indicators</div>");
+        html += '<div class="wm-metrics-grid">';
+        stMetrics.forEach(function (m) {
+          html += '<div class="wm-metric-item">';
+          html += '<span class="wm-metric-icon">' + esc(m.icon) + '</span>';
+          html += '<span class="wm-metric-label">' + esc(m.label) + '</span>';
+          html += '<div class="wm-metric-value">' + esc(m.value) + '</div>';
+          html += '</div>';
+        });
+        html += '</div></div>';
+      }
+
+      return html;
+    }
+
+    function loadCityHistory(cityName) {
+      fetch('/api/weather-map/city-history/' + encodeURIComponent(cityName))
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.status !== 'ok') {
+            document.getElementById('history-loading').innerHTML = '<div style="color:#ef4444">⚠️ ' + esc(d.reason || t('weatherMap.err.dataUnavailable', 'Data unavailable')) + '</div>';
+            return;
+          }
+          overlayHistoryLoaded[cityName] = true;
+          document.getElementById('history-loading').style.display = 'none';
+          document.getElementById('history-content').style.display = '';
+          document.getElementById('history-content').innerHTML = buildHistoryContent(d);
+          setTimeout(function () { renderHistoryChart(d); }, 100);
+        })
+        .catch(function (e) {
+          console.error('[WeatherMap] History error:', e);
+          document.getElementById('history-loading').innerHTML = t("weatherMap.lit.8be63e3086", "<div style=\"color:#ef4444\">⚠️ Network error</div>");
+        });
+    }
+    function buildHistoryContent(d) {
+      var stats = d.stats || {};
+      var days = d.days || [];
+      var html = '';
+
+      var isUS = _isUSCity(d.timezone, d.city);
+      var unit = isUS ? '°F' : '°C';
+      var actualSourceLabel = stats.actual_source === 'wu-v1-historical'
+        ? t('weatherMap.hist.srcWU', 'Weather Underground (matches PM settlement source)')
+        : t('weatherMap.hist.srcOM', 'Open-Meteo Archive (ERA5 Land reanalysis, may differ from PM settlement station by ±1-2°)');
+
+      html += t("weatherMap.lit.6d10d3966f", "<div style=\"margin-bottom:16px\"><span class=\"wm-judgment-tag\" style=\"background:#22c55e20;color:#22c55e;font-size:12px;padding:4px 12px\">\u2705 Full records refreshed</span></div>");
+
+      html += t("weatherMap.lit.e2cab518a1", "<div style=\"font-size:12px;color:#f59e0b;font-weight:600;margin-bottom:4px\">Performance Snapshot</div>");
+      html += t("weatherMap.lit.287b105d53", "<div style=\"font-size:16px;font-weight:700;color:#e2e8f0;margin-bottom:4px\">Recent Settlement Performance</div>");
+      html += t("weatherMap.lit.44d25f8105", "<div style=\"font-size:12px;color:#64748b;margin-bottom:16px\">View hit rate, error, and baseline comparison from recent settled samples.</div>");
+
+      html += '<div class="wm-history-stats">';
+      html += t("weatherMap.lit.4d1f2a38ed", "<div class=\"wm-hist-stat\"><div class=\"wm-hist-stat-label\">DEB Settlement Hit Rate</div><div class=\"wm-hist-stat-value\">") + (stats.hit_rate || 0) + '%</div><div class="wm-hist-stat-sub">' + (stats.hit_count || 0) + '/' + (stats.total_days || 0) + '</div></div>';
+      html += '<div class="wm-hist-stat"><div class="wm-hist-stat-label">DEB MAE</div><div class="wm-hist-stat-value">' + (stats.fusion_mae != null ? stats.fusion_mae + '°' : '--') + '</div></div>';
+      html += t("weatherMap.lit.a331f181d6", "<div class=\"wm-hist-stat\"><div class=\"wm-hist-stat-label\">Best Single Model MAE</div><div class=\"wm-hist-stat-value\">") + (stats.best_model_mae != null ? stats.best_model_mae + '°' : '--') + '</div><div class="wm-hist-stat-sub">' + esc(stats.best_model || '') + '</div></div>';
+      html += t("weatherMap.lit.6f8887f49b", "<div class=\"wm-hist-stat\"><div class=\"wm-hist-stat-label\">DEB Beats Best Model</div><div class=\"wm-hist-stat-value\">") + (stats.fusion_mae != null && stats.best_model_mae != null ? (stats.fusion_mae <= stats.best_model_mae ? t('weatherMap.yes.icon', '✅ Yes') : t('weatherMap.no.icon', '❌ No')) : '--') + '</div></div>';
+      html += t("weatherMap.lit.6a4daa8974", "<div class=\"wm-hist-stat\"><div class=\"wm-hist-stat-label\">Last 15 Days Settled Samples</div><div class=\"wm-hist-stat-value\">") + (stats.total_days || 0) + t("weatherMap.lit.4e5ee3869a", " days</div></div>");
+      html += '</div>';
+
+      var fusionMae = stats.fusion_mae;
+      var hitRate = stats.hit_rate || 0;
+      var bestModelName = stats.best_model || '';
+      var bestMae = stats.best_model_mae;
+
+      html += '<div class="wm-card" style="margin-bottom:16px">';
+      html += t('weatherMap.auto.f38b4c88', '<div class="wm-card-title">\ud83d\udcd6 \u6570\u636e\u89e3\u8bfb & \u5efa\u8bae</div>');
+      html += '<div style="font-size:12px;color:#cbd5e1;line-height:1.8">';
+
+      if (hitRate >= 80) {
+        html += t('weatherMap.auto.c1bb81d9', '<div style="margin-bottom:8px">✅ <b>DEB\u7ed3\u7b97\u80dc\u7387 ') + hitRate + t('weatherMap.auto.7b3ced37', '%</b> — \u878d\u5408\u9884\u6d4b\u9ad8\u5ea6\u53ef\u9760，\u8bef\u5dee<1°C\u7684\u5929\u6570\u5360\u6bd4\u9ad8。\u8be5\u57ce\u5e02\u6e29\u5ea6\u8def\u5f84\u7a33\u5b9a，\u9002\u5408\u6b63\u5e38\u4ed3\u4f4d\u5165\u573a。</div>');
+      } else if (hitRate >= 60) {
+        html += t('weatherMap.auto.f73435a3', '<div style="margin-bottom:8px">⚠️ <b>DEB\u7ed3\u7b97\u80dc\u7387 ') + hitRate + t('weatherMap.auto.f209f5df', '%</b> — \u878d\u5408\u9884\u6d4b\u5c1a\u53ef\u4f46\u5b58\u5728\u6ce2\u52a8。\u5efa\u8bae\u7f29\u4ed3\u81f3\u6b63\u5e38\u768470%，\u5e76\u5bc6\u5207\u5173\u6ce8\u6a21\u578b\u5206\u6b67\u5ea6。</div>');
+      } else {
+        html += t('weatherMap.auto.91942827', '<div style="margin-bottom:8px">\ud83d\udd34 <b>DEB\u7ed3\u7b97\u80dc\u7387 ') + hitRate + t('weatherMap.auto.efb16a90', '%</b> — \u878d\u5408\u9884\u6d4b\u504f\u5dee\u8f83\u5927。\u8be5\u57ce\u5e02\u8fd1\u671f\u6c14\u8c61\u6761\u4ef6\u4e0d\u7a33\u5b9a，\u5efa\u8bae\u6682\u505c\u6216\u6700\u5c0f\u4ed3\u4f4d\u8bd5\u63a2。</div>');
+      }
+
+      if (fusionMae != null && bestMae != null) {
+        if (fusionMae <= bestMae) {
+          html += t('weatherMap.auto.abb0089c', '<div style="margin-bottom:8px">\ud83d\udcca DEB\u878d\u5408MAE (') + fusionMae + t('weatherMap.auto.91684990', '°) ≤ \u6700\u4f73\u5355\u6a21\u578b') + esc(bestModelName) + ' (' + bestMae + t('weatherMap.auto.2424db83', '°)，\u878d\u5408\u7b56\u7565\u6709\u6548。</div>');
+        } else {
+          html += t('weatherMap.auto.abb0089c', '<div style="margin-bottom:8px">\ud83d\udcca DEB\u878d\u5408MAE (') + fusionMae + t('weatherMap.auto.13464fa1', '°) > \u6700\u4f73\u5355\u6a21\u578b') + esc(bestModelName) + ' (' + bestMae + t('weatherMap.auto.837e4f8f', '°)，\u878d\u5408\u88ab\u4e2a\u522b\u6a21\u578b\u62d6\u7d2f。</div>');
+        }
+      }
+
+      html += t('weatherMap.auto.50088589', '<div style="margin-bottom:8px;color:#94a3b8">\ud83d\udccc <b>\u6570\u636e\u6765\u6e90</b>：\u5b9e\u6d4b\u6e29\u5ea6\u6765\u81ea ') + actualSourceLabel + t('weatherMap.auto.ed97717e', '，\u6a21\u578b\u9884\u6d4b\u4e3a\u5404\u6a21\u578b\u56de\u6eaf\u9884\u62a5\u503c。</div>');
+
+      if (fusionMae != null) {
+        if (fusionMae <= 1.0) {
+          html += t('weatherMap.auto.e16b8d7c', '<div>\ud83d\udca1 <b>\u6295\u6ce8\u5efa\u8bae</b>：MAE ≤ 1°C，\u9884\u6d4b\u7cbe\u5ea6\u4f18\u79c0。\u5f53DEB\u9884\u6d4b\u4e0e\u5e02\u573a\u4ef7\u683c\u51fa\u73b0≥3°C\u504f\u5dee\u65f6，\u53ef\u8003\u8651\u8fb9\u7f18\u4e0b\u6ce8。</div>');
+        } else if (fusionMae <= 2.0) {
+          html += t('weatherMap.auto.983a2ca2', '<div>\ud83d\udca1 <b>\u6295\u6ce8\u5efa\u8bae</b>：MAE 1-2°C，\u7cbe\u5ea6\u4e00\u822c。\u4ec5\u5728\u9ad8\u7f6e\u4fe1\u5ea6\u65f6\u5165\u573a，\u907f\u5f00\u6781\u7aef\u5929\u6c14\u65e5。</div>');
+        } else {
+          html += t('weatherMap.auto.7c7f0da3', '<div>\ud83d\udca1 <b>\u6295\u6ce8\u5efa\u8bae</b>：MAE > 2°C，\u504f\u5dee\u8f83\u5927。\u8be5\u57ce\u5e02\u4e0d\u9002\u5408\u6e29\u5ea6\u65b9\u5411\u6027\u6295\u6ce8。</div>');
+        }
+      }
+
+      html += '</div></div>';
+
+      html += '<div class="wm-history-chart-card">';
+      html += t("weatherMap.lit.5af0ed293c", "<div class=\"wm-chart-card-title\" style=\"font-size:14px\">Historical Temperature Comparison Trend</div>");
+      html += '<div class="wm-history-chart-container"><canvas id="wm-history-chart"></canvas></div>';
+      html += '</div>';
+
+      html += '<div class="wm-card">';
+      html += t("weatherMap.lit.6595313111", "<div style=\"font-size:12px;color:#f59e0b;font-weight:600;margin-bottom:4px\">Reference Table</div>");
+      html += t("weatherMap.lit.640dac1699", "<div class=\"wm-card-title\">Daily History Details</div>");
+      html += '<div style="overflow-x:auto">';
+      html += '<table class="wm-history-table"><thead><tr>';
+      html += t("weatherMap.lit.19d93e0d41", "<th>Date</th><th>Actual High</th><th>Actual Low</th><th>Fusion</th><th>Error</th><th>ECMWF</th><th>GFS</th><th>ICON</th><th>GEM</th><th>JMA</th>");
+      html += '</tr></thead><tbody>';
+
+      days.forEach(function (day) {
+        var _aMax = isUS ? day.actual_max_f : day.actual_max;
+        var _aMin = isUS ? day.actual_min_f : day.actual_min;
+
+        var errC = (day.actual_max != null && day.fusion != null) ? (day.fusion - day.actual_max) : null;
+        var errDisp = errC != null ? (isUS ? (errC * 9 / 5).toFixed(1) : errC.toFixed(1)) : '--';
+        var errClass = errC != null ? (Math.abs(errC) < 1.0 ? 'wm-hist-good' : (Math.abs(errC) > 2.0 ? 'wm-hist-error' : '')) : '';
+        var errUnit = isUS ? '°F' : '°C';
+        var models = day.models || {};
+        html += '<tr>';
+        html += '<td style="font-weight:600">' + esc(day.date) + '</td>';
+        html += '<td style="color:#ef4444;font-weight:600">' + (_aMax != null ? Math.round(_aMax) + unit : '--') + '</td>';
+        html += '<td style="color:#3b82f6">' + (_aMin != null ? Math.round(_aMin) + unit : '--') + '</td>';
+        html += '<td style="color:#22c55e;font-weight:600">' + _tempStr(day.fusion, isUS) + '</td>';
+        html += '<td class="' + errClass + '">' + (errDisp !== '--' ? (parseFloat(errDisp) > 0 ? '+' : '') + errDisp + errUnit : '--') + '</td>';
+        html += '<td>' + (models.ECMWF != null ? _tempVal(models.ECMWF, isUS) + '°' : '--') + '</td>';
+        html += '<td>' + (models.GFS != null ? _tempVal(models.GFS, isUS) + '°' : '--') + '</td>';
+        html += '<td>' + (models.ICON != null ? _tempVal(models.ICON, isUS) + '°' : '--') + '</td>';
+        html += '<td>' + (models.GEM != null ? _tempVal(models.GEM, isUS) + '°' : '--') + '</td>';
+        html += '<td>' + (models.JMA != null ? _tempVal(models.JMA, isUS) + '°' : '--') + '</td>';
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div></div>';
+
+      return html;
+    }
+
+    function renderHistoryChart(d) {
+      var canvas = document.getElementById('wm-history-chart');
+      if (!canvas) return;
+      var days = (d.days || []).slice().reverse();
+      if (days.length === 0) return;
+      var isUS = _isUSCity(d.timezone, d.city);
+      var tUnit = isUS ? '°F' : '°C';
+
+      var labels = days.map(function (day) { return day.date; });
+      var actuals = days.map(function (day) {
+        var v = isUS ? day.actual_max_f : day.actual_max;
+        return v != null ? Math.round(v) : null;
+      });
+      var fusions = days.map(function (day) {
+        return day.fusion != null ? (isUS ? Math.round(day.fusion * 9 / 5 + 32) : Math.round(day.fusion)) : null;
+      });
+
+      var bestModel = (d.stats || {}).best_model || 'ECMWF';
+      var bestModelData = days.map(function (day) {
+        var v = (day.models || {})[bestModel];
+        return v != null ? (isUS ? Math.round(v * 9 / 5 + 32) : Math.round(v)) : null;
+      });
+
+      var ctx = canvas.getContext('2d');
+      if (canvas._chart) canvas._chart.destroy();
+
+      canvas._chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: t('weatherMap.chart.actualMax', 'Actual Max Temp'),
+              data: actuals,
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              borderWidth: 2.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              pointBackgroundColor: '#ef4444',
+              tension: 0.2,
+            },
+            {
+              label: t('weatherMap.chart.debFusion', 'DEB Fusion'),
+              data: fusions,
+              borderColor: '#22c55e',
+              borderWidth: 2,
+              borderDash: [6, 3],
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              pointBackgroundColor: '#22c55e',
+              tension: 0.2,
+              fill: false,
+            },
+            {
+              label: t('weatherMap.chart.bestSingle', 'Best Single Model (') + bestModel + ')',
+              data: bestModelData,
+              borderColor: '#3b82f6',
+              borderWidth: 1.5,
+              borderDash: [4, 4],
+              pointRadius: 2,
+              pointHoverRadius: 4,
+              pointBackgroundColor: '#3b82f6',
+              tension: 0.2,
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { color: '#94a3b8', font: { size: 11 }, boxWidth: 14, padding: 12 } },
+            tooltip: {
+              backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#cbd5e1',
+              borderColor: '#334155', borderWidth: 1,
+              callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + (ctx.raw != null ? ctx.raw + tUnit : '--'); } }
+            },
+          },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#64748b', font: { size: 10 }, callback: function (v) { return v + tUnit; } }, grid: { color: '#1e293b' } },
+          },
+        },
+      });
+    }
+
+    function renderTempChart(d) {
+      var canvas = document.getElementById('wm-temp-chart');
+      if (!canvas) return;
+      var isUS = _isUSCity(d.timezone, d.city);
+      var tUnit = isUS ? '°F' : '°C';
+
+      var ecmwf = d.ecmwf || {};
+      var hourly = ecmwf.hourly || [];
+      if (hourly.length === 0) return;
+
+      var labels = hourly.map(function (h) { return h.time; });
+      var temps = hourly.map(function (h) { return h.temp != null ? (isUS ? Math.round(h.temp * 9 / 5 + 32) : Math.round(h.temp)) : null; });
+
+      var gfsHourly = ecmwf.gfs_hourly || [];
+      var gfsTemps = gfsHourly.length > 0
+        ? gfsHourly.map(function (h) { return h.temp != null ? (isUS ? Math.round(h.temp * 9 / 5 + 32) : Math.round(h.temp)) : null; })
+        : new Array(hourly.length).fill(null);
+
+      var ensembleTemps = temps.map(function (t, i) {
+        var g = gfsTemps[i];
+        if (t != null && g != null) return Math.round((t + g) / 2);
+        if (t != null) return t;
+        return null;
+      });
+      var hasGFS = gfsTemps.some(function (v) { return v != null; });
+      var hasEnsemble = hasGFS;
+
+      var localHour = d.local_hour || 0;
+      var metarHour = d.metar_observed_hour;
+      if (metarHour == null || isNaN(metarHour)) metarHour = localHour;
+      var currentTempC = d.current_temp_c;
+      var currentTempDisp = currentTempC != null ? (isUS ? Math.round(currentTempC * 9 / 5 + 32) : Math.round(currentTempC)) : null;
+      var pw = d.peak_window || {};
+
+      var pwStart = pw.start != null ? pw.start : 10;
+      var pwEnd = pw.end != null ? pw.end : 17;
+
+      var tw = d.trough_window || {};
+      var twStart = tw.start != null ? tw.start : 3;
+      var twEnd = tw.end != null ? tw.end : 7;
+
+      var metarData = new Array(hourly.length).fill(null);
+      var metarHistory = d.metar_history || [];
+      if (metarHistory.length > 0) {
+        metarHistory.forEach(function (pt) {
+          var h = pt.hour;
+          var tc = isUS ? Math.round(pt.temp_f) : Math.round(pt.temp_c);
+          if (h >= 0 && h < hourly.length) metarData[h] = tc;
+        });
+      } else if (currentTempDisp != null && metarHour >= 0 && metarHour < hourly.length) {
+
+        metarData[metarHour] = currentTempDisp;
+      }
+
+      var jdg = d.judgment || {};
+      var baselineTemp = null;
+      if (ecmwf.daily_max != null && jdg.deviation != null) {
+        var baselineC = ecmwf.daily_max - jdg.deviation;
+        baselineTemp = isUS ? Math.round(baselineC * 9 / 5 + 32) : Math.round(baselineC);
+      }
+      var baselineData = baselineTemp != null ? new Array(hourly.length).fill(baselineTemp) : null;
+
+      var modelComp2 = d.model_comparison || [];
+      var modelDayMaxLine = null;
+      if (modelComp2.length >= 2) {
+        var sum = 0, cnt = 0;
+        modelComp2.forEach(function (m) { if (m.daily_max != null) { sum += m.daily_max; cnt++; } });
+        if (cnt > 0) {
+          var avgC = sum / cnt;
+          modelDayMaxLine = isUS ? Math.round(avgC * 9 / 5 + 32) : Math.round(avgC);
+        }
+      }
+      var modelDayMaxData = modelDayMaxLine != null ? new Array(hourly.length).fill(modelDayMaxLine) : null;
+
+      var ctx = canvas.getContext('2d');
+      if (canvas._chart) canvas._chart.destroy();
+
+      var datasets = [
+        {
+          label: t('weatherMap.chart.ecmwfPred', 'ECMWF IFS Forecast'),
+          data: temps,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34, 197, 94, 0.07)',
+          borderWidth: 2,
+          borderDash: [5, 3],
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.3,
+          fill: false,
+          order: 3,
+        },
+      ];
+
+      if (hasGFS) {
+        datasets.push({
+          label: t('weatherMap.chart.gfsPred', 'GFS Forecast'),
+          data: gfsTemps,
+          borderColor: '#818cf8',
+          backgroundColor: 'rgba(129, 140, 248, 0.07)',
+          borderWidth: 2,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          tension: 0.3,
+          fill: false,
+          order: 3,
+        });
+      }
+
+      if (hasEnsemble) {
+        datasets.push({
+          label: t('weatherMap.auto.aee72378', '\u878d\u5408\u5747\u5024'),
+          data: ensembleTemps,
+          borderColor: '#f59e0b',
+          backgroundColor: 'rgba(245, 158, 11, 0.08)',
+          borderWidth: 2.5,
+          borderDash: [],
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          tension: 0.3,
+          fill: false,
+          order: 2,
+        });
+      }
+
+      datasets.push({
+        label: t('weatherMap.chart.metarObs', 'METAR Observed'),
+        data: metarData,
+        borderColor: '#3b82f6',
+        backgroundColor: metarData.map(function (v, i) {
+
+          return (v != null && i === metarHour) ? '#3b82f6' : 'rgba(59,130,246,0.55)';
+        }),
+        pointRadius: metarData.map(function (v, i) {
+          if (v == null) return 0;
+          return (i === metarHour) ? 7 : 4;
+        }),
+        pointHoverRadius: 8,
+        pointStyle: 'circle',
+        showLine: true,
+        spanGaps: false,
+        borderWidth: 1.5,
+        borderDash: [3, 3],
+        order: 1,
+      });
+
+      if (baselineData) {
+        datasets.push({
+          label: t('weatherMap.chart.baseline', 'Historical Baseline'),
+          data: baselineData,
+          borderColor: 'rgba(100,116,139,0.5)',
+          borderWidth: 1,
+          borderDash: [3, 5],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          tension: 0,
+          fill: false,
+          order: 4,
+        });
+      }
+
+      if (modelDayMaxData) {
+        datasets.push({
+          label: t('weatherMap.auto.8f070dc7', '\u591a\u6a21\u578b\u65e5\u9ad8\u5747\u5024'),
+          data: modelDayMaxData,
+          borderColor: 'rgba(251,146,60,0.55)',
+          borderWidth: 1.5,
+          borderDash: [2, 4],
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          tension: 0,
+          fill: false,
+          order: 4,
+        });
+      }
+
+      canvas._chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: datasets,
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: true, position: 'top', labels: { color: '#94a3b8', font: { size: 10 }, boxWidth: 12, padding: 8 } },
+            tooltip: {
+              backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#cbd5e1',
+              borderColor: '#334155', borderWidth: 1,
+              callbacks: { label: function (ctx) { return ctx.dataset.label + ': ' + (ctx.raw != null ? ctx.raw + tUnit : '--'); } }
+            },
+          },
+          scales: {
+            x: { ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#64748b', font: { size: 9 }, callback: function (v) { return v + tUnit; } }, grid: { color: '#1e293b' } },
+          },
+        },
+        plugins: [{
+          id: 'peakWindowBg',
+          beforeDraw: function (chart) {
+            var xScale = chart.scales.x;
+            var yScale = chart.scales.y;
+            var _ctx = chart.ctx;
+            var startIdx = pwStart;
+            var endIdx = Math.min(pwEnd, labels.length - 1);
+            if (startIdx < labels.length && endIdx < labels.length) {
+              var x1 = xScale.getPixelForValue(startIdx);
+              var x2 = xScale.getPixelForValue(endIdx);
+              _ctx.save();
+              _ctx.fillStyle = 'rgba(234, 179, 8, 0.06)';
+              _ctx.fillRect(x1, yScale.top, x2 - x1, yScale.bottom - yScale.top);
+              _ctx.fillStyle = 'rgba(234, 179, 8, 0.4)';
+              _ctx.font = '9px Inter, system-ui';
+              _ctx.fillText(t('weatherMap.chart.peakLabel', 'Peak Window'), x1 + 4, yScale.top + 12);
+              _ctx.restore();
+            }
+          }
+        }, {
+          id: 'troughWindowBg',
+          beforeDraw: function (chart) {
+            var xScale = chart.scales.x;
+            var yScale = chart.scales.y;
+            var _ctx = chart.ctx;
+            var tStartIdx = twStart;
+            var tEndIdx = Math.min(twEnd, labels.length - 1);
+            if (tStartIdx < labels.length && tEndIdx < labels.length) {
+              var tx1 = xScale.getPixelForValue(tStartIdx);
+              var tx2 = xScale.getPixelForValue(tEndIdx);
+              _ctx.save();
+              _ctx.fillStyle = 'rgba(59, 130, 246, 0.06)';
+              _ctx.fillRect(tx1, yScale.top, tx2 - tx1, yScale.bottom - yScale.top);
+              _ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+              _ctx.font = '9px Inter, system-ui';
+              _ctx.fillText(t('weatherMap.auto.c42cfffd', '\u8c37\u5024\u7a97\u53e3'), tx1 + 4, yScale.top + 24);
+              _ctx.restore();
+            }
+          }
+        }, {
+
+          id: 'nowLine',
+          afterDraw: function (chart) {
+            if (localHour < 0 || localHour >= labels.length) return;
+            var xScale = chart.scales.x;
+            var yScale = chart.scales.y;
+            var _ctx = chart.ctx;
+            var xNow = xScale.getPixelForValue(localHour);
+            _ctx.save();
+            _ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+            _ctx.lineWidth = 1.5;
+            _ctx.setLineDash([4, 3]);
+            _ctx.beginPath();
+            _ctx.moveTo(xNow, yScale.top);
+            _ctx.lineTo(xNow, yScale.bottom);
+            _ctx.stroke();
+            _ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
+            _ctx.font = '9px Inter, system-ui';
+            _ctx.fillText('NOW', xNow + 3, yScale.top + 10);
+            _ctx.restore();
+          }
+        }],
+      });
+    }
+
+    function esc(s) {
+      if (s == null) return '';
+      var d = document.createElement('div');
+      d.textContent = String(s);
+      return d.innerHTML;
+    }
+
+    function _isUSCity(tz, city) {
+      if (!tz) return false;
+      var usParts = ['New_York', 'Chicago', 'Denver', 'Los_Angeles', 'Phoenix', 'Anchorage', 'Adak', 'Detroit', 'Indiana', 'Kentucky', 'Boise', 'Juneau', 'Nome'];
+      var isUS = tz.startsWith('America/') && usParts.some(function (p) { return tz.indexOf(p) >= 0; });
+      if (tz === 'Pacific/Honolulu') isUS = true;
+      var nonUS = ['Buenos Aires', 'Mexico City', 'Panama City', 'São Paulo', 'Toronto', 'Bogota', 'Lima', 'Santiago', 'Havana'];
+      if (nonUS.some(function (c) { return (city || '').indexOf(c) >= 0; })) isUS = false;
+      return isUS;
+    }
+    function _c2f(c) { return c != null ? Math.round(c * 9 / 5 + 32) : null; }
+    function _tempStr(c, isUS) {
+      if (c == null) return '--';
+      return isUS ? Math.round(c * 9 / 5 + 32) + '°F' : Math.round(c) + '°C';
+    }
+    function _tempVal(c, isUS) {
+      if (c == null) return null;
+      return isUS ? Math.round(c * 9 / 5 + 32) : Math.round(c);
+    }
+    function _slugifyCityName(name) {
+      var base = String(name || '');
+      try {
+        base = base.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      } catch (e) {
+
+      }
+      return base.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    }
+
+    function formatMetar(text) {
+      if (!text) return '';
+      return esc(text)
+        .replace(/(\u6c14\u6e29\s*[\d.-]+°[CF]\s*\([\d.-]+°[CF]\))/g, '<span class="metar-temp">$1</span>')
+        .replace(/([\u5317\u4e1c\u5357\u897f]+\u98ce\s*\d+kt[^|]*)/g, '<span class="metar-wind">$1</span>');
+    }
+
+    function _toStructuredTafItems(tafText) {
+      var text = (tafText || '').trim();
+      if (!text) return [];
+
+      var raw = text;
+      if (raw.indexOf(t('weatherMap.auto.24e99efd', 'TAF\u539f\u6587(\u964d\u7ea7\u6e90NWS)：')) === 0) {
+        raw = raw.replace(t('weatherMap.auto.24e99efd', 'TAF\u539f\u6587(\u964d\u7ea7\u6e90NWS)：'), '').trim();
+      }
+
+      var out = [];
+      function push(label, value) {
+        if (!value) return;
+        out.push({ label: label, value: value });
+      }
+
+      var windMatch = raw.match(/\b(\d{3}|VRB)(\d{2,3})(G\d{2,3})?KT\b/);
+      if (windMatch) {
+        var d = windMatch[1] === 'VRB' ? t('weatherMap.taf.windVRB', 'Variable wind') : (windMatch[1] + '°');
+        var g = windMatch[3] ? (t('weatherMap.taf.gustsLabel', ', gusts ') + windMatch[3].slice(1) + t('weatherMap.taf.windKt', 'kt')) : '';
+        push(t('weatherMap.taf.windField', 'Wind'), d + t('weatherMap.taf.windSpeed', ', speed ') + windMatch[2] + t('weatherMap.taf.windKt', 'kt') + g);
+      } else if (raw.indexOf(t('weatherMap.taf.windWord', 'wind')) >= 0) {
+        var cnWind = raw.match(/[^，。；;]*\u98ce[^，。；;]*/);
+        if (cnWind) push(t('weatherMap.taf.windField', 'Wind'), cnWind[0].trim());
+      }
+
+      var visMatch = raw.match(/\b(\d+(?:\.\d+)?)SM\b/i);
+      if (visMatch) {
+        var sm = parseFloat(visMatch[1]);
+        var visTxt = sm >= 6 ? t('weatherMap.taf.visGood', 'Visibility good (>=6SM)') : (t('weatherMap.taf.visAbout', 'Visibility about ') + sm + 'SM');
+        push(t('weatherMap.taf.visLabel', 'Visibility'), visTxt);
+      } else if (raw.indexOf(t('weatherMap.taf.visLabel', 'Visibility')) >= 0) {
+        var cnVis = raw.match(/[^，。；;]*\u80fd\u89c1\u5ea6[^，。；;]*/);
+        if (cnVis) push(t('weatherMap.taf.visLabel', 'Visibility'), cnVis[0].trim());
+      }
+
+      var cloud = '';
+      if (/OVC|BKN|\u9634|\u5bc6\u4e91/i.test(raw)) cloud = t('weatherMap.taf.cloudHigh', 'Mid-to-high cloud cover, temperature suppression risk');
+      else if (/SCT|FEW|\u6674|\u5c11\u4e91/i.test(raw)) cloud = t('weatherMap.taf.cloudLow', 'Low cloud cover, surface heating conditions favorable');
+      if (cloud) push(t('weatherMap.taf.cloudStruct', 'Cloud Structure'), cloud);
+
+      var wx = '';
+      if (/TS|\u96f7\u66b4/i.test(raw)) wx = t('weatherMap.taf.thunder', 'Thunderstorm signal, short-term strong convection may suppress temperature');
+      else if (/RA|SHRA|DZ|SN|\u964d\u96e8|\u964d\u6c34/i.test(raw)) wx = t('weatherMap.taf.rain', 'Precipitation signal, afternoon warming may be suppressed');
+      else if (/FG|BR|\u96fe/i.test(raw)) wx = t('weatherMap.taf.fog', 'Low visibility/fog signal, early-period warming efficiency low');
+      if (wx) push(t('weatherMap.taf.weatherPhenomenon', 'Weather Phenomenon'), wx);
+
+      var trend = [];
+      if (/BECMG/i.test(raw)) trend.push(t('weatherMap.taf.becmg', 'BECMG gradual change segment present'));
+      if (/TEMPO/i.test(raw)) trend.push(t('weatherMap.taf.tempo', 'TEMPO short-term disturbance present'));
+      var prob = raw.match(/PROB\d{2}/i);
+      if (prob) trend.push(t('weatherMap.taf.probHas', 'Has ') + prob[0].toUpperCase() + t('weatherMap.taf.probSeg', ' probability forecast segment'));
+      if (trend.length) push(t('weatherMap.taf.timeChange', 'Period Changes'), trend.join('；'));
+
+      if (!out.length) {
+        push(t('weatherMap.taf.summary', 'Summary'), t('weatherMap.taf.summaryDefault', 'TAF forecast retrieved; no strong suppression or strong warming signal identified.'));
+      }
+
+      return out.slice(0, 6);
+    }
+
+    window.refreshCurrentOverlayTab = function () {
+      if (!currentCityData || !currentCityData.name) return;
+      var cityName = currentCityData.name;
+
+      if (currentOverlayTab === 'history') {
+        overlayHistoryLoaded[cityName] = false;
+        document.getElementById('history-loading').style.display = '';
+        document.getElementById('history-content').style.display = 'none';
+        document.getElementById('history-content').innerHTML = '';
+        loadCityHistory(cityName);
+        return;
+      }
+
+      if (currentOverlayTab === 'bets') {
+        document.getElementById('bets-loading').style.display = '';
+        document.getElementById('bets-content').style.display = 'none';
+        if (typeof WmBetsModule !== 'undefined') {
+          WmBetsModule.loadCityBets(cityName, { force: true });
+        }
+        return;
+      }
+
+      document.getElementById('intraday-loading').style.display = '';
+      document.getElementById('intraday-content').style.display = 'none';
+      document.getElementById('intraday-content').innerHTML = '';
+      cityDetailReqSeq += 1;
+      loadCityDetail(cityName, cityDetailReqSeq);
+    };
+
+    var _clockTimer = null;
+    function _startLocalClock() {
+      if (_clockTimer) clearInterval(_clockTimer);
+      function _tick() {
+        var el = document.getElementById('wm-local-clock');
+        if (!el) { clearInterval(_clockTimer); return; }
+        var tz = el.getAttribute('data-tz');
+        try {
+          var now = new Date();
+          var opts = {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+          };
+          if (tz) opts.timeZone = tz;
+          var dt = now.toLocaleString('sv-SE', opts).replace(',', '');
+          el.textContent = dt;
+        } catch (e) {
+          var fallback = new Date();
+          var y = fallback.getFullYear();
+          var mo = String(fallback.getMonth() + 1).padStart(2, '0');
+          var d = String(fallback.getDate()).padStart(2, '0');
+          var h = String(fallback.getHours()).padStart(2, '0');
+          var mi = String(fallback.getMinutes()).padStart(2, '0');
+          var s = String(fallback.getSeconds()).padStart(2, '0');
+          el.textContent = y + '-' + mo + '-' + d + ' ' + h + ':' + mi + ':' + s;
+        }
+      }
+      _tick();
+      _clockTimer = setInterval(_tick, 1000);
+    }
+
+    var WmBetsModule = (function () {
+      var _loadedCity = null;
+      var _bets = [];
+      var _openDetailId = null;
+      var _detailCache = {};
+      var _liveTimer = null;
+      var _detailCharts = {};
+
+      function _esc(s) { if (!s) return ''; return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+      function _getCategoryIcon(cat) {
+        return '🌤️';
+      }
+      function _getCategoryColor(cat) {
+        var m = { weather: '#06b6d4', sports: '#eab308', crypto: '#f97316', geopolitics: '#8b5cf6', finance: '#10b981', tech: '#3b82f6', economy: '#f59e0b', pop_culture: '#ec4899' };
+        return m[cat] || '#64748b';
+      }
+      function _getStrategyLabel(bucket, tag) {
+        var m = {
+          'weather_double_no_right': t('weatherMap.auto.1aa9013d', 'NO-\u53f3\u7ffc'), 'weather_double_no_left': t('weatherMap.auto.f01f81fe', 'NO-\u5de6\u7ffc'), 'weather_double_no_same': t('weatherMap.auto.f843e2f2', 'NO-\u5cf0\u503c'),
+          'weather_right_tail_right': t('weatherMap.auto.dcbace5d', 'NO-\u53f3\u5c3e\u505a\u7a7a'), 'weather_right_tail_left': t('weatherMap.auto.39a63305', 'NO-\u53f3\u5c3e\u5de6\u7ffc'), 'weather_right_tail_same': t('weatherMap.auto.8d6e5939', 'NO-\u53f3\u5c3e\u5cf0\u503c'),
+          'weather_yes_ambush': t('weatherMap.auto.d1d1131e', 'YES\u57cb\u4f0f'), 'weather': t('weatherMap.auto.265f273c', '\u5929\u6c14'), 'pure_coverage': t('weatherMap.auto.8a7af647', '\u7eaf\u8986\u76d6'), 'extreme_lock': t('weatherMap.auto.6d933626', 'EHCL\u9501\u5b9a'), 'city_no': 'CityNO'
+        };
+        var k = tag || bucket || '';
+        return m[k] || (k ? k.replace(/_/g, ' ') : '');
+      }
+      function _buildPmUrl(b) {
+        var mSlug = b.market_slug || '', eSlug = b.event_slug || '';
+        function v(s) { return s && /^[a-z0-9\-]+$/i.test(s); }
+        if (v(eSlug) && v(mSlug) && eSlug !== mSlug) return 'https://polymarket.com/event/' + encodeURIComponent(eSlug) + '/' + encodeURIComponent(mSlug);
+        if (v(eSlug)) return 'https://polymarket.com/event/' + encodeURIComponent(eSlug);
+        if (v(mSlug)) return 'https://polymarket.com/event/' + encodeURIComponent(mSlug);
+        return '';
+      }
+      function _isSnapshotBet(b) {
+        var bid = String((b && b.bet_id) || '');
+        var strategy = String((b && b.strategy) || (b && b.strategy_tag) || '');
+        return !!(b && (b.source === 'user_pm_positions_snapshots' || bid.indexOf('pmpos:') === 0 || strategy === 'manual_user_pm_snapshot'));
+      }
+      function _isManualPmBet(b) {
+        var bid = String((b && b.bet_id) || '');
+        var strategy = String((b && b.strategy) || (b && b.strategy_tag) || '');
+        return bid.indexOf('pm-open-') === 0 || bid.indexOf('pm-closed-') === 0 || strategy === 'manual_pm';
+      }
+      function _extractConditionId(b) {
+        if (!b) return '';
+        var cond = String((b.condition_id || b.market_condition_id || '')).trim();
+        if (/^0x[a-f0-9]{64}$/i.test(cond)) return cond;
+        var bid = String((b.bet_id || '')).trim();
+        if (bid.indexOf('pmpos:') === 0) {
+          var parts = bid.split(':');
+          if (parts.length >= 3 && /^0x[a-f0-9]{64}$/i.test(parts[2])) return parts[2];
+        }
+        var m = bid.match(/^pm-(?:open|closed)-(0x[a-f0-9]{64})-/i);
+        if (m && m[1]) return m[1];
+        return '';
+      }
+      function _buildBetLink(b) {
+        // T544 — 持仓事件链接统一指向本站 /event 详情页（PM 与本站持仓一致）
+        var mSlug = b.market_slug || '', eSlug = b.event_slug || '';
+        function v(s) { return s && /^[a-z0-9\-]+$/i.test(s); }
+        if (v(eSlug)) return { url: '/event/' + encodeURIComponent(eSlug), external: false, platform: 'ours' };
+        if (v(mSlug)) return { url: '/event/' + encodeURIComponent(mSlug), external: false, platform: 'ours' };
+        return { url: '/v2/discover?p=weather', external: false, platform: 'ours' };
+      }
+      function _fmtCents(v) { if (v == null || isNaN(v)) return '—'; return (v * 100).toFixed(1) + '¢'; }
+      function _fmtUsd(v) { if (v == null || isNaN(v)) return '$0.00'; return '$' + Math.abs(v).toFixed(2); }
+      function _fmtPnl(v) { if (v == null || isNaN(v)) return '—'; return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toFixed(2); }
+      function _fmtPct(v) { if (v == null || isNaN(v)) return ''; return (v >= 0 ? '+' : '') + (v * 100).toFixed(1) + '%'; }
+      function _toUnixSeconds(ts) {
+        if (ts == null || ts === '') return null;
+        if (typeof ts === 'number' && isFinite(ts)) {
+          return ts > 1e12 ? Math.floor(ts / 1000) : ts;
+        }
+        if (typeof ts === 'string') {
+          var s = ts.trim();
+          if (!s) return null;
+          var asNum = Number(s);
+          if (isFinite(asNum) && s === String(asNum)) {
+            return asNum > 1e12 ? Math.floor(asNum / 1000) : asNum;
+          }
+          var parsed = Date.parse(s);
+          if (isFinite(parsed)) return Math.floor(parsed / 1000);
+        }
+        return null;
+      }
+      function _timeAgo(ts) {
+        var tsSec = _toUnixSeconds(ts);
+        if (tsSec == null) return '—';
+        var diff = Date.now() / 1000 - tsSec; if (diff < 0) diff = 0;
+        if (diff < 60) return Math.floor(diff) + t('weatherMap.time.secAgo', 's ago');
+        if (diff < 3600) return Math.floor(diff / 60) + t('weatherMap.time.minAgo', 'm ago');
+        if (diff < 86400) return Math.floor(diff / 3600) + t('weatherMap.time.hourAgo', 'h ago');
+        if (diff < 604800) return Math.floor(diff / 86400) + t('weatherMap.time.dayAgo', 'd ago');
+        return new Date(tsSec * 1000).toISOString().slice(5, 10);
+      }
+      function _timeFull(ts) {
+        var tsSec = _toUnixSeconds(ts);
+        if (tsSec == null) return '';
+        return new Date(tsSec * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+      }
+      function _fmtPriceCents(v) { if (v == null || isNaN(v)) return '—'; return (v * 100).toFixed(1) + '¢'; }
+      function _fmtHeld(mins) {
+        if (!mins || mins <= 0) return '—';
+        if (mins < 60) return mins + t('weatherMap.unit.minute', 'min');
+        if (mins < 1440) return Math.floor(mins / 60) + t('weatherMap.unit.hour', 'h') + Math.round(mins % 60) + t('weatherMap.auto.daf783c8', '\u5206');
+        return Math.floor(mins / 1440) + t('weatherMap.auto.249aba76', '\u5929') + Math.floor((mins % 1440) / 60) + t('weatherMap.unit.hour', 'h');
+      }
+      function _cityAliases(cityName) {
+        var c = (cityName || '').toLowerCase();
+        var aliases = [c];
+        if (c === 'nyc') aliases.push('new york', 'new york city');
+        if (c === 'new york' || c === 'new york city') aliases.push('nyc');
+        if (c === 'la') aliases.push('los angeles');
+        if (c === 'los angeles') aliases.push('la');
+        if (c === 'sf') aliases.push('san francisco');
+        if (c === 'san francisco') aliases.push('sf');
+        if (c === 'dc') aliases.push('washington dc', 'washington d.c.');
+        if (c === 'washington dc' || c === 'washington d.c.') aliases.push('dc');
+        return aliases;
+      }
+      function _cityMatchesBet(cityName, bet) {
+        var aliases = _cityAliases(cityName);
+        var fields = [
+          (bet && bet.question) || '',
+          (bet && bet.market_slug) || '',
+          (bet && bet.event_slug) || '',
+          (bet && bet.market_id) || ''
+        ].join(' ').toLowerCase();
+        for (var i = 0; i < aliases.length; i++) {
+          if (aliases[i] && fields.indexOf(aliases[i]) >= 0) return true;
+        }
+        return false;
+      }
+
+      function _renderSingleCard(b) {
+        var cat = b.category || '';
+        var icon = _getCategoryIcon(cat);
+        var outcome = (b.outcome || 'YES').toUpperCase();
+        var isYes = outcome === 'YES';
+        var isOpen = !b.resolved_outcome;
+        var dirBadge = isYes
+          ? '<span class="bc-badge bc-badge-yes">YES</span>'
+          : '<span class="bc-badge bc-badge-no">NO</span>';
+        var statusHtml = '';
+        if (isOpen) {
+          statusHtml = t("weatherMap.lit.d0615af00f", "<span class=\"bc-badge bc-badge-open\"><span class=\"bc-pulse\"></span>Holding</span>");
+        } else {
+          var et = b.exit_type || 'resolution';
+          if (et === 'profit_take' || et === 'near_ceiling' || et === 'trailing_stop' || et === 'quick_exit' || et === 'weather_quick_exit' || et === 'hold_to_settle') {
+            statusHtml = t("weatherMap.lit.80f1fef838", "<span class=\"bc-badge bc-badge-sold\">\ud83d\udce4 Sold</span>");
+          } else if (et === 'stop_loss' || et === 'floor_stop' || et === 'standard_stop' || et === 'reversal_stop' || et === 'expiry_stop' || et === 'early_stop') {
+            statusHtml = t("weatherMap.lit.e37924fae2", "<span class=\"bc-badge bc-badge-loss\">\ud83d\uded1 Stop-Loss</span>");
+          } else if (et === 'manual_exit' || et === 'manual_sell') {
+            statusHtml = '<span class="bc-badge ' + (b.pnl >= 0 ? 'bc-badge-win' : 'bc-badge-loss') + t("weatherMap.lit.b46a0c5416", "\">\ud83d\udc4b Manual</span>");
+          } else if (b.is_win) {
+            statusHtml = t("weatherMap.lit.21745b4b1c", "<span class=\"bc-badge bc-badge-win\">\u2705 Profit</span>");
+          } else {
+            statusHtml = t("weatherMap.lit.4fb2e0a8a4", "<span class=\"bc-badge bc-badge-loss\">\u274c Loss</span>");
+          }
+        }
+        var timeRel = _timeAgo(b.ts_entered);
+        var timeFull = _timeFull(b.ts_entered);
+        var shortId = (b.bet_id || '').split('-')[0].slice(0, 8);
+        var q = b.question || '—';
+        var linkInfo = _buildBetLink(b);
+        var qHtml;
+        if (linkInfo) {
+          var _linkAttr = linkInfo.external ? ' target="_blank" rel="noopener"' : ' target="_blank"';
+          var _linkArrow = linkInfo.platform === 'pm'
+            ? ' <span class="bc-link-arrow" title="Polymarket">↗</span>'
+            : ' <span class="bc-link-arrow bc-link-internal" title="VeYra">⬡</span>';
+          qHtml = '<a href="' + linkInfo.url + '"' + _linkAttr + ' class="bc-q-link" onclick="event.stopPropagation()">' + _esc(q) + _linkArrow + '</a>';
+        } else {
+          qHtml = '<span>' + _esc(q) + '</span>';
+        }
+        var entryPrice = b.entry_price || b.actual_avg_price || b.market_price || 0;
+        var sizeUsd = (b.size_usdc || 0).toFixed(2);
+        var shares = b.matched_shares > 0 ? Math.round(b.matched_shares * 10) / 10
+          : (entryPrice > 0 ? Math.round((b.size_usdc || 0) / entryPrice * 10) / 10 : 0);
+        var cp = b.current_price;
+        var cpHtml = '';
+        if (isOpen && cp != null) {
+          var diff = cp - entryPrice;
+          var cpColor = diff > 0.001 ? '#34d399' : (diff < -0.001 ? '#fb7185' : '#94a3b8');
+          cpHtml = '<span style="color:' + cpColor + '">' + _fmtCents(cp) + '</span>';
+        } else if (!isOpen) {
+          cpHtml = '<span style="color:#64748b">—</span>';
+        } else {
+          cpHtml = '<span style="color:#475569">···</span>';
+        }
+        var pnlVal, pnlPct;
+        if (b.resolved_outcome) { pnlVal = b.pnl || 0; pnlPct = b.pnl_pct || null; }
+        else if (b.unrealized_pnl != null) { pnlVal = b.unrealized_pnl; pnlPct = b.unrealized_pnl_pct; }
+        else { pnlVal = null; pnlPct = null; }
+        var pnlColor = pnlVal != null ? (pnlVal >= 0 ? '#34d399' : '#fb7185') : '#eab308';
+        var pnlMainHtml = pnlVal != null
+          ? '<span style="color:' + pnlColor + '">' + _fmtPnl(pnlVal) + '</span>'
+          : '<span style="color:#eab308">⏳</span>';
+        var pnlSub = pnlPct != null
+          ? ' <span class="bc-r-pnl-pct" style="color:' + pnlColor + '">' + _fmtPct(pnlPct) + '</span>'
+          : '';
+
+        return '<div class="bc-item" data-bet-id="' + _esc(b.bet_id) + '" onclick="WmBetsModule.toggleDetail(\'' + _esc(b.bet_id) + '\', this)">' +
+          '<div class="bc-row">' +
+          '<div class="bc-r-icon">' + icon + '</div>' +
+          '<div class="bc-r-main">' +
+          '<div class="bc-r-title">' + qHtml + '</div>' +
+          '<div class="bc-r-meta">' + dirBadge + statusHtml +
+          '<span class="bc-badge bc-badge-shares">$' + sizeUsd + ' · ' + shares + t("weatherMap.lit.fd054aa1a9", " shares</span>") +
+          '<span class="bc-badge bc-badge-time" title="' + timeFull + '">' + timeRel + '</span>' +
+          (shortId ? '<span class="bc-badge bc-badge-id">' + shortId + '</span>' : '') +
+          '</div>' +
+          '</div>' +
+          '<div class="bc-r-data">' +
+          '<div class="bc-r-col"><div class="bc-r-entry"><s>' + _fmtCents(entryPrice) + '</s></div></div>' +
+          '<div class="bc-r-col"><div class="bc-r-live" id="wm-cp-' + _esc(b.bet_id) + '">' + cpHtml + '</div></div>' +
+          '<div class="bc-r-col bc-r-pnl"><div><span class="bc-r-pnl-val" id="wm-pnl-' + _esc(b.bet_id) + '">' + pnlMainHtml + pnlSub + '</span></div></div>' +
+          '</div>' +
+          '</div>' +
+          '<div class="bc-detail-panel" id="wm-detail-' + _esc(b.bet_id) + '" onclick="event.stopPropagation()"></div>' +
+          '</div>';
+      }
+
+      function _renderAll() {
+        var container = document.getElementById('bets-content');
+        if (!container || !_bets.length) return;
+
+        var openBets = _bets.filter(function (b) { return !b.resolved_outcome; });
+        if (openBets.length === 0) {
+          container.innerHTML =
+            '<div class="bc-empty"><div class="bc-empty-icon">✅</div>' +
+            t("weatherMap.lit.b35a99d975", "<div class=\"bc-empty-title\">No current positions in this city</div>") +
+            t("weatherMap.lit.b23b77a0a5", "<div class=\"bc-empty-desc\">All positions are settled</div></div>");
+          return;
+        }
+        var sorted = openBets.slice().sort(function (a, b) {
+          return (_toUnixSeconds(b.ts_entered) || 0) - (_toUnixSeconds(a.ts_entered) || 0);
+        });
+        container.innerHTML =
+          t("weatherMap.lit.ab1b4ecdd0", "<div class=\"bc-col-header\"><span>Entry</span><span>Live</span><span class=\"bc-h-pnl\">PnL</span></div>") +
+          '<div class="bets-card-list">' + sorted.map(function (b) { return _renderSingleCard(b); }).join('') + '</div>';
+      }
+
+      function _toggleDetail(betId, cardEl) {
+        var panel = document.getElementById('wm-detail-' + betId);
+        if (!panel) return;
+        if (_openDetailId === betId) {
+          panel.innerHTML = ''; panel.classList.remove('active');
+          if (cardEl) cardEl.classList.remove('bc-item-active');
+          _openDetailId = null;
+          return;
+        }
+        if (_openDetailId) {
+          var old = document.getElementById('wm-detail-' + _openDetailId);
+          if (old) { old.innerHTML = ''; old.classList.remove('active'); }
+          var oldRow = document.querySelector('#bets-content .bc-item-active');
+          if (oldRow) oldRow.classList.remove('bc-item-active');
+        }
+        _openDetailId = betId;
+        if (cardEl) cardEl.classList.add('bc-item-active');
+        panel.classList.add('active');
+        panel.innerHTML = t("weatherMap.lit.74016fa6d1", "<div class=\"bc-detail-loading\"><span class=\"spinner\"></span> Loading details...</div>");
+        if (_detailCache[betId]) {
+          var cached = _detailCache[betId];
+          if (cached && cached.bet && (_isSnapshotBet(cached.bet) || _isManualPmBet(cached.bet))) {
+            panel.innerHTML = _renderSnapshotDetailPanel(cached.bet);
+            if (typeof loadDetailPriceChart === 'function' && cached.bet && !cached.bet.resolved_outcome) loadDetailPriceChart(betId, 6);
+          } else {
+            panel.innerHTML = _renderDetailPanel(cached);
+            if (typeof loadDetailPriceChart === 'function' && cached.bet && !cached.bet.resolved_outcome) loadDetailPriceChart(betId, 6);
+          }
+          return;
+        }
+        var betObj = null;
+        for (var _i = 0; _i < _bets.length; _i++) { if (_bets[_i].bet_id === betId) { betObj = _bets[_i]; break; } }
+        if (betObj && (_isSnapshotBet(betObj) || _isManualPmBet(betObj))) {
+          var snapDetail = { bet: betObj, children: [], parent: null, siblings: [], event_siblings: [], total_position_usdc: betObj.size_usdc || 0 };
+          _detailCache[betId] = snapDetail;
+          var p = document.getElementById('wm-detail-' + betId);
+          if (p) p.innerHTML = _renderSnapshotDetailPanel(betObj);
+          if (typeof loadDetailPriceChart === 'function' && betObj && !betObj.resolved_outcome) loadDetailPriceChart(betId, 6);
+          return;
+        }
+        fetch('/api/bets/' + encodeURIComponent(betId))
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data && data.error) {
+              var p = document.getElementById('wm-detail-' + betId);
+              if (p) p.innerHTML = '<div class="bc-detail-error">' + _esc(data.error) + '</div>';
+              return;
+            }
+            _detailCache[betId] = data;
+            var p = document.getElementById('wm-detail-' + betId);
+            if (p) p.innerHTML = _renderDetailPanel(data);
+            if (typeof loadDetailPriceChart === 'function' && data.bet && !data.bet.resolved_outcome) loadDetailPriceChart(betId, 6);
+          })
+          .catch(function () {
+            var p = document.getElementById('wm-detail-' + betId);
+            if (p) p.innerHTML = t("weatherMap.lit.21c37784d8", "<div class=\"bc-detail-error\">Load failed, please retry</div>");
+          });
+      }
+
+      function _dpMetric(label, val) {
+        return '<div class="dp-metric"><div class="dp-metric-val">' + val + '</div><div class="dp-metric-label">' + label + '</div></div>';
+      }
+      function _dpKv(k, v) {
+        return '<div class="dp-kv"><span class="dp-kv-k">' + k + '</span><span class="dp-kv-v">' + v + '</span></div>';
+      }
+      function _pnlClass(v) { return v >= 0 ? 'pnl-pos' : 'pnl-neg'; }
+      function _pnlStr(v) { return (v >= 0 ? '+' : '-') + '$' + Math.abs(v).toFixed(2); }
+      function _fmtStatus(b) {
+        if (!b.resolved_outcome) return t("weatherMap.lit.d0615af00f", "<span class=\"bc-badge bc-badge-open\"><span class=\"bc-pulse\"></span>Holding</span>");
+        if (b.is_win) return t("weatherMap.lit.21745b4b1c", "<span class=\"bc-badge bc-badge-win\">\u2705 Profit</span>");
+        return t("weatherMap.lit.4fb2e0a8a4", "<span class=\"bc-badge bc-badge-loss\">\u274c Loss</span>");
+      }
+      function _fmtOutcomeBadge(b) {
+        var o = (b.outcome || 'YES').toUpperCase();
+        return o === 'YES'
+          ? '<span class="bc-badge bc-badge-yes">YES</span>'
+          : '<span class="bc-badge bc-badge-no">NO</span>';
+      }
+      function _fmtBetType(bt) {
+        var m = { 'entry': t('weatherMap.betType.entry', '🎯 Entry'), 'scale_in': t('weatherMap.betType.scale_in', '📈 Scale-in'), 'copy_trade': t('weatherMap.betType.copy_trade', '📋 Copy-trade'), 'manual': t('weatherMap.betType.manual', '✍️ Manual') };
+        return m[bt] || (bt || '—');
+      }
+      function _fmtExpiry(hrs) {
+        if (hrs == null) return '—';
+        if (hrs < 0) return t('weatherMap.detail.expired', 'Expired');
+        if (hrs < 1) return Math.round(hrs * 60) + t('weatherMap.unit.minute', 'min');
+        if (hrs < 24) return hrs.toFixed(1) + t('weatherMap.unit.hour', 'h');
+        return Math.floor(hrs / 24) + t('weatherMap.auto.249aba76', '\u5929') + Math.round(hrs % 24) + t('weatherMap.unit.hour', 'h');
+      }
+      function _fmtTimeRel(ts) {
+        if (!ts) return '—';
+        return _timeAgo(ts) + ' · ' + _timeFull(ts);
+      }
+
+      function _renderDetailPanel(data) {
+        var b = data.bet || {};
+        var children = data.children || [];
+        var parent = data.parent;
+        var siblings = data.siblings || [];
+        var totalPos = data.total_position_usdc || 0;
+
+        var cpHtml = b.current_price != null ? _fmtPriceCents(b.current_price) : '—';
+        var _entryFee = b.entry_fee_usdc || 0;
+        var _exitFee = b.exit_fee_usdc || 0;
+        var _totalFee = _entryFee + _exitFee;
+        var _feeRate = b.fee_rate || 0;
+        var _feeHtml = _totalFee > 0
+          ? '<span style="color:#f59e0b">$' + _totalFee.toFixed(4) + '</span><span style="color:#64748b;font-size:0.7rem;margin-left:4px">(' + (_feeRate * 100).toFixed(1) + '%)</span>'
+          : '<span style="color:#64748b">—</span>';
+        var metricsCard = '<div class="dp-card">' +
+          t("weatherMap.lit.033ac26847", "<div class=\"dp-card-title\">Core Metrics</div>") +
+          '<div class="dp-metrics-grid">' +
+          _dpMetric(t('weatherMap.detail.entryPrice', 'Entry Price'), _fmtPriceCents(b.entry_price || b.actual_avg_price || b.market_price || 0)) +
+          _dpMetric(t('weatherMap.detail.livePrice', 'Live Price'), cpHtml) +
+          _dpMetric(t('weatherMap.detail.size', 'Size'), '$' + (b.size_usdc || 0).toFixed(2)) +
+          _dpMetric(t('weatherMap.detail.aiConfidence', 'AI Confidence'), b.confidence ? (b.confidence * 100).toFixed(1) + '%' : '—') +
+          _dpMetric('AI P(YES)', b.ai_probability ? b.ai_probability.toFixed(4) : '—') +
+          _dpMetric('EV', '<span class="' + ((b.ev || 0) >= 0.05 ? 'text-green' : '') + '">' + ((b.ev) ? b.ev.toFixed(4) : '—') + '</span>') +
+          _dpMetric(t('weatherMap.detail.fee', 'PM Fee'), _feeHtml) +
+          _dpMetric(t('weatherMap.detail.heldFor', 'Held For'), _fmtHeld(b.held_minutes || 0)) +
+          '</div></div>';
+
+        var _isOpen = !b.resolved_outcome;
+        var priceChartCard = '';
+        if (_isOpen) {
+          var _entryRaw = b.entry_price || b.actual_avg_price || b.market_price || 0;
+          var _entry = (_entryRaw * 100).toFixed(1);
+          priceChartCard = '<div class="dp-card">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+            t("weatherMap.lit.a3df2e1d4a", "<div class=\"dp-card-title\" style=\"margin:0\">\ud83d\udcc8 Price Chart</div>") +
+            '<div id="dp-pchart-overlay-' + b.bet_id + '" style="display:flex;gap:10px;align-items:baseline;font-size:0.75rem">' +
+            '<span style="color:#64748b">Entry <b style="color:#eab308">' + _entry + '¢</b></span>' +
+            '<span style="color:#64748b">Current <b id="dp-pchart-cur-' + b.bet_id + '" style="color:#e2e8f0">—¢</b></span>' +
+            '<span id="dp-pchart-chg-' + b.bet_id + '"></span>' +
+            '</div>' +
+            '</div>' +
+            '<div id="dp-pchart-wrap-' + b.bet_id + '" style="position:relative;height:180px;width:100%">' +
+            '<canvas id="dp-pchart-' + b.bet_id + '"></canvas>' +
+            '<div id="dp-pchart-loading-' + b.bet_id + '" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:0.75rem"><span class="spinner"></span> ' + t('weatherMap.detail.loadingPrice', 'Loading price data...') + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:4px;margin-top:6px;justify-content:center">' +
+            '<button class="pm-range-btn dp-pchart-range" data-bet="' + b.bet_id + '" data-hours="1" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',1)">Live</button>' +
+            '<button class="pm-range-btn dp-pchart-range active" data-bet="' + b.bet_id + '" data-hours="6" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',6)">6h</button>' +
+            '<button class="pm-range-btn dp-pchart-range" data-bet="' + b.bet_id + '" data-hours="24" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',24)">24h</button>' +
+            '<button class="pm-range-btn dp-pchart-range" data-bet="' + b.bet_id + '" data-hours="48" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',48)">48h</button>' +
+            '</div>' +
+            '</div>';
+        }
+
+        var _otLabels = { 'maker': '🟢 Maker', 'taker': '🔴 Taker', 'simulated': t('weatherMap.orderType.simulated', '⚪ Simulated') };
+        var _otDisp = _otLabels[b.order_type] || (b.order_type ? _esc(b.order_type) : '—');
+        var paramsCard = '<div class="dp-card">' +
+          t("weatherMap.lit.ebd9c8b260", "<div class=\"dp-card-title\">\ud83d\udccb Bet Info</div>") +
+          '<div class="dp-kv-list">' +
+          _dpKv(t('weatherMap.detail.betType', 'Bet Type'), _fmtBetType(b.bet_type)) +
+          _dpKv(t('weatherMap.detail.orderType', 'Order Type'), _otDisp) +
+          _dpKv(t('weatherMap.detail.expiryAt', 'Expiry At'), _esc(b.market_end_date) || t("weatherMap.lit.954542a7f6", "<span style=\"color:#64748b\">Pending</span>")) +
+          _dpKv(t('weatherMap.detail.expiryIn', 'Expires In'), _fmtExpiry(b.hours_to_expiry)) +
+          '</div></div>';
+
+        var reasoningCard = '';
+        if (b.ai_reasoning) {
+          reasoningCard = '<div class="dp-card">' +
+            t("weatherMap.lit.f36c03faf9", "<div class=\"dp-card-title\">\ud83e\udd16 AI Reasoning</div>") +
+            '<div class="dp-code-block dp-reasoning-full">' + _esc(b.ai_reasoning) + '</div></div>';
+        }
+
+        var chainCard = '<div class="dp-card">' +
+          t("weatherMap.lit.955acbc28d", "<div class=\"dp-card-title\">\ud83d\udd17 Position Chain</div>") +
+          '<div class="dp-kv-list">' +
+          _dpKv(t('weatherMap.detail.scaleInCount', 'Scale-in Count'), String(b.scale_in_count || 0)) +
+          _dpKv(t('weatherMap.detail.totalPosition', 'Total Position'), '<span style="color:#22d3ee;font-weight:600">$' + totalPos.toFixed(2) + '</span>') +
+          '</div>';
+        if (parent) {
+          chainCard += t("weatherMap.lit.5d76469c87", "<div class=\"dp-chain-label\">\u2b06\ufe0f Parent (Original Entry)</div>") +
+            '<div class="dp-chain-node">' + _fmtBetType(parent.bet_type) +
+            ' <span class="dp-chain-amt">$' + (parent.size_usdc || 0).toFixed(2) + '</span>' +
+            ' <span class="dp-chain-price">@' + _fmtPriceCents(parent.market_price || 0) + '</span>' +
+            ' <span class="dp-chain-time">' + _timeFull(parent.ts_entered) + '</span></div>';
+        }
+        if (children.length > 0) {
+          chainCard += t("weatherMap.lit.92b09529a8", "<div class=\"dp-chain-label\">\u2b07\ufe0f Scale-in \u00d7") + children.length + '</div>';
+          for (var ci = 0; ci < children.length; ci++) {
+            var c = children[ci];
+            chainCard += '<div class="dp-chain-node">' + _fmtBetType(c.bet_type) +
+              ' <span class="dp-chain-amt">$' + (c.size_usdc || 0).toFixed(2) + '</span>' +
+              ' <span class="dp-chain-price">@' + _fmtPriceCents(c.market_price || 0) + '</span>' +
+              ' <span class="dp-chain-time">' + _timeFull(c.ts_entered) + '</span></div>';
+            if (ci < children.length - 1) chainCard += '<div class="dp-chain-connector"></div>';
+          }
+        }
+        if (siblings.length > 1) {
+          chainCard += t("weatherMap.lit.484b77291f", "<div class=\"dp-chain-label\">\ud83d\udccb All bets in market (") + siblings.length + t("weatherMap.lit.d91d822c57", " entries)</div>");
+          for (var si = 0; si < siblings.length; si++) {
+            var s = siblings[si];
+            var isCur = s.bet_id === b.bet_id;
+            var rsvd = s.resolved_outcome
+              ? '<span class="' + (s.pnl >= 0 ? 'pnl-pos' : 'pnl-neg') + '" style="font-size:0.72rem">' + _pnlStr(s.pnl || 0) + '</span>'
+              : t("weatherMap.lit.f130a4a6da", "<span style=\"color:#eab308;font-size:0.72rem\">Holding</span>");
+            chainCard += '<div class="dp-chain-node' + (isCur ? ' dp-chain-current' : '') + '">' +
+              _fmtBetType(s.bet_type) +
+              ' <span class="dp-chain-amt">$' + (s.size_usdc || 0).toFixed(2) + '</span>' +
+              ' <span class="dp-chain-price">@' + _fmtPriceCents(s.market_price || 0) + '</span> ' +
+              rsvd + (isCur ? t("weatherMap.lit.80376675da", " <span style=\"color:#22d3ee;font-size:0.68rem\">\u2190 Current</span>") : '') +
+              '</div>';
+          }
+        }
+        chainCard += '</div>';
+
+        var exitCard = '';
+        if (b.resolved_outcome) {
+          var exitExplain = {
+            'resolution': t('weatherMap.exit.resolution', 'Market natural settlement'), 'stop_loss': t('weatherMap.exit.stop_loss', 'Stop-loss protection triggered'), 'floor_stop': t('weatherMap.exit.floor_stop', 'Floor stop'), 'standard_stop': t('weatherMap.exit.standard_stop', 'Standard stop'),
+            'reversal_stop': t('weatherMap.exit.reversal_stop', 'Reversal stop'), 'expiry_stop': t('weatherMap.exit.expiry_stop', 'Near-expiry stop'), 'profit_take': t('weatherMap.exit.profit_take', 'Profit-take exit'), 'near_ceiling': t('weatherMap.exit.near_ceiling', 'Near-ceiling profit-take'),
+            'weather_quick_exit': t('weatherMap.exit.weather_quick_exit', 'Weather quick profit-take'), 'trailing_stop': t('weatherMap.exit.trailing_stop', 'Trailing profit-take'), 'quick_exit': t('weatherMap.exit.quick_exit', 'Quick profit-take'), 'early_stop': t('weatherMap.exit.early_stop', 'Early quick stop'), 'hold_to_settle': t('weatherMap.exit.hold_to_settle', 'Hold to settlement')
+          };
+          var exitType = b.exit_type || 'resolution';
+          var exitDesc = exitExplain[exitType] || exitType;
+          var resultBadge = b.is_win
+            ? t("weatherMap.lit.1e398fb964", "<span class=\"dp-result-badge dp-result-win\">\u2705 Profit</span>")
+            : t("weatherMap.lit.1e896e8d96", "<span class=\"dp-result-badge dp-result-loss\">\u274c Loss</span>");
+          exitCard = '<div class="dp-card">' +
+            t("weatherMap.lit.ca83fba16d", "<div class=\"dp-card-title\">\ud83c\udfc1 Exit & Settlement</div>") +
+            '<div style="text-align:center;margin-bottom:10px">' + resultBadge + '</div>' +
+            '<div class="dp-kv-list">' +
+            _dpKv(t('weatherMap.detail.exitPrice', 'Exit Price'), b.exit_price != null ? _fmtPriceCents(b.exit_price) : '—') +
+            _dpKv(t('weatherMap.detail.exitType', 'Exit Type'), '<span style="font-weight:600">' + _esc(exitType) + '</span>') +
+            _dpKv(t('weatherMap.detail.exitReason', 'Exit Reason'), '<span style="font-size:0.73rem;color:#94a3b8">' + _esc(exitDesc) + '</span>') +
+            _dpKv(t('weatherMap.detail.recovered', 'Recovered'), '$' + (b.payout != null ? b.payout.toFixed(2) : '—')) +
+            _dpKv(t('weatherMap.detail.pnl', 'P&L'), '<span class="' + _pnlClass(b.pnl || 0) + '" style="font-weight:700">' + _pnlStr(b.pnl || 0) + '</span>') +
+            _dpKv(t('weatherMap.detail.settledAt', 'Settled At'), _timeFull(b.resolved_at)) +
+            '</div></div>';
+        }
+
+        var _isCS = b.dimension_tags && b.dimension_tags.indexOf('chain_sync') >= 0;
+        var _bb = (b.sim_balance_before != null && !(b.sim_balance_before === 0 && _isCS)) ? '$' + b.sim_balance_before.toFixed(2) : t('weatherMap.detail.notApplicable', 'N/A');
+        var _ba = (b.sim_balance_after != null && !(b.sim_balance_after === 0 && _isCS)) ? '$' + b.sim_balance_after.toFixed(2) : t('weatherMap.detail.notApplicable', 'N/A');
+        var balanceCard = '<div class="dp-card dp-card-sm">' +
+          t("weatherMap.lit.b6eae184f9", "<div class=\"dp-card-title\">\ud83d\udcb0 Balance Snapshot</div>") +
+          '<div class="dp-kv-list">' + _dpKv(t('weatherMap.detail.balanceBefore', 'Before Entry'), _bb) + _dpKv(t('weatherMap.detail.balanceAfter', 'After Entry'), _ba) + '</div></div>';
+
+        return '<div class="detail-panel dp-root">' +
+          '<div class="dp-body">' +
+          '<div class="dp-col">' + metricsCard + paramsCard + balanceCard + '</div>' +
+          '<div class="dp-col">' + exitCard + chainCard + priceChartCard + reasoningCard + '</div>' +
+          '</div></div>';
+      }
+
+      function _renderSnapshotDetailPanel(b) {
+        var entryPrice = b.entry_price || b.actual_avg_price || b.avg_price || b.market_price || 0;
+        var cp = b.current_price;
+        var cpHtml = cp != null ? _fmtCents(cp) : '<span style="color:#475569">···</span>';
+        var pnlVal = b.unrealized_pnl;
+        var pnlPct = b.unrealized_pnl_pct;
+        var pnlColor = pnlVal != null ? (pnlVal >= 0 ? '#34d399' : '#fb7185') : '#eab308';
+        var pnlHtml = pnlVal != null
+          ? '<span style="color:' + pnlColor + ';font-weight:700">' + _pnlStr(pnlVal) + '</span>'
+          : '<span style="color:#eab308">⏳</span>';
+        var pnlPctHtml = pnlPct != null ? ' <span style="color:' + pnlColor + ';font-size:0.8rem">' + _fmtPct(pnlPct) + '</span>' : '';
+        var eSlug = b.event_slug || '', mSlug = b.market_slug || '';
+        function vSlug(s) { return s && /^[a-z0-9\-]+$/i.test(s); }
+        var pmLink = '';
+        if (vSlug(eSlug) && vSlug(mSlug) && eSlug !== mSlug)
+          pmLink = 'https://polymarket.com/event/' + encodeURIComponent(eSlug) + '/' + encodeURIComponent(mSlug);
+        else if (vSlug(eSlug)) pmLink = 'https://polymarket.com/event/' + encodeURIComponent(eSlug);
+        else if (vSlug(mSlug)) pmLink = 'https://polymarket.com/event/' + encodeURIComponent(mSlug);
+        var pmLinkHtml = pmLink
+          ? '<a href="' + pmLink + '" target="_blank" rel="noopener" class="bc-q-link" style="font-size:0.8rem">↗ Polymarket</a>'
+          : '';
+        var vyLink = '';
+        if (vSlug(eSlug)) vyLink = '/event/' + encodeURIComponent(eSlug);
+        else if (vSlug(mSlug)) vyLink = '/event/' + encodeURIComponent(mSlug);
+        var vyLinkHtml = vyLink
+          ? '<a href="' + vyLink + '" target="_blank" class="bc-q-link" style="font-size:0.8rem">⬡ VeYra</a>'
+          : '';
+        var wallet = b.wallet || (b.bet_id || '').split(':')[1] || '';
+        var walletShort = wallet ? wallet.slice(0, 6) + '…' + wallet.slice(-4) : '—';
+        var size = (b.size_usdc || 0).toFixed(2);
+        var shares = b.matched_shares > 0 ? b.matched_shares.toFixed(1) : (entryPrice > 0 ? ((b.size_usdc || 0) / entryPrice).toFixed(1) : '—');
+        var priceChartCard = '';
+        if (!b.resolved_outcome) {
+          priceChartCard = '<div class="dp-card">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">' +
+            t('weatherMap.detail.priceChart', '<div class="dp-card-title" style="margin:0">📈 Price Chart</div>') +
+            '<div id="dp-pchart-overlay-' + b.bet_id + '" style="display:flex;gap:10px;align-items:baseline;font-size:0.75rem">' +
+            '<span style="color:#64748b">Entry <b style="color:#eab308">' + (entryPrice * 100).toFixed(1) + '¢</b></span>' +
+            '<span style="color:#64748b">Current <b id="dp-pchart-cur-' + b.bet_id + '" style="color:#e2e8f0">' + (cp != null ? (cp * 100).toFixed(1) + '¢' : '—¢') + '</b></span>' +
+            '<span id="dp-pchart-chg-' + b.bet_id + '"></span>' +
+            '</div>' +
+            '</div>' +
+            '<div id="dp-pchart-wrap-' + b.bet_id + '" style="position:relative;height:180px;width:100%">' +
+            '<canvas id="dp-pchart-' + b.bet_id + '"></canvas>' +
+            '<div id="dp-pchart-loading-' + b.bet_id + '" style="position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:0.75rem"><span class="spinner"></span> ' + t('weatherMap.detail.loadingPrice', 'Loading price data...') + '</div>' +
+            '</div>' +
+            '<div style="display:flex;gap:4px;margin-top:6px;justify-content:center">' +
+            '<button class="pm-range-btn dp-pchart-range" data-bet="' + b.bet_id + '" data-hours="1" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',1)">Live</button>' +
+            '<button class="pm-range-btn dp-pchart-range active" data-bet="' + b.bet_id + '" data-hours="6" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',6)">6h</button>' +
+            '<button class="pm-range-btn dp-pchart-range" data-bet="' + b.bet_id + '" data-hours="24" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',24)">24h</button>' +
+            '<button class="pm-range-btn dp-pchart-range" data-bet="' + b.bet_id + '" data-hours="48" onclick="loadDetailPriceChart(\'' + b.bet_id + '\',48)">48h</button>' +
+            '</div>' +
+            '</div>';
+        }
+        return '<div class="detail-panel dp-root">' +
+          '<div class="dp-body">' +
+          '<div class="dp-col">' +
+          '<div class="dp-card">' +
+          '<div class="dp-card-title" style="display:flex;align-items:center;gap:8px">' +
+          t('weatherMap.detail.pmSnapshot', '📊 PM Snapshot') +
+          ' <span style="font-size:0.75rem;color:#64748b;font-weight:400">' + walletShort + '</span>' +
+          '</div>' +
+          '<div class="dp-metrics-grid">' +
+          _dpMetric(t('weatherMap.detail.entryPrice', 'Entry Price'), _fmtCents(entryPrice)) +
+          _dpMetric(t('weatherMap.detail.livePrice', 'Live Price'), cpHtml) +
+          _dpMetric(t('weatherMap.detail.pnl', 'P&L'), pnlHtml + pnlPctHtml) +
+          _dpMetric(t('weatherMap.detail.size', 'Size'), '$' + size) +
+          '</div>' +
+          '<div class="dp-kv-list">' +
+          _dpKv(t('weatherMap.detail.outcome', 'Outcome'), '<span class="bc-badge ' + (b.outcome === 'NO' ? 'bc-badge-no' : 'bc-badge-yes') + '">' + (b.outcome || 'YES') + '</span>') +
+          _dpKv(t('weatherMap.detail.shares', 'Shares'), shares) +
+          _dpKv(t('weatherMap.detail.entryTime', 'Entry Time'), _timeFull(b.ts_entered)) +
+          (vyLink ? _dpKv('Event', vyLinkHtml) : '') +
+          (pmLink ? _dpKv('Market', pmLinkHtml) : '') +
+          '</div>' +
+          '</div>' +
+          '</div>' +
+          (priceChartCard ? '<div class="dp-col">' + priceChartCard + '</div>' : '') +
+          '</div></div>';
+      }
+
+      window.loadDetailPriceChart = function (betId, hours) {
+        var b = null;
+        for (var i = 0; i < _bets.length; i++) {
+          if (_bets[i].bet_id === betId) { b = _bets[i]; break; }
+        }
+        if (!b) return;
+        var isPmLike = _isSnapshotBet(b) || _isManualPmBet(b);
+
+        var interval = '6h';
+        if (hours <= 1) interval = '1h';
+        else if (hours <= 6) interval = '6h';
+        else if (hours <= 24) interval = '1d';
+        else interval = '1w';
+
+        var loadingEl = document.getElementById('dp-pchart-loading-' + betId);
+        var curEl = document.getElementById('dp-pchart-cur-' + betId);
+        var chgEl = document.getElementById('dp-pchart-chg-' + betId);
+        if (loadingEl) {
+          loadingEl.style.display = '';
+          loadingEl.innerHTML = '<span class="spinner"></span> ' + t('weatherMap.detail.loadingPrice', 'Loading price data...');
+        }
+
+        var btns = document.querySelectorAll('.dp-pchart-range[data-bet="' + betId + '"]');
+        btns.forEach(function (btn) {
+          btn.classList.toggle('active', String(btn.getAttribute('data-hours')) === String(hours));
+        });
+
+        var historyUrl = '';
+        if (isPmLike) {
+          var cid = _extractConditionId(b);
+          if (!cid) {
+            if (loadingEl) loadingEl.innerHTML = '<span style="color:#94a3b8">' + t('weatherMap.detail.noPriceData', 'No price data available yet') + '</span>';
+            return;
+          }
+          historyUrl = '/api/pm/market/trades?market=' + encodeURIComponent(cid) + '&limit=120';
+        } else {
+          historyUrl = '/api/bets/' + encodeURIComponent(betId) + '/price-history?interval=' + encodeURIComponent(interval);
+        }
+
+        fetch(historyUrl)
+          .then(function (r) { return r.json(); })
+          .then(function (res) {
+            var hist = [];
+            if (isPmLike) {
+              var trades = (res && res.trades) || [];
+              var out = String((b.outcome || '')).toUpperCase();
+              hist = trades
+                .filter(function (tk) {
+                  if (!out) return true;
+                  var to = String((tk && tk.outcome) || '').toUpperCase();
+                  return !to || to === out;
+                })
+                .map(function (tk) { return { t: Number((tk && tk.timestamp) || 0), p: Number((tk && tk.price) || NaN) }; })
+                .filter(function (pt) { return isFinite(pt.t) && isFinite(pt.p); })
+                .sort(function (a, bx) { return a.t - bx.t; });
+            } else {
+              hist = (res && res.history) || [];
+            }
+            if (!Array.isArray(hist) || hist.length === 0) {
+              if (loadingEl) loadingEl.innerHTML = '<span style="color:#94a3b8">' + t('weatherMap.detail.noPriceData', 'No price data available yet') + '</span>';
+              return;
+            }
+
+            var labels = [];
+            var values = [];
+            for (var k = 0; k < hist.length; k++) {
+              var pt = hist[k] || {};
+              var ts = Number(pt.t || 0) * 1000;
+              var price = Number(pt.p);
+              if (!isFinite(ts) || !isFinite(price)) continue;
+              labels.push(new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }));
+              values.push(price * 100);
+            }
+            if (!values.length) {
+              if (loadingEl) loadingEl.innerHTML = '<span style="color:#94a3b8">' + t('weatherMap.detail.noPriceData', 'No price data available yet') + '</span>';
+              return;
+            }
+
+            var canvas = document.getElementById('dp-pchart-' + betId);
+            if (!canvas || !window.Chart) return;
+            if (_detailCharts[betId]) {
+              _detailCharts[betId].destroy();
+              _detailCharts[betId] = null;
+            }
+
+            var ctx = canvas.getContext('2d');
+            _detailCharts[betId] = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: labels,
+                datasets: [{
+                  data: values,
+                  borderColor: '#60a5fa',
+                  backgroundColor: 'rgba(96,165,250,0.14)',
+                  borderWidth: 2,
+                  tension: 0.28,
+                  fill: true,
+                  pointRadius: 0,
+                  pointHoverRadius: 3
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                  x: { grid: { color: 'rgba(148,163,184,0.12)' }, ticks: { color: '#94a3b8', maxTicksLimit: 6 } },
+                  y: {
+                    grid: { color: 'rgba(148,163,184,0.12)' },
+                    ticks: {
+                      color: '#94a3b8',
+                      callback: function (v) { return Number(v).toFixed(1) + '¢'; }
+                    }
+                  }
+                }
+              }
+            });
+
+            var first = values[0];
+            var last = values[values.length - 1];
+            if (curEl) curEl.textContent = last.toFixed(1) + '¢';
+            if (chgEl && isFinite(first) && first !== 0) {
+              var deltaPct = (last - first) / first;
+              var up = deltaPct >= 0;
+              chgEl.innerHTML = '<b style="color:' + (up ? '#34d399' : '#fb7185') + '">' + (up ? '+' : '') + (deltaPct * 100).toFixed(2) + '%</b>';
+            }
+            if (loadingEl) loadingEl.style.display = 'none';
+          })
+          .catch(function () {
+            if (loadingEl) loadingEl.innerHTML = '<span style="color:#ef4444">' + t('weatherMap.detail.priceLoadFailed', 'Price load failed') + '</span>';
+          });
+      };
+
+      function _startLive() {
+        if (_liveTimer) return;
+        _pollLive();
+        _liveTimer = setInterval(_pollLive, 5000);
+      }
+      function _stopLive() {
+        if (_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
+      }
+      function _pollLive() {
+        var tab = document.getElementById('tab-bets');
+        if (!tab || !tab.classList.contains('active')) { _stopLive(); return; }
+        var openBets = _bets.filter(function (b) { return !b.resolved_outcome; });
+        if (!openBets.length) return;
+        fetch('/api/bets/live-prices')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var prices = d.prices || {};
+            for (var betId in prices) {
+              var p = prices[betId];
+              if (p.cp == null) continue;
+              for (var i = 0; i < _bets.length; i++) {
+                if (_bets[i].bet_id === betId) {
+                  _bets[i].current_price = p.cp;
+                  _bets[i].unrealized_pnl = p.upnl;
+                  _bets[i].unrealized_pnl_pct = p.upnl_pct;
+
+                  var cpEl = document.getElementById('wm-cp-' + betId);
+                  var pnlEl = document.getElementById('wm-pnl-' + betId);
+                  if (cpEl) {
+                    var entry = _bets[i].entry_price || _bets[i].actual_avg_price || _bets[i].market_price || 0;
+                    var df = p.cp - entry;
+                    var clr = df > 0.001 ? '#34d399' : (df < -0.001 ? '#fb7185' : '#94a3b8');
+                    cpEl.innerHTML = '<span style="color:' + clr + '">' + _fmtCents(p.cp) + '</span>';
+                    cpEl.classList.add('bc-price-flash');
+                    setTimeout(function (el) { el.classList.remove('bc-price-flash'); }, 500, cpEl);
+                  }
+                  if (pnlEl && p.upnl != null) {
+                    var pc = p.upnl >= 0 ? '#34d399' : '#fb7185';
+                    pnlEl.innerHTML = '<span style="color:' + pc + '">' + _fmtPnl(p.upnl) + '</span>' +
+                      (p.upnl_pct != null ? ' <span class="bc-r-pnl-pct" style="color:' + pc + '">' + _fmtPct(p.upnl_pct) + '</span>' : '');
+                  }
+                  var detailCurEl = document.getElementById('dp-pchart-cur-' + betId);
+                  var detailChgEl = document.getElementById('dp-pchart-chg-' + betId);
+                  if (detailCurEl) detailCurEl.textContent = _fmtCents(p.cp);
+                  if (detailChgEl) {
+                    var entry2 = _bets[i].entry_price || _bets[i].actual_avg_price || _bets[i].market_price || 0;
+                    if (entry2 > 0) {
+                      var dPct = (p.cp - entry2) / entry2;
+                      var up2 = dPct >= 0;
+                      detailChgEl.innerHTML = '<b style="color:' + (up2 ? '#34d399' : '#fb7185') + '">' + (up2 ? '+' : '') + (dPct * 100).toFixed(2) + '%</b>';
+                    }
+                  }
+                  break;
+                }
+              }
+            }
+          }).catch(function () { });
+
+        var hasSnapshot = _bets.some(function (b) { return _isSnapshotBet(b); });
+        if (hasSnapshot && currentCityData && currentCityData.name) {
+          fetch('/api/weather-map/city-bets/' + encodeURIComponent(currentCityData.name))
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+              var rows = (res && res.bets) || [];
+              for (var j = 0; j < rows.length; j++) {
+                var it = rows[j] || {};
+                if (!_isSnapshotBet(it)) continue;
+                for (var i2 = 0; i2 < _bets.length; i2++) {
+                  var b2 = _bets[i2];
+                  if (!_isSnapshotBet(b2)) continue;
+                  if (String(b2.bet_id) !== String(it.bet_id)) continue;
+                  b2.current_price = it.current_price;
+                  b2.unrealized_pnl = it.unrealized_pnl;
+                  b2.unrealized_pnl_pct = it.unrealized_pnl_pct;
+
+                  var cpEl2 = document.getElementById('wm-cp-' + b2.bet_id);
+                  var pnlEl2 = document.getElementById('wm-pnl-' + b2.bet_id);
+                  if (cpEl2 && it.current_price != null) cpEl2.innerHTML = '<span style="color:#e2e8f0">' + _fmtCents(it.current_price) + '</span>';
+                  if (pnlEl2 && it.unrealized_pnl != null) {
+                    var pc2 = it.unrealized_pnl >= 0 ? '#34d399' : '#fb7185';
+                    pnlEl2.innerHTML = '<span style="color:' + pc2 + '">' + _fmtPnl(it.unrealized_pnl) + '</span>' +
+                      (it.unrealized_pnl_pct != null ? ' <span class="bc-r-pnl-pct" style="color:' + pc2 + '">' + _fmtPct(it.unrealized_pnl_pct) + '</span>' : '');
+                  }
+
+                  var dCur2 = document.getElementById('dp-pchart-cur-' + b2.bet_id);
+                  var dChg2 = document.getElementById('dp-pchart-chg-' + b2.bet_id);
+                  if (dCur2 && it.current_price != null) dCur2.textContent = _fmtCents(it.current_price);
+                  if (dChg2 && it.current_price != null) {
+                    var epx2 = b2.entry_price || b2.actual_avg_price || b2.market_price || 0;
+                    if (epx2 > 0) {
+                      var pct2 = (it.current_price - epx2) / epx2;
+                      var upx2 = pct2 >= 0;
+                      dChg2.innerHTML = '<b style="color:' + (upx2 ? '#34d399' : '#fb7185') + '">' + (upx2 ? '+' : '') + (pct2 * 100).toFixed(2) + '%</b>';
+                    }
+                  }
+                }
+              }
+            })
+            .catch(function () { });
+        }
+      }
+
+      function loadCityBets(cityName, options) {
+        var forceReload = !!(options && options.force);
+        if (!forceReload && _loadedCity === cityName && _bets.length > 0) {
+
+          document.getElementById('bets-loading').style.display = 'none';
+          document.getElementById('bets-content').style.display = '';
+          _startLive();
+          return;
+        }
+        _loadedCity = cityName;
+        _bets = [];
+        _openDetailId = null;
+        _detailCache = {};
+        _stopLive();
+        document.getElementById('bets-loading').style.display = '';
+        document.getElementById('bets-content').style.display = 'none';
+
+        function _applyBets(openBets) {
+          _bets = openBets || [];
+          document.getElementById('bets-loading').style.display = 'none';
+          document.getElementById('bets-content').style.display = '';
+          if (_bets.length === 0) {
+            document.getElementById('bets-content').innerHTML =
+              '<div class="bc-empty"><div class="bc-empty-icon">📊</div>' +
+              t("weatherMap.lit.b35a99d975", "<div class=\"bc-empty-title\">No current positions in this city</div>") +
+              t("weatherMap.lit.8e16f9fd9c", "<div class=\"bc-empty-desc\">Waiting for system to discover new weather betting opportunities</div></div>");
+          } else {
+            _renderAll();
+            _startLive();
+          }
+        }
+
+        function _loadFromHistoryFallback() {
+
+          return fetch('/api/bets/history?category=weather&status=open&per_page=200&page=1')
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+              var allOpen = (result && result.bets) || [];
+              return allOpen.filter(function (b) { return _cityMatchesBet(cityName, b); });
+            });
+        }
+
+        function _betDedupKey(b) {
+          var out = String((b && b.outcome) || '').toUpperCase();
+          var cid = _extractConditionId(b);
+          if (cid) return cid + ':' + out;
+          return [String((b && b.event_slug) || ''), String((b && b.market_slug) || ''), out].join('|').toLowerCase();
+        }
+
+        function _loadManualPmOpenByCity() {
+          return fetch('/api/user/pm/bets?status=open&per_page=200&page=1&refresh=0')
+            .then(function (r) { if (!r.ok) return { bets: [] }; return r.json(); })
+            .then(function (res) {
+              var all = (res && res.bets) || [];
+              return all.filter(function (b) { return _cityMatchesBet(cityName, b); });
+            })
+            .catch(function () { return []; });
+        }
+
+        fetch('/api/weather-map/city-bets/' + encodeURIComponent(cityName))
+          .then(function (r) { if (!r.ok) throw new Error('city-bets http ' + r.status); return r.json(); })
+          .then(function (result) {
+            var openBets = (result && result.bets) || [];
+            return _loadManualPmOpenByCity().then(function (manualPm) {
+              var merged = openBets.concat(manualPm || []);
+              var deduped = [];
+              var seen = {};
+              for (var i3 = 0; i3 < merged.length; i3++) {
+                var row = merged[i3];
+                var key = _betDedupKey(row);
+                if (!key) continue;
+                if (seen[key] == null) {
+                  seen[key] = deduped.length;
+                  deduped.push(row);
+                  continue;
+                }
+                var prev = deduped[seen[key]];
+                if (_isSnapshotBet(prev) && !_isSnapshotBet(row)) deduped[seen[key]] = row;
+              }
+              if (deduped.length > 0) {
+                _applyBets(deduped);
+                return;
+              }
+              return _loadFromHistoryFallback().then(_applyBets);
+            });
+          }).catch(function (e) {
+            console.error('[WmBets] city-bets load error, fallback to history:', e);
+            Promise.all([_loadFromHistoryFallback(), _loadManualPmOpenByCity()])
+              .then(function (parts) {
+                _applyBets((parts[0] || []).concat(parts[1] || []));
+              })
+              .catch(function (err) {
+                console.error('[WmBets] fallback load error:', err);
+                document.getElementById('bets-loading').innerHTML =
+                  t("weatherMap.lit.95098db57f", "<div style=\"color:#ef4444\">\u26a0\ufe0f Failed to load bet data</div>");
+              });
+          });
+      }
+
+      function cleanup() {
+        _stopLive();
+        Object.keys(_detailCharts).forEach(function (k) { if (_detailCharts[k]) { _detailCharts[k].destroy(); } });
+        _detailCharts = {};
+        _loadedCity = null;
+        _bets = [];
+        _openDetailId = null;
+        _detailCache = {};
+      }
+
+      return {
+        loadCityBets: loadCityBets,
+        toggleDetail: _toggleDetail,
+        cleanup: cleanup
+      };
+    })();
+
+    window.WmBetsModule = WmBetsModule;
+
+    loadCities();
+
+  });
+</script>
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('weather_event_map');
+  }
+</script>
+
+{% endblock %}

@@ -1,0 +1,39 @@
+# ========== 核心依赖 ==========
+requests>=2.31.0
+openai>=1.30.0          # DeepSeek 官方 API 使用 OpenAI 兼容接口
+schedule>=1.2.0
+python-dotenv>=1.0.0
+
+# ========== Polymarket CLOB (V2) ==========
+# V2 SDK: py-clob-client-v2 replaces py-clob-client after April 28, 2026 cutover.
+# V1 (py-clob-client) stops working after cutover. Do NOT add it back here.
+py-clob-client-v2>=1.0.0
+
+# T876-Wave-B (2026-05-06): Polymarket Builder Relayer Python SDK.
+# Used for deterministic Deposit Wallet derivation (CREATE2) for new
+# users post 2026-05-04 PM cutover. PyPI 0.0.1 is pre-deposit-wallet;
+# we pin git@main (>= deposit-wallet PR #13 merged 2026-05-01).
+py-builder-relayer-client @ git+https://github.com/Polymarket/py-builder-relayer-client.git@main
+
+# ========== 工具 ==========
+psycopg2-binary>=2.9.0  # PostgreSQL 驱动（多租户 SaaS 架构）
+rich>=13.0.0            # 终端仪表盘（彩色表格、进度条、自动刷新）
+yfinance>=0.2.40        # Yahoo Finance 股票/ETF 数据（finance + economy fetcher）
+eccodes>=2.38.0         # ECMWF GRIB2 解码（GFS + ECMWF 云端镜像）
+
+# ========== Web 仪表盘 ==========
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+gunicorn>=22.0.0          # Phase-2: 多 worker 进程管理器（-k uvicorn.workers.UvicornWorker）
+jinja2>=3.1.0            # V2 前端模板引擎（Jinja2Templates）
+itsdangerous>=2.2.0      # Starlette SessionMiddleware signing backend
+python-multipart>=0.0.9  # FastAPI Form() 表单解析（admin_v3 登录 / 2FA 表单）
+pyotp>=2.9.0            # Google Authenticator TOTP 二次验证
+qrcode>=7.4.0           # TOTP 设置 QR 码生成
+PyJWT>=2.8.0            # JWT verification for Privy token auth（via JWKS）
+cryptography>=43.0.0   # Privy authorization-key signing for backend wallet RPC
+websockets>=12.0       # T510 P1-1/P1-2: PM Market & Sports WebSocket bridges
+
+# ========== 开发 / 测试 ==========
+pytest>=8.0.0
+pytest-cov>=5.0.0

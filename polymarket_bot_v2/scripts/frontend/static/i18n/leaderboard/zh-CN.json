@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "积分",
+  "leaderboard.col.earned": "已赚取",
+  "leaderboard.col.joined": "加入",
+  "leaderboard.col.spent": "已消费",
+  "leaderboard.empty": "排行榜暂无用户 — 注册并交易即可获得首批积分。",
+  "leaderboard.error": "排行榜加载失败，请重试。",
+  "leaderboard.hero.sub": "按积分余额排名的 VeYra 用户榜单 — 通过注册、交易、每日登录、推荐等方式赚取积分。",
+  "leaderboard.hero.title": "积分排行榜",
+  "leaderboard.joined.dayUnit": "天",
+  "leaderboard.joined.monthUnit": "月",
+  "leaderboard.joined.today": "今天",
+  "leaderboard.joined.yearUnit": "年",
+  "leaderboard.loading": "加载排行榜中…",
+  "leaderboard.stat.balance": "榜单积分",
+  "leaderboard.stat.earned": "总消费",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "积分排行榜",
+  "leaderboard.toolbar.note": "实时排名 · 积分余额前 50 名",
+  "leaderboard.toolbar.refresh": "刷新"
+}

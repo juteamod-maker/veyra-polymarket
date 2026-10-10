@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "Điểm",
+  "leaderboard.col.earned": "Đã kiếm",
+  "leaderboard.col.joined": "Đã tham gia",
+  "leaderboard.col.spent": "Đã tiêu",
+  "leaderboard.empty": "Không có người dùng nào trong bảng xếp hạng — đăng ký và giao dịch để kiếm điểm đầu tiên.",
+  "leaderboard.error": "Tải bảng xếp hạng thất bại. Vui lòng thử lại.",
+  "leaderboard.hero.sub": "Xếp hạng tất cả người dùng VeYra theo số dư điểm — kiếm điểm qua đăng ký, giao dịch, đăng nhập hàng ngày, giới thiệu và nhiều hơn nữa.",
+  "leaderboard.hero.title": "Bảng xếp hạng điểm",
+  "leaderboard.joined.dayUnit": "ngày",
+  "leaderboard.joined.monthUnit": "tháng",
+  "leaderboard.joined.today": "hôm nay",
+  "leaderboard.joined.yearUnit": "năm",
+  "leaderboard.loading": "Đang tải bảng xếp hạng…",
+  "leaderboard.stat.balance": "Điểm xếp hạng",
+  "leaderboard.stat.earned": "Tổng chi tiêu",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "Bảng xếp hạng điểm",
+  "leaderboard.toolbar.note": "Xếp hạng trực tiếp · 50 người dùng hàng đầu theo số dư điểm hiện tại",
+  "leaderboard.toolbar.refresh": "Làm mới"
+}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('page.deposit.title','Deposit Guide') }}{% endblock %}
+
+{% block content %}
+<script>document.body.setAttribute('data-requires-pm', '1');</script>
+
+<div class="v-page-shell v-page-shell-narrow">
+
+  <!-- T464B: Top "USDC Deposit (Polygon Network)" intro card removed per UX cleanup. -->
+
+  <!-- HTMX vanilla runtime mount point -->
+  <div id="vp-deposit-htmx-slot"></div>
+
+  <template>
+    <div class="v-card" style="margin-top:12px;color:var(--text-muted)" data-i18n="deposit.loading">{{
+      i18n_dict.get('deposit.loading','Loading deposit information...') }}</div>
+  </template>
+
+  <template>
+    <div class="v-card v-surface-danger" style="margin-top:12px">
+    </div>
+  </template>
+
+  <template>
+    <div>
+
+      <div class="v-card"
+        style="margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:0.78rem;color:var(--text-muted)" data-i18n="deposit.currentBalance">{{
+            i18n_dict.get('deposit.currentBalance','Tradable Balance (pUSD)') }}</div>
+          <div style="font-size:1.6rem;font-weight:700"></div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:0.72rem;color:var(--text-muted)" data-i18n="deposit.minThresholds">{{
+            i18n_dict.get('deposit.minThresholds','Min order / Safety line') }}</div>
+          <div style="font-size:0.88rem"></div>
+          <button class="v-btn v-btn-outline v-btn-sm" style="margin-top:6px" data-i18n="deposit.refreshBalance">{{
+            i18n_dict.get('deposit.refreshBalance','Refresh balance') }}</button>
+        </div>
+      </div>
+
+      <div class="v-card" style="margin-top:12px">
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:6px" data-i18n="deposit.funderLabel">{{
+          i18n_dict.get('deposit.funderLabel','Your funding wallet address (funder address)') }}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <code
+            style="font-family:monospace;font-size:0.92rem;word-break:break-all;flex:1;background:var(--bg-primary);padding:8px 12px;border-radius:6px;color:var(--text-primary);border:1px solid var(--border)"></code>
+          <button class="v-btn v-btn-primary v-btn-sm" data-i18n="deposit.copyAddress">{{
+            i18n_dict.get('deposit.copyAddress','Copy address') }}</button>
+        </div>
+        <div class="v-surface-danger" style="margin-top:10px;font-size:0.82rem">
+          <span data-i18n="deposit.warning.prefix">{{ i18n_dict.get('deposit.warning.prefix','Only USDC.e or pUSD on')
+            }}</span>
+          <b data-i18n="deposit.warning.network">{{ i18n_dict.get('deposit.warning.network','Polygon mainnet') }}</b>
+          <span data-i18n="deposit.warning.middle">{{ i18n_dict.get('deposit.warning.middle','(Chain ID 137) is
+            supported. Sending from other chains (Ethereum / Arbitrum / Base / Solana) will result in') }}</span>
+          <b data-i18n="deposit.warning.suffix">{{ i18n_dict.get('deposit.warning.suffix','permanent loss.') }}</b>
+        </div>
+      </div>
+
+      <div class="v-card" style="margin-top:12px">
+        <div style="font-weight:600;margin-bottom:8px" data-i18n="deposit.notes.title">{{
+          i18n_dict.get('deposit.notes.title','Notes') }}</div>
+        <ul style="font-size:0.82rem;color:var(--text-secondary);line-height:1.7;padding-left:22px">
+          <template>
+            <li></li>
+          </template>
+          <li><span data-i18n="deposit.notes.explorerPrefix">{{ i18n_dict.get('deposit.notes.explorerPrefix','Once
+              credited, on-chain records can be viewed at') }}</span> <a target="_blank"
+              style="color:var(--accent)">polygonscan.com</a><span data-i18n="deposit.notes.explorerSuffix">{{
+              i18n_dict.get('deposit.notes.explorerSuffix','.') }}</span></li>
+          <li data-i18n="deposit.notes.system">{{ i18n_dict.get('deposit.notes.system','The system reads this address
+            balance automatically when executing orders; no manual signing is required.') }}</li>
+        </ul>
+      </div>
+    </div>
+  </template>
+
+  <template>
+    <div class="v-surface-success" style="margin-top:10px;font-size:0.82rem">
+    </div>
+  </template>
+</div>
+
+<script>
+  function depositPage() {
+    return {
+      info: null,
+      loading: true,
+      error: '',
+      copyMsg: '',
+      async init() {
+        this.loading = true;
+        this.error = '';
+        try {
+          const res = await fetch('/api/pm/deposit-info', { credentials: 'include' });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+          if (data && data.status === 'unbound') {
+            this.info = null;
+            this.error = data.error || 'wallet not bound';
+          } else {
+            this.info = data;
+          }
+        } catch (e) {
+          this.error = String(e.message || e);
+        } finally {
+          this.loading = false;
+        }
+      },
+      async copy(text) {
+        var i18n = window.veyraI18n || null;
+        var msgOk = i18n ? i18n.t('deposit.copied', 'Copied to clipboard') : 'Copied to clipboard';
+        var msgFb = i18n ? i18n.t('deposit.copy.fallback', 'Copy failed, please select manually') : 'Copy failed, please select manually';
+        try {
+          await navigator.clipboard.writeText(text);
+          this.copyMsg = msgOk;
+          setTimeout(() => { this.copyMsg = ''; }, 2500);
+        } catch (e) {
+          this.copyMsg = msgFb;
+        }
+      },
+    };
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "PMウォレット連携済み",
+  "go.badge.unbound": "PMウォレット未連携",
+  "go.btn.authorize": "ウォレットを認証",
+  "go.btn.dashboard": "ダッシュボードへ",
+  "go.contentLoading": "コンテンツを読み込み中…",
+  "go.heading": "V e Y r a ユーザーガイド",
+  "go.loadFailedPrefix": "読み込みエラー：",
+  "go.loading": "リダイレクト中、しばらくお待ちください…",
+  "go.title": "リダイレクト中",
+  "go.toc": "目次",
+  "go.toc.empty": "（見出しなし）"
+}

@@ -1,0 +1,638 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - Feature Management{% endblock %}
+
+{% block content %}
+<script>
+  if (document.body) document.body.setAttribute('data-requires-pm', '1');
+</script>
+<style>
+  #vp-config-root .cfg-hero {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    background:
+      radial-gradient(120% 160% at 92% -30%, rgba(245, 158, 11, 0.22) 0%, rgba(245, 158, 11, 0) 56%),
+      radial-gradient(120% 130% at -14% -35%, rgba(51, 102, 255, 0.30) 0%, rgba(51, 102, 255, 0) 60%),
+      linear-gradient(165deg, rgba(20, 28, 43, 0.94), rgba(16, 24, 40, 0.97));
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.34);
+  }
+
+  #vp-config-root .cfg-hero-kicker {
+    color: var(--text-muted);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  #vp-config-root .cfg-hero-title {
+    margin: 0;
+    font-size: clamp(24px, 3vw, 34px);
+    line-height: 1.15;
+    color: var(--text-primary);
+  }
+
+  #vp-config-root .cfg-hero-sub {
+    margin-top: 10px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    max-width: 760px;
+  }
+
+  #vp-config-root .cfg-hero-tags {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  #vp-config-root .cfg-chip {
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  #vp-config-root .cfg-tab-shell {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(20, 28, 43, 0.92), rgba(20, 28, 43, 0.66));
+    padding: 8px;
+  }
+
+  #vp-config-root .cfg-tabs {
+    border-bottom: 0;
+    margin-bottom: 0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  #vp-config-root .cfg-tabs .v-tab {
+    border: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 600;
+    padding: 10px 14px;
+  }
+
+  #vp-config-root .cfg-tabs .v-tab:hover {
+    border-color: rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  #vp-config-root .cfg-tabs .v-tab.active {
+    border-color: rgba(51, 102, 255, 0.28);
+    background: linear-gradient(180deg, rgba(51, 102, 255, 0.20), rgba(51, 102, 255, 0.08));
+    color: var(--text-primary);
+    box-shadow: inset 0 0 0 1px rgba(51, 102, 255, 0.24);
+  }
+
+  #vp-config-root .cfg-panel {
+    min-height: 180px;
+  }
+
+  #vp-config-root .cfg-tone-info {
+    background: linear-gradient(160deg, rgba(51, 102, 255, 0.16), rgba(20, 28, 43, 0.88));
+    border: 1px solid rgba(51, 102, 255, 0.25);
+  }
+
+  #vp-config-root .cfg-tone-accent {
+    background: linear-gradient(160deg, rgba(245, 158, 11, 0.16), rgba(20, 28, 43, 0.88));
+    border: 1px solid rgba(245, 158, 11, 0.24);
+  }
+
+  #vp-config-root .cfg-tone-muted {
+    background: linear-gradient(160deg, rgba(148, 163, 184, 0.12), rgba(20, 28, 43, 0.88));
+    border: 1px solid rgba(148, 163, 184, 0.2);
+  }
+
+  #vp-config-root .cfg-table thead th {
+    color: var(--text-secondary);
+    font-size: 12px;
+    letter-spacing: 0.03em;
+  }
+
+  #vp-config-root .cfg-panel .v-card {
+    animation: cfgCardIn 0.34s ease both;
+  }
+
+  #vp-config-root .cfg-panel .v-card:nth-child(2) {
+    animation-delay: 0.04s;
+  }
+
+  #vp-config-root .cfg-panel .v-card:nth-child(3) {
+    animation-delay: 0.08s;
+  }
+
+  @keyframes cfgCardIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  #vp-config-root .cfg-loading {
+    display: grid;
+    place-items: center;
+    min-height: 220px;
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    color: var(--text-muted);
+    background: rgba(20, 28, 43, 0.45);
+  }
+
+  @media (max-width: 768px) {
+    #vp-config-root .cfg-hero {
+      padding: 16px;
+      border-radius: 14px;
+    }
+
+    #vp-config-root .cfg-tabs .v-tab {
+      flex: 1 1 calc(50% - 8px);
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+    #vp-config-root .cfg-tabs .v-tab {
+      flex: 1 1 100%;
+    }
+  }
+</style>
+<div id="vp-config-root" class="v-page-shell">
+
+  <div class="cfg-tab-shell">
+    <div class="v-tabs cfg-tabs">
+      <button class="v-tab active" data-vp-tab-btn="points">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px">
+          <polygon
+            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
+        <span data-i18n="config.tab.points">{{ i18n_dict.get('config.tab.points','My Points') }}</span>
+      </button>
+      <button class="v-tab" data-vp-tab-btn="fees">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px">
+          <rect x="2" y="5" width="20" height="14" rx="2" />
+          <path d="M2 10h20" />
+        </svg>
+        <span data-i18n="config.tab.fees">{{ i18n_dict.get('config.tab.fees','Fees') }}</span>
+      </button>
+      <button class="v-tab" data-vp-tab-btn="strategy">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+        <span data-i18n="config.tab.strategy">{{ i18n_dict.get('config.tab.strategy','Strategy Settings') }}</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="vp-config-panel-points" class="cfg-panel">
+    <template>
+      <div class="empty-state">
+        <div class="spinner" style="margin:0 auto 12px"></div>
+        <p data-i18n="config.loading">{{ i18n_dict.get('config.loading','Loading...') }}</p>
+      </div>
+    </template>
+    <template>
+      <div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div class="stat-card" style="border-left:3px solid var(--warning)">
+            <div class="label" data-i18n="config.points.balance">{{ i18n_dict.get('config.points.balance','Current
+              Points') }}</div>
+            <div class="value" style="color:var(--warning)">-</div>
+            <div class="sub">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="label" data-i18n="config.points.totalEarned">{{ i18n_dict.get('config.points.totalEarned','Total
+              Earned') }}</div>
+            <div class="value">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="label" data-i18n="config.points.thisMonth">{{ i18n_dict.get('config.points.thisMonth','This
+              Month') }}</div>
+            <div class="value">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="label" data-i18n="config.points.redeemed">{{ i18n_dict.get('config.points.redeemed','Total
+              Redeemed') }}</div>
+            <div class="value">-</div>
+          </div>
+        </div>
+
+        <div class="v-card mb-6">
+          <div class="v-card-header">
+            <span class="v-card-title" data-i18n="config.points.tierProgress">{{
+              i18n_dict.get('config.points.tierProgress','Tier Progress') }}</span>
+            <span class="badge badge-warning">-</span>
+          </div>
+          <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;margin-bottom:8px">
+            <div></div>
+          </div>
+          <div class="flex justify-between text-xs" style="color:var(--text-muted)">
+            <span>-</span>
+            <span>-</span>
+          </div>
+        </div>
+
+        <div class="v-card">
+          <div class="v-card-header">
+            <span class="v-card-title" data-i18n="config.points.history">{{
+              i18n_dict.get('config.points.history','Points History') }}</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="v-table">
+              <thead>
+                <tr>
+                  <th data-i18n="config.col.time">{{ i18n_dict.get('config.col.time','Time') }}</th>
+                  <th data-i18n="config.col.event">{{ i18n_dict.get('config.col.event','Event') }}</th>
+                  <th data-i18n="config.col.delta">{{ i18n_dict.get('config.col.delta','Delta') }}</th>
+                  <th data-i18n="config.col.balance">{{ i18n_dict.get('config.col.balance','Balance') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template>
+                  <tr>
+                    <td class="text-xs" style="color:var(--text-muted)">-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                  </tr>
+                </template>
+                <template>
+                  <tr>
+                    <td colspan="4" class="text-center" style="color:var(--text-muted);padding:32px"
+                      data-i18n="config.points.empty">{{ i18n_dict.get('config.points.empty','No points records') }}
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <div id="vp-config-panel-fees" class="cfg-panel">
+    <template>
+      <div class="empty-state">
+        <div class="spinner" style="margin:0 auto 12px"></div>
+        <p data-i18n="config.loading">{{ i18n_dict.get('config.loading','Loading...') }}</p>
+      </div>
+    </template>
+    <template>
+      <div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="stat-card" style="border-left:3px solid var(--warning)">
+            <div class="label" data-i18n="config.fees.rate">{{ i18n_dict.get('config.fees.rate','Current Rate') }}</div>
+            <div class="value" style="color:var(--warning)">-</div>
+            <div class="sub" data-i18n="config.fees.rateSub">{{ i18n_dict.get('config.fees.rateSub','Charged per trade')
+              }}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label" data-i18n="config.fees.thisMonth">{{ i18n_dict.get('config.fees.thisMonth','Fees This
+              Month') }}</div>
+            <div class="value">-</div>
+          </div>
+          <div class="stat-card">
+            <div class="label" data-i18n="config.fees.total">{{ i18n_dict.get('config.fees.total','Total Fees') }}</div>
+            <div class="value">-</div>
+          </div>
+        </div>
+
+        <div class="v-card">
+          <div class="v-card-header">
+            <span class="v-card-title" data-i18n="config.fees.history">{{ i18n_dict.get('config.fees.history','Fees
+              History') }}</span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="v-table">
+              <thead>
+                <tr>
+                  <th data-i18n="config.col.date">{{ i18n_dict.get('config.col.date','Date') }}</th>
+                  <th data-i18n="config.col.type">{{ i18n_dict.get('config.col.type','Type') }}</th>
+                  <th data-i18n="config.col.amount">{{ i18n_dict.get('config.col.amount','Amount') }}</th>
+                  <th data-i18n="config.col.linkedTrade">{{ i18n_dict.get('config.col.linkedTrade','Linked Trade') }}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                <template>
+                  <tr>
+                    <td class="text-xs" style="color:var(--text-muted)">-</td>
+                    <td>-</td>
+                    <td class="text-warning">-</td>
+                    <td class="text-xs" style="color:var(--text-muted)">-</td>
+                  </tr>
+                </template>
+                <template>
+                  <tr>
+                    <td colspan="4" class="text-center" style="color:var(--text-muted);padding:32px"
+                      data-i18n="config.fees.empty">{{ i18n_dict.get('config.fees.empty','No fee records') }}</td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <div id="vp-config-panel-strategy" class="cfg-panel">
+    <template>
+      <div class="empty-state">
+        <div class="spinner" style="margin:0 auto 12px"></div>
+        <p data-i18n="config.loading">{{ i18n_dict.get('config.loading','Loading...') }}</p>
+      </div>
+    </template>
+    <template>
+      <div class="grid grid-cols-1 gap-6">
+        <div class="v-card" style="border-left:3px solid var(--primary)">
+          <button type="button" class="w-full flex items-center justify-between"
+            style="background:none;border:0;padding:0;cursor:pointer">
+            <div class="v-card-header" style="width:100%;padding:0">
+              <span class="v-card-title" style="display:flex;align-items:center;gap:8px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                {{ i18n_dict.get('config.copytrader.title','Copytrader Strategy') }}
+              </span>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span class="badge">-</span>
+                <a href="/Copytrader" class="badge badge-info" style="text-decoration:none;cursor:pointer">
+                  {{ i18n_dict.get('config.copytrader.goto','Full Manager') }} &rarr;
+                </a>
+                <span class="badge badge-info"></span>
+              </div>
+            </div>
+          </button>
+          <div>
+            <template>
+              <div class="empty-state" style="padding:16px">
+                <div class="spinner" style="margin:0 auto"></div>
+              </div>
+            </template>
+            <template>
+              <div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div class="v-surface-muted flex items-center justify-between">
+                    <div>
+                      <div class="text-sm font-medium">{{ i18n_dict.get('config.copytrader.enabled','Daemon Enabled') }}
+                      </div>
+                      <div class="text-xs mt-0.5" style="color:var(--text-muted)">{{
+                        i18n_dict.get('config.copytrader.enabledDesc','Start/stop the copy-trade daemon') }}</div>
+                    </div>
+                    <div class="v-toggle"></div>
+                  </div>
+                  <div class="v-surface-muted flex items-center justify-between">
+                    <div>
+                      <div class="text-sm font-medium">{{ i18n_dict.get('config.copytrader.followSell','Follow Sell') }}
+                      </div>
+                      <div class="text-xs mt-0.5" style="color:var(--text-muted)">{{
+                        i18n_dict.get('config.copytrader.followSellDesc','Mirror sell orders from tracked wallets') }}
+                      </div>
+                    </div>
+                    <div class="v-toggle"></div>
+                  </div>
+                  <div class="v-surface-muted flex items-center justify-between">
+                    <div>
+                      <div class="text-sm font-medium">{{ i18n_dict.get('config.copytrader.excludeBots','Exclude Bots')
+                        }}</div>
+                      <div class="text-xs mt-0.5" style="color:var(--text-muted)">{{
+                        i18n_dict.get('config.copytrader.excludeBotsDesc','Filter out algorithmically detected bots') }}
+                      </div>
+                    </div>
+                    <div class="v-toggle"></div>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.tradeMode','Buy/Sell Mode') }}</label>
+                    <select class="v-input" style="width:100%;font-size:.82rem" disabled>
+                      <option value="taker">Taker</option>
+                      <option value="maker">Maker</option>
+                    </select>
+                    <div class="text-xs mt-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.tradeModeLockedHint','Currently locked to Taker for stable
+                      execution') }}</div>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.followMultiplier','Follow Multiplier') }}</label>
+                    <input type="number" class="v-input" style="width:100%;font-size:.82rem" min="1" max="1000"
+                      step="1">
+                    <div class="flex gap-2 mt-2">
+                      <button class="v-btn v-btn-outline v-btn-sm" type="button">10</button>
+                      <button class="v-btn v-btn-outline v-btn-sm" type="button">50</button>
+                      <button class="v-btn v-btn-outline v-btn-sm" type="button">100</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.maxFollows','Max Concurrent Follows') }}</label>
+                    <input type="number" class="v-input" style="width:100%;font-size:.82rem" min="1" max="20" step="1">
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.minScore','Min Wallet Score') }}</label>
+                    <input type="number" class="v-input" style="width:100%;font-size:.82rem" min="0" max="100" step="1">
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.maxPrice','Max Entry Price') }}</label>
+                    <input type="number" class="v-input" style="width:100%;font-size:.82rem" min="0.1" max="0.99"
+                      step="0.01">
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.minEv','Min EV Filter') }}</label>
+                    <input type="number" class="v-input" style="width:100%;font-size:.82rem" min="0" max="0.2"
+                      step="0.001">
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.lookback','Lookback (minutes)') }}</label>
+                    <input type="number" class="v-input" style="width:100%;font-size:.82rem" min="1" max="1440"
+                      step="5">
+                  </div>
+                  <div>
+                    <label class="text-xs font-medium block mb-1" style="color:var(--text-muted)">{{
+                      i18n_dict.get('config.copytrader.scanInterval','Scan Interval (seconds)') }}</label>
+                    <input type="number" class="v-input" style="width:100%;font-size:.82rem" min="10" max="3600"
+                      step="10">
+                  </div>
+                </div>
+                <div style="margin-top:10px;font-size:.8rem;font-weight:600"></div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('config');
+  }
+</script>
+<script>
+  function configApp() {
+    return {
+      tab: 'points',
+      points: { balance: 0, tier: '-', total_earned: 0, this_month: 0, redeemed: 0, next_tier_pts: 0, history: [] },
+      fees: { rate: 0, total: 0, this_month: 0, history: [] },
+      strategy: {
+        auto_bet: false, copy_trade: false, stop_loss: false, telegram_notify: false, trade_notify: false,
+        max_single_bet_pct: 0.03, daily_loss_pct: 0.5, min_ev: 0.04, dry_run: true
+      },
+      ctSettings: {
+        enabled: true, scan_interval_seconds: 60, max_concurrent_follows: 3,
+        trade_mode: 'taker', trade_mode_options: ['taker', 'maker'], trade_mode_locked: true,
+        follow_multiplier: 1, min_order_size_buffer_shares: 1,
+        min_ev_filter: 0.002, max_price_filter: 0.85, follow_sell_enabled: true,
+        trade_lookback_minutes: 30, exclude_bots: true, min_score: 0
+      },
+      pointsLoading: false,
+      feesLoading: false,
+      stratLoading: false,
+      ctLoading: false,
+      strategyAccordionOpen: true,
+      ctSaveMsg: '',
+      ctSaveOk: true,
+
+      async init() {
+        await this.loadPoints();
+        if (window.lucide) lucide.createIcons();
+      },
+
+      async loadPoints() {
+        this.pointsLoading = true;
+        const d = await vJson('/api/user/points');
+        if (d) {
+          this.points = {
+            ...this.points,
+            balance: d.balance ?? 0,
+            total_earned: d.total_earned ?? 0,
+            this_month: d.this_month ?? 0,
+            redeemed: d.total_spent ?? 0,
+            history: d.recent_transactions || [],
+          };
+        }
+        this.pointsLoading = false;
+      },
+
+      async loadFees() {
+        if (this.fees.history.length > 0) return;
+        this.feesLoading = true;
+        const d = await vJson('/api/user/fees');
+        if (d) this.fees = { ...this.fees, ...d };
+        this.feesLoading = false;
+      },
+
+      async loadStrategy() {
+        if (this.stratLoading) return;
+        this.stratLoading = true;
+        const d = await vJson('/api/user/strategy');
+        if (d) this.strategy = { ...this.strategy, ...d };
+        this.stratLoading = false;
+        await this.loadCtSettings();
+      },
+
+      async loadCtSettings() {
+        if (this.ctLoading) return;
+        this.ctLoading = true;
+        try {
+          const resp = await fetch('/api/v2/copytrader/settings', { credentials: 'include' });
+          const d = await resp.json();
+          if (d && d.settings) this.ctSettings = { ...this.ctSettings, ...d.settings };
+        } catch (e) { }
+        this.ctLoading = false;
+      },
+
+      async ctToggle(key) {
+        this.ctSettings[key] = !this.ctSettings[key];
+        await this.ctSave();
+      },
+
+      async ctSave() {
+        this.ctSaveMsg = '';
+        try {
+          this.ctSettings.trade_mode = 'taker';
+          this.ctSettings.trade_mode_options = ['taker', 'maker'];
+          this.ctSettings.trade_mode_locked = true;
+          this.ctSettings.follow_multiplier = Math.max(1, Math.min(1000, parseInt(this.ctSettings.follow_multiplier || 1, 10) || 1));
+          const resp = await fetch('/api/v2/copytrader/settings', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings: this.ctSettings }),
+          });
+          const d = await resp.json().catch(() => null);
+          if (resp.ok && d && d.ok) {
+            this.ctSaveOk = true;
+            this.ctSaveMsg = '{{ i18n_dict.get("config.copytrader.saved","Saved") }}';
+          } else {
+            this.ctSaveOk = false;
+            this.ctSaveMsg = '{{ i18n_dict.get("config.copytrader.saveFailed","Save failed") }}';
+          }
+        } catch (e) {
+          this.ctSaveOk = false;
+          this.ctSaveMsg = '{{ i18n_dict.get("config.copytrader.saveFailed","Save failed") }}';
+        }
+        setTimeout(() => { this.ctSaveMsg = ''; }, 3000);
+      },
+
+      async setCtMultiplier(v) {
+        this.ctSettings.follow_multiplier = Number(v) || 1;
+        await this.ctSave();
+      },
+
+      async toggleStrategy(key) {
+        this.strategy[key] = !this.strategy[key];
+        const resp = await vFetch('/api/user/strategy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ [key]: this.strategy[key] }),
+        });
+        if (!resp || !resp.ok) {
+          this.strategy[key] = !this.strategy[key];
+          const _t = (window.veyraI18n && window.veyraI18n.t) ? window.veyraI18n.t : function (k, fb) { return fb; };
+          showToast(_t('config.toast.strategySaveFailed', 'Strategy save failed'), 'error');
+          return;
+        }
+        const d = await resp.json().catch(() => null);
+        if (d) {
+          this.strategy = { ...this.strategy, ...d };
+        }
+      },
+    };
+  }
+</script>
+{% endblock %}

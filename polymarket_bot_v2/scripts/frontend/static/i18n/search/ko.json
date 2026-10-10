@@ -1,0 +1,20 @@
+{
+  "search.title": "검색",
+  "search.subtitle": "스포츠, 정치, 암호화폐, e스포츠 등 모든 Polymarket 이벤트 검색.",
+  "search.input.placeholder": "팀, 선수, 후보, 토큰, 날씨 도시 검색…",
+  "search.button.go": "검색",
+  "search.tab.active": "진행 중",
+  "search.tab.resolved": "완료",
+  "search.tab.all": "전체",
+  "search.loading": "검색 중…",
+  "search.empty.no_query": "검색어를 입력하세요.",
+  "search.empty.no_results": "결과 없음. 다른 키워드를 시도하세요.",
+  "search.error": "검색 실패. 다시 시도하세요.",
+  "search.card.ends": "종료",
+  "search.card.vol": "거래량",
+  "search.card.markets": "마켓",
+  "search.summary.results": "결과 {n}개",
+  "search.summary.page": "{total}중 {page}페이지",
+  "search.pagination.prev": "이전",
+  "search.pagination.next": "다음"
+}

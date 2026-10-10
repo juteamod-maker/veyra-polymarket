@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "Carteira PM associada",
+  "go.badge.unbound": "Carteira PM não associada",
+  "go.btn.authorize": "Autorizar carteira",
+  "go.btn.dashboard": "Ir ao painel",
+  "go.contentLoading": "A carregar conteúdo…",
+  "go.heading": "Guia do utilizador V e Y r a",
+  "go.loadFailedPrefix": "Falha ao carregar:",
+  "go.loading": "A redirecionar, por favor aguarde…",
+  "go.title": "A redirecionar",
+  "go.toc": "Conteúdo",
+  "go.toc.empty": "(sem cabeçalhos)"
+}

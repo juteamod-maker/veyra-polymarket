@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - Refer a Friend{% endblock %}
+
+{% block content %}
+<script>
+  if (document.body) document.body.setAttribute('data-requires-pm', '1');
+</script>
+<style>
+  /* T905: refer page mobile (<=768px) layout reconstruction */
+  @media (max-width: 768px) {
+    #refer-page-root.v-page-shell {
+      padding: 12px !important;
+    }
+
+    #refer-page-root .grid {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    #refer-page-root .stat-card {
+      padding: 14px !important;
+    }
+
+    #refer-page-root .stat-card .value {
+      font-size: 1.2rem !important;
+      word-break: break-all;
+    }
+
+    #refer-page-root .v-card {
+      padding: 14px !important;
+    }
+
+    #refer-page-root .v-card-header {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    #refer-page-root .v-card-header .flex {
+      flex-wrap: wrap;
+    }
+
+    /* link input + copy: stack to two rows */
+    #refer-page-root #ref-link-input {
+      width: 100% !important;
+      min-width: 0 !important;
+      font-size: 12px !important;
+    }
+
+    #refer-page-root [data-refer-action="copy"] {
+      width: 100% !important;
+      justify-content: center;
+    }
+
+    #refer-page-root .flex.gap-2 {
+      flex-direction: column;
+      gap: 8px !important;
+    }
+
+    /* records table: card-style stacked rows */
+    #refer-page-root .overflow-x-auto {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+
+    #refer-page-root .v-table {
+      font-size: 12px;
+      min-width: 0;
+    }
+
+    /* T905 key fix: prevent grid items from expanding to widest content */
+    #refer-page-root,
+    #refer-page-root .grid,
+    #refer-page-root .grid>* {
+      min-width: 0 !important;
+    }
+
+    #refer-page-root .v-card,
+    #refer-page-root .stat-card {
+      min-width: 0 !important;
+      max-width: 100%;
+      overflow: hidden;
+    }
+
+    #refer-page-root [data-refer-pagination] {
+      flex-wrap: wrap;
+      justify-content: center !important;
+    }
+
+    /* lg:col-span-* manual reset */
+    #refer-page-root .lg\:col-span-3,
+    #refer-page-root .lg\:col-span-2 {
+      grid-column: span 1 / span 1 !important;
+    }
+
+    /* Reward rows: keep readable */
+    #refer-page-root .flex.items-center.justify-between {
+      gap: 8px;
+    }
+
+    #refer-page-root .badge {
+      white-space: nowrap;
+    }
+  }
+</style>
+<div id="refer-page-root" class="v-page-shell">
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="stat-card v-card-l-success">
+      <div class="label" data-i18n="refer.stats.count.label">{{ i18n_dict.get('refer.stats.count.label','Referrals') }}
+      </div>
+      <div class="value text-success" data-refer-stat="count">-</div>
+      <div class="sub" data-i18n="refer.stats.count.sub">{{ i18n_dict.get('refer.stats.count.sub','Successful sign-ups')
+        }}</div>
+    </div>
+    <div class="stat-card v-card-l-accent">
+      <div class="label" data-i18n="refer.stats.earnings.label">{{ i18n_dict.get('refer.stats.earnings.label','Referral
+        Earnings') }}</div>
+      <div class="value" style="color:var(--accent)" data-refer-stat="earnings">-</div>
+      <div class="sub" data-i18n="refer.stats.earnings.sub">{{ i18n_dict.get('refer.stats.earnings.sub','Total rewards')
+        }}</div>
+    </div>
+    <div class="stat-card v-card-l-warning">
+      <div class="label" data-i18n="refer.stats.code.label">{{ i18n_dict.get('refer.stats.code.label','My Referral
+        Code') }}</div>
+      <div class="value text-warning text-base font-mono" data-refer-stat="code">-</div>
+      <div class="sub" data-i18n="refer.stats.code.sub">{{ i18n_dict.get('refer.stats.code.sub','Personal invite code')
+        }}</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    <div class="lg:col-span-3 space-y-4">
+
+      <div class="v-card">
+        <div class="v-card-header">
+          <span class="v-card-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;margin-right:6px">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+            </svg>
+            <span data-i18n="refer.linkCard.title">{{ i18n_dict.get('refer.linkCard.title','Personal Referral Link')
+              }}</span>
+          </span>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-semibold"
+              style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em"
+              data-i18n="refer.linkCard.label">{{ i18n_dict.get('refer.linkCard.label','Referral Link') }}</label>
+            <div class="flex gap-2 mt-2">
+              <input readonly class="v-input font-mono text-sm" id="ref-link-input" data-refer-link-input>
+              <button class="v-btn v-btn-primary" style="white-space:nowrap;flex-shrink:0" data-refer-action="copy">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                <span data-i18n="common.copy">{{ i18n_dict.get('common.copy','Copy') }}</span>
+              </button>
+            </div>
+          </div>
+          <div class="text-xs" data-refer-copy-msg style="color:var(--text-muted)"></div>
+          <div class="v-surface-info text-sm">
+            <span data-i18n="refer.linkCard.noticePrefix">{{ i18n_dict.get('refer.linkCard.noticePrefix','Referral
+              rewards are distributed by current admin point rules after your friend completes their first trade. Please
+              use the rule breakdown on the right as the source of truth.') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="v-card">
+        <div class="v-card-header">
+          <span class="v-card-title" data-i18n="refer.records.title">{{ i18n_dict.get('refer.records.title','Referral
+            Records') }}</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="badge badge-neutral" data-refer-count-badge>-</span>
+            <span class="badge badge-success">L1: <span data-refer-l1-count>0</span></span>
+            <span class="badge badge-info">L2: <span data-refer-l2-count>0</span></span>
+            <span class="badge badge-warning">L3: <span data-refer-l3-count>0</span></span>
+          </div>
+        </div>
+        <div class="empty-state" data-refer-loading style="display:none">
+          <div class="spinner" style="margin:0 auto 12px"></div>
+          <p data-i18n="common.loading">{{ i18n_dict.get('common.loading','Loading...') }}</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="v-table">
+            <thead>
+              <tr>
+                <th data-i18n="refer.col.friend">{{ i18n_dict.get('refer.col.friend','Wallet') }}</th>
+                <th data-i18n="refer.col.parent">{{ i18n_dict.get('refer.col.parent','Parent') }}</th>
+                <th data-i18n="refer.col.level">{{ i18n_dict.get('refer.col.level','Level') }}</th>
+                <th data-i18n="refer.col.registeredAt">{{ i18n_dict.get('refer.col.registeredAt','Registered At') }}
+                </th>
+                <th data-i18n="refer.col.status">{{ i18n_dict.get('refer.col.status','Status') }}</th>
+                <th data-i18n="refer.col.reward">{{ i18n_dict.get('refer.col.reward','Reward') }}</th>
+              </tr>
+            </thead>
+            <tbody data-refer-table-body style="display:none"></tbody>
+          </table>
+          <div data-refer-pagination
+            style="display:none;padding:12px 4px 4px;align-items:center;justify-content:flex-end;gap:8px">
+            <button class="v-btn v-btn-outline v-btn-sm" data-refer-page-prev>{{ i18n_dict.get('common.prev','Prev')
+              }}</button>
+            <span data-refer-page-info style="font-size:.78rem;color:var(--text-muted)">1 / 1</span>
+            <button class="v-btn v-btn-outline v-btn-sm" data-refer-page-next>{{ i18n_dict.get('common.next','Next')
+              }}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2 space-y-4">
+
+      <div class="v-card">
+        <div class="v-card-header">
+          <span class="v-card-title" data-i18n="refer.howto.title">{{ i18n_dict.get('refer.howto.title','How It Works')
+            }}</span>
+        </div>
+        <div class="space-y-4">
+          <div class="flex gap-3">
+            <div
+              style="width:28px;height:28px;border-radius:50%;background:var(--accent-bg);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">
+              1</div>
+            <div>
+              <div class="text-sm font-semibold" data-i18n="refer.howto.step1.title">{{
+                i18n_dict.get('refer.howto.step1.title','Copy your referral link') }}</div>
+              <div class="text-xs mt-0.5" style="color:var(--text-muted)" data-i18n="refer.howto.step1.desc">{{
+                i18n_dict.get('refer.howto.step1.desc','Copy your personal referral link from above') }}</div>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div
+              style="width:28px;height:28px;border-radius:50%;background:var(--accent-bg);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">
+              2</div>
+            <div>
+              <div class="text-sm font-semibold" data-i18n="refer.howto.step2.title">{{
+                i18n_dict.get('refer.howto.step2.title','Share with friends') }}</div>
+              <div class="text-xs mt-0.5" style="color:var(--text-muted)" data-i18n="refer.howto.step2.desc">{{
+                i18n_dict.get('refer.howto.step2.desc','Send via social media, Telegram or other channels') }}</div>
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div
+              style="width:28px;height:28px;border-radius:50%;background:var(--accent-bg);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">
+              3</div>
+            <div>
+              <div class="text-sm font-semibold" data-i18n="refer.howto.step3.title">{{
+                i18n_dict.get('refer.howto.step3.title','Friend completes first trade') }}</div>
+              <div class="text-xs mt-0.5" style="color:var(--text-muted)" data-i18n="refer.howto.step3.desc">{{
+                i18n_dict.get('refer.howto.step3.desc','Once your friend signs up and trades, both of you receive the
+                reward automatically') }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v-card">
+        <div class="v-card-header">
+          <span class="v-card-title" data-i18n="refer.rewards.title">{{ i18n_dict.get('refer.rewards.title','Referral
+            Rewards') }}</span>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between p-2 rounded" style="background:var(--bg-body)">
+            <span class="text-sm" data-i18n="refer.rewards.first">{{ i18n_dict.get('refer.rewards.first','L1 referrer
+              reward (after friend first trade)') }}</span>
+            <span class="badge badge-success" data-refer-l1-bonus>{{ i18n_dict.get('refer.rewards.firstBonus','+🪙 0')
+              }}</span>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded" style="background:var(--bg-body)">
+            <span class="text-sm" data-i18n="refer.rewards.tier5">{{ i18n_dict.get('refer.rewards.tier5','L2 referrer
+              reward') }}</span>
+            <span class="badge badge-info" data-refer-l2-bonus>{{ i18n_dict.get('refer.rewards.tier5Bonus','+🪙 0')
+              }}</span>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded" style="background:var(--bg-body)">
+            <span class="text-sm" data-i18n="refer.rewards.tier10">{{ i18n_dict.get('refer.rewards.tier10','L3 referrer
+              reward') }}</span>
+            <span class="badge badge-warning" data-refer-l3-bonus>{{ i18n_dict.get('refer.rewards.tier10Bonus','+🪙 0')
+              }}</span>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded" style="background:var(--bg-body)">
+            <span class="text-sm" data-i18n="refer.rewards.tier20">{{ i18n_dict.get('refer.rewards.tier20','Referred
+              user reward after first trade') }}</span>
+            <span class="badge" style="background:rgba(117,146,255,0.15);color:#7592FF" data-refer-referred-bonus>{{
+              i18n_dict.get('refer.rewards.tier20Bonus','+🪙 0') }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('refer');
+  }
+</script>
+<script>
+  function referApp() {
+    const fmtPoints = (n) => `+🪙 ${Number.isFinite(n) ? n : 0}`;
+
+    return {
+      ref: { code: '', count: 0, earnings: 0, referrals: [] },
+      refLink: '',
+      copyMsg: '',
+      tableLoading: false,
+
+      async init() {
+        this.tableLoading = true;
+        const d = await vJson('/api/user/referral');
+        if (d) {
+          this.ref = { ...this.ref, ...d };
+          this.ref.code = d.code || d.referral_code || this.ref.code;
+          this.refLink = d.referral_link || ('https://veyra.trade/?ref=' + (this.ref.code || ''));
+        }
+
+        const rulesData = await vJson('/api/points/rules');
+        const rewards = (rulesData && rulesData.referral_rewards) || {};
+        const l1 = Number(rewards['1'] || rewards[1] || 0);
+        const l2 = Number(rewards['2'] || rewards[2] || 0);
+        const l3 = Number(rewards['3'] || rewards[3] || 0);
+        const referred = Number(rewards.referred || 0);
+        const l1Node = document.querySelector('[data-refer-l1-bonus]');
+        if (l1Node) l1Node.textContent = fmtPoints(l1);
+        const l2Node = document.querySelector('[data-refer-l2-bonus]');
+        if (l2Node) l2Node.textContent = fmtPoints(l2);
+        const l3Node = document.querySelector('[data-refer-l3-bonus]');
+        if (l3Node) l3Node.textContent = fmtPoints(l3);
+        const referredNode = document.querySelector('[data-refer-referred-bonus]');
+        if (referredNode) referredNode.textContent = fmtPoints(referred);
+
+        this.tableLoading = false;
+        if (window.lucide) lucide.createIcons();
+      },
+
+      async copyLink() {
+        var i18n = window.veyraI18n || null;
+        var msgOk = i18n ? i18n.t('refer.copy.success', 'Link copied to clipboard') : 'Link copied to clipboard';
+        var msgFb = i18n ? i18n.t('refer.copy.fallback', 'Link copied') : 'Link copied';
+        try {
+          await navigator.clipboard.writeText(this.refLink);
+          this.copyMsg = msgOk;
+        } catch {
+          var el = document.getElementById('ref-link-input');
+          if (el) { el.select(); document.execCommand('copy'); }
+          this.copyMsg = msgFb;
+        }
+        setTimeout(() => { this.copyMsg = ''; }, 3000);
+      },
+    };
+  }
+</script>
+{% endblock %}

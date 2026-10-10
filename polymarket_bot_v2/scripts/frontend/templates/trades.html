@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - Trade History{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/betslist.css?v={{ asset_version | default('0') }}">
+<style>
+  /* bets-refresh-btn: animation state only — visual styling deferred to v-btn v-btn-primary */
+  .bets-refresh-btn .bets-refresh-ico {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    transition: transform .35s ease;
+  }
+
+  .bets-refresh-btn.is-refreshing .bets-refresh-ico {
+    animation: bets-refresh-spin .9s linear infinite;
+  }
+
+  @keyframes bets-refresh-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .bets-refresh-toast {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    z-index: 9999;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: .82rem;
+    color: #fff;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .32);
+    transform: translateY(20px);
+    opacity: 0;
+    transition: transform .25s ease, opacity .25s ease;
+    pointer-events: none;
+  }
+
+  .bets-refresh-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  .bets-refresh-toast.ok {
+    background: linear-gradient(135deg, #16a34a, #22c55e);
+  }
+
+  .bets-refresh-toast.err {
+    background: linear-gradient(135deg, #b91c1c, #ef4444);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<script>document.body.setAttribute('data-requires-pm', '1');</script>
+
+<main id="bets-app" class="trades-v2-page v-page-shell">
+
+  <div class="v-card bets-filter-card">
+    <div class="bets-toolbar-scroll">
+      <div class="bets-toolbar-row">
+        <span class="bets-toolbar-sep"></span>
+
+        <input id="bets-filter-search" type="text" data-i18n-attr="placeholder:trades.filter.searchPlaceholder"
+          placeholder="{{ i18n_dict.get('trades.filter.searchPlaceholder','Search market / question / ID') }}"
+          oninput="BetsModule.debouncedFetch()"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();BetsModule.fetchBets(1)}" class="bets-search-input">
+        <select id="bets-filter-period" onchange="BetsModule.applyTimePeriod()" class="bets-filter-select">
+          <option value="" data-i18n="trades.period.all">{{ i18n_dict.get('trades.period.all','All time') }}</option>
+          <option value="today" data-i18n="trades.period.today">{{ i18n_dict.get('trades.period.today','Today') }}
+          </option>
+          <option value="7d" data-i18n="trades.period.7d">{{ i18n_dict.get('trades.period.7d','Last 7 days') }}</option>
+          <option value="30d" data-i18n="trades.period.30d">{{ i18n_dict.get('trades.period.30d','Last 30 days') }}
+          </option>
+          <option value="custom" data-i18n="trades.period.custom">{{ i18n_dict.get('trades.period.custom','Custom') }}
+          </option>
+        </select>
+        <div id="bets-custom-dates" class="bets-custom-dates" style="display:none">
+          <input id="bets-filter-from" type="date" onchange="BetsModule.debouncedFetch()" class="bets-filter-date">
+          <span style="color:var(--text-muted)" data-i18n="trades.filter.dateSeparator">{{
+            i18n_dict.get('trades.filter.dateSeparator','to') }}</span>
+          <input id="bets-filter-to" type="date" onchange="BetsModule.debouncedFetch()" class="bets-filter-date">
+        </div>
+
+        <select id="bets-filter-cat" onchange="BetsModule.onCategoryChanged()" class="bets-filter-select">
+          <option value="" data-i18n="trades.filter.allCategories">{{ i18n_dict.get('trades.filter.allCategories','All
+            categories') }}</option>
+        </select>
+        <select id="bets-filter-status" onchange="BetsModule.fetchImmediate()" class="bets-filter-select">
+          <option value="" data-i18n="trades.filter.allStatus">{{ i18n_dict.get('trades.filter.allStatus','All status')
+            }}</option>
+          <option value="open" selected data-i18n="trades.tab.open">{{ i18n_dict.get('trades.tab.open','Open') }}
+          </option>
+          <option value="resolved" data-i18n="trades.tab.closed">{{ i18n_dict.get('trades.tab.closed','Closed') }}
+          </option>
+          <option value="win" data-i18n="trades.status.win">{{ i18n_dict.get('trades.status.win','Win') }}</option>
+          <option value="loss" data-i18n="trades.status.loss">{{ i18n_dict.get('trades.status.loss','Loss') }}</option>
+          <option value="profit_take" data-i18n="trades.status.profitTake">{{
+            i18n_dict.get('trades.status.profitTake','Take Profit') }}</option>
+          <option value="stop_loss" data-i18n="trades.status.stopLoss">{{ i18n_dict.get('trades.status.stopLoss','Stop
+            Loss') }}</option>
+          <option value="manual_exit" data-i18n="trades.status.manualExit">{{
+            i18n_dict.get('trades.status.manualExit','Manual Exit') }}</option>
+        </select>
+        <select id="bets-filter-dim" onchange="BetsModule.fetchImmediate()" class="bets-filter-select"
+          style="display:none">
+          <option value="" data-i18n="trades.filter.allDimensions">{{ i18n_dict.get('trades.filter.allDimensions','All
+            dimensions') }}</option>
+        </select>
+
+        <select id="bets-filter-perpage" onchange="BetsModule.fetchImmediate()"
+          class="bets-filter-select bets-filter-perpage">
+          <option value="25" selected data-i18n="trades.filter.perPage25">{{ i18n_dict.get('trades.filter.perPage25','25
+            / page') }}</option>
+          <option value="50" data-i18n="trades.filter.perPage50">{{ i18n_dict.get('trades.filter.perPage50','50 / page')
+            }}</option>
+          <option value="100" data-i18n="trades.filter.perPage100">{{ i18n_dict.get('trades.filter.perPage100','100 /
+            page') }}</option>
+        </select>
+
+        <div class="bets-toolbar-right">
+          <button id="bets-refresh-btn" type="button" class="v-btn v-btn-primary bets-refresh-btn"
+            onclick="BetsModule.refreshNow && BetsModule.refreshNow()"
+            title="{{ i18n_dict.get('trades.refresh.button','Refresh Now') }}">
+            <svg class="bets-refresh-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+              <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
+            </svg>
+            <span data-i18n="trades.refresh.button">{{ i18n_dict.get('trades.refresh.button','Refresh Now') }}</span>
+          </button>
+          <span id="bets-page-info" class="bets-record-count">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bets-card-list" class="bets-card-list"></div>
+
+  <div class="bets-pagination">
+    <div class="bets-page-controls">
+      <button id="bets-page-prev" onclick="BetsModule.prevPage()" class="bets-page-btn" disabled
+        data-i18n="trades.pagination.prev">{{ i18n_dict.get('trades.pagination.prev','Previous') }}</button>
+      <span id="bets-page-label" class="bets-page-label">1 / 1</span>
+      <button id="bets-page-next" onclick="BetsModule.nextPage()" class="bets-page-btn" disabled
+        data-i18n="trades.pagination.next">{{ i18n_dict.get('trades.pagination.next','Next') }}</button>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('trades');
+  }
+</script>
+<script>
+  if (typeof api === 'undefined') {
+    window.api = function (path, opts) {
+      opts = opts || {};
+      var fetchOpts = { credentials: 'include' };
+      if (opts.method) fetchOpts.method = opts.method;
+      if (opts.body) {
+        fetchOpts.body = opts.body;
+        fetchOpts.headers = { 'Content-Type': 'application/json' };
+      }
+      if (opts.signal) fetchOpts.signal = opts.signal;
+      return fetch(path, fetchOpts).then(function (r) { return r.json(); });
+    };
+  }
+  if (typeof escHtml === 'undefined') {
+    window.escHtml = function (s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+  }
+</script>
+<script src="/static/js/bets.js?v={{ asset_version | default('0') }}"></script>
+<script>
+  localStorage.setItem('polymarket_active_tab', 'bets');
+  if (window.BetsModule && typeof window.BetsModule.onTabActivate === 'function') {
+    window.BetsModule.onTabActivate();
+  }
+</script>
+{% endblock %}

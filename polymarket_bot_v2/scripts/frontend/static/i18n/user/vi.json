@@ -1,0 +1,22 @@
+{
+  "user.mfa.disabledLabel": "MFA tắt · Khuyến khích mạnh để bảo vệ tài khoản",
+  "user.mfa.enabledLabel": "MFA bật · Phương thức đang hoạt động:",
+  "user.mfa.hintNoSecret": "Hệ thống này không bao giờ chạm vào khóa riêng OTP/Passkey của bạn. Luồng MFA được cung cấp bởi Privy.",
+  "user.mfa.manageBtn": "Quản lý/Tắt MFA",
+  "user.mfa.openBtn": "Bật MFA (khuyến nghị)",
+  "user.mfa.readPolicy": "Đọc chính sách bảo mật V e Y r a →",
+  "user.mfa.title": "Bảo mật tài khoản · Xác thực đa yếu tố (MFA)",
+  "user.pmWallet.bound": "Đã kết nối thành công (hệ thống đã triển khai Gnosis Safe)",
+  "user.pmWallet.fundWallet": "Ví tài trợ (Safe)",
+  "user.pmWallet.gotoBind": "Ủy quyền và kết nối ví",
+  "user.pmWallet.lockedHint": "Để bảo mật tài sản, ví Polymarket được triển khai tự động qua Gnosis Safe Proxy và liên kết với đăng nhập Privy của bạn. Không thể sửa đổi thủ công.",
+  "user.pmWallet.notBoundHtml": "Chưa có ví tài trợ Polymarket nào được kết nối. Vì lý do bảo mật, nhập ví thủ công bị vô hiệu hóa. Bạn phải ủy quyền qua Privy.",
+  "user.pmWallet.title": "Ví Polymarket",
+  "user.profile.active": "Hoạt động",
+  "user.profile.authWalletLabel": "Địa chỉ ví xác thực",
+  "user.profile.copy": "Sao chép",
+  "user.profile.displayNameLabel": "Tên hiển thị",
+  "user.profile.editTitle": "Chỉnh sửa hồ sơ",
+  "user.profile.registeredAt": "Đã đăng ký lúc",
+  "user.profile.save": "Lưu thay đổi"
+}

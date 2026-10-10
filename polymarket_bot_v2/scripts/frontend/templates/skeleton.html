@@ -1,0 +1,874 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a — UIUX Component Library{% endblock %}
+{% block breadcrumb %}UIUX Component Library{% endblock %}
+
+{% block content %}
+<div class="v-page-shell">
+
+  <!-- ═══════════════════════════════════════════════════════════
+       PAGE HERO  (v-page-hero)
+  ═══════════════════════════════════════════════════════════ -->
+  <section class="v-page-hero">
+    <div class="v-page-kicker">Design System · VeYra V2</div>
+    <h1 class="v-page-title">UIUX Component Library</h1>
+    <div class="v-page-sub">Every atomic visual component defined in the VeYra.trade Design System Manual V1.
+      Use this page as the single reference when building or reviewing any feature page.</div>
+    <div class="v-page-chips">
+      <span class="v-page-chip">Tokens</span>
+      <span class="v-page-chip">Typography</span>
+      <span class="v-page-chip">Buttons</span>
+      <span class="v-page-chip">Forms</span>
+      <span class="v-page-chip">Cards</span>
+      <span class="v-page-chip">Badges</span>
+      <span class="v-page-chip">Surfaces</span>
+      <span class="v-page-chip">Tables</span>
+      <span class="v-page-chip">States</span>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 1 · COLOR TOKENS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">1 · Color Tokens</span>
+      <span class="badge badge-neutral">:root CSS vars</span>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Background</div>
+    <div class="flex flex-wrap gap-3 mb-4">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--bg-body);border:1px solid var(--border)">
+        </div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--bg-body</div>
+          <div style="font-size:10px;color:var(--text-muted)">#101828</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div
+          style="width:40px;height:40px;border-radius:8px;background:var(--bg-card-solid);border:1px solid var(--border)">
+        </div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--bg-card-solid</div>
+          <div style="font-size:10px;color:var(--text-muted)">#141C2B</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div
+          style="width:40px;height:40px;border-radius:8px;background:var(--surface-elev-1);border:1px solid var(--border)">
+        </div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--surface-elev-1</div>
+          <div style="font-size:10px;color:var(--text-muted)">rgba(255,255,255,0.04)</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div
+          style="width:40px;height:40px;border-radius:8px;background:var(--surface-elev-2);border:1px solid var(--border)">
+        </div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--surface-elev-2</div>
+          <div style="font-size:10px;color:var(--text-muted)">rgba(255,255,255,0.07)</div>
+        </div>
+      </div>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Semantic Colors</div>
+    <div class="flex flex-wrap gap-3 mb-4">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--accent)"></div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--accent</div>
+          <div style="font-size:10px;color:var(--text-muted)">#465FFF</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--accent-hover)"></div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--accent-hover</div>
+          <div style="font-size:10px;color:var(--text-muted)">#5A73FF</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--success)"></div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--success</div>
+          <div style="font-size:10px;color:var(--text-muted)">#10B981</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--danger)"></div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--danger</div>
+          <div style="font-size:10px;color:var(--text-muted)">#F04438</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--warning)"></div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--warning</div>
+          <div style="font-size:10px;color:var(--text-muted)">#F59E0B</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:40px;height:40px;border-radius:8px;background:var(--info)"></div>
+        <div>
+          <div class="v-mono" style="font-size:11px;color:var(--text-primary)">--info</div>
+          <div style="font-size:10px;color:var(--text-muted)">#3ABFF8</div>
+        </div>
+      </div>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Text Colors</div>
+    <div class="flex flex-wrap gap-4">
+      <span style="color:var(--text-primary);font-size:13px">--text-primary · #F2F4F7</span>
+      <span style="color:var(--text-secondary);font-size:13px">--text-secondary · #D0D5DD</span>
+      <span style="color:var(--text-muted);font-size:13px">--text-muted · #98A2B3</span>
+      <span style="color:var(--text-dim);font-size:13px">--text-dim · #667085</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 2 · TYPOGRAPHY SCALE
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">2 · Typography Scale</span>
+      <span class="badge badge-neutral">Inter stack</span>
+    </div>
+    <div class="space-y-4">
+      <div style="border-bottom:1px solid var(--border);padding-bottom:14px">
+        <div style="font-size:32px;font-weight:700;line-height:1.25;color:var(--text-primary)">Display 32/700</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">32px / line-height 1.25 /
+          weight 700</div>
+      </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:14px">
+        <div style="font-size:28px;font-weight:700;line-height:1.3;color:var(--text-primary)">Heading H1 28/700</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">28px / weight 700</div>
+      </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:14px">
+        <div style="font-size:24px;font-weight:700;line-height:1.35;color:var(--text-primary)">Heading H2 24/700</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">24px / weight 700</div>
+      </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:14px">
+        <div style="font-size:20px;font-weight:600;line-height:1.4;color:var(--text-primary)">Heading H3 20/600</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">20px / weight 600</div>
+      </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:14px">
+        <div style="font-size:16px;font-weight:500;line-height:1.5;color:var(--text-primary)">Body-L 16/500 — Primary
+          body text for important descriptions and section leads.</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">16px / weight 500</div>
+      </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:14px">
+        <div style="font-size:14px;font-weight:400;line-height:1.57;color:var(--text-secondary)">Body 14/400 — Standard
+          body copy. Used for most content blocks, descriptions, and helper text within cards.</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">14px / weight 400</div>
+      </div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:14px">
+        <div style="font-size:12px;font-weight:500;line-height:1.5;color:var(--text-muted)">Caption 12/500 — Labels,
+          timestamps, meta info, table headers, chip text.</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">12px / weight 500</div>
+      </div>
+      <div>
+        <div class="v-mono" style="font-size:13px;font-weight:600;color:var(--text-primary)">Mono-data 13/600 —
+          0x1a2b3c4d · 1,234.56 pUSD · #F04438</div>
+        <div class="v-mono" style="font-size:11px;color:var(--text-muted);margin-top:4px">13px / weight 600 ·
+          ui-monospace stack · class: v-mono</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 3 · SPACING + RADIUS + SHADOW TOKENS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">3 · Spacing · Radius · Shadow</span>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Spacing Scale (px)</div>
+    <div class="flex flex-wrap items-end gap-3 mb-6">
+      {% for sp in [4,8,12,16,20,24,32,40,48] %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="width:{{ sp }}px;height:{{ sp }}px;background:var(--accent);opacity:0.55;border-radius:3px"></div>
+        <span style="font-size:10px;color:var(--text-muted)">{{ sp }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Border Radius</div>
+    <div class="flex flex-wrap gap-4 mb-6">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div
+          style="width:56px;height:56px;background:var(--surface-elev-1);border:1px solid var(--border);border-radius:var(--radius-sm)">
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">--radius-sm (8px)</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div
+          style="width:56px;height:56px;background:var(--surface-elev-1);border:1px solid var(--border);border-radius:var(--radius-md)">
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">--radius-md (10px)</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div
+          style="width:56px;height:56px;background:var(--surface-elev-1);border:1px solid var(--border);border-radius:var(--radius-lg)">
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">--radius-lg (14px)</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div
+          style="width:56px;height:56px;background:var(--surface-elev-1);border:1px solid var(--border);border-radius:999px">
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">pill (999px)</span>
+      </div>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Shadows</div>
+    <div class="flex flex-wrap gap-6">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <div
+          style="width:100px;height:60px;background:var(--bg-card-solid);border-radius:10px;box-shadow:var(--shadow-surface)">
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">--shadow-surface</span>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+        <div
+          style="width:100px;height:60px;background:var(--bg-card-solid);border-radius:10px;box-shadow:var(--shadow-hero)">
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">--shadow-hero</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 4 · BUTTONS — ALL VARIANTS + STATES
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">4 · Buttons</span>
+      <span class="badge badge-neutral">v-btn</span>
+    </div>
+
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Variants — Default size (h=36)</div>
+    <div class="flex flex-wrap gap-3 mb-5">
+      <button class="v-btn v-btn-primary">Primary</button>
+      <button class="v-btn v-btn-outline">Secondary / Outline</button>
+      <button class="v-btn v-btn-danger">Danger</button>
+    </div>
+
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Small (v-btn-sm, h=30)</div>
+    <div class="flex flex-wrap gap-3 mb-5">
+      <button class="v-btn v-btn-primary v-btn-sm">Primary sm</button>
+      <button class="v-btn v-btn-outline v-btn-sm">Outline sm</button>
+      <button class="v-btn v-btn-danger v-btn-sm">Danger sm</button>
+    </div>
+
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Disabled State</div>
+    <div class="flex flex-wrap gap-3 mb-5">
+      <button class="v-btn v-btn-primary" disabled>Primary disabled</button>
+      <button class="v-btn v-btn-outline" disabled>Outline disabled</button>
+      <button class="v-btn v-btn-danger" disabled>Danger disabled</button>
+    </div>
+
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Loading State (spinner inside
+      button)</div>
+    <div class="flex flex-wrap gap-3 mb-5">
+      <button class="v-btn v-btn-primary" disabled>
+        <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+        Saving…
+      </button>
+      <button class="v-btn v-btn-outline" disabled>
+        <span class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+        Loading…
+      </button>
+    </div>
+
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">With Icon</div>
+    <div class="flex flex-wrap gap-3">
+      <button class="v-btn v-btn-primary">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Add New
+      </button>
+      <button class="v-btn v-btn-outline">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10" />
+          <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14" />
+        </svg>
+        Refresh
+      </button>
+      <button class="v-btn v-btn-danger v-btn-sm">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14H6L5 6" />
+          <path d="M10 11v6M14 11v6" />
+          <path d="M9 6V4h6v2" />
+        </svg>
+        Delete
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 5 · FORM CONTROLS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">5 · Form Controls</span>
+      <span class="badge badge-neutral">v-input · v-select · v-toggle</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <div class="text-xs font-semibold mb-3"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Text Input</div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-semibold"
+              style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Default</label>
+            <input class="v-input" placeholder="Enter value…">
+          </div>
+          <div>
+            <label class="text-xs font-semibold"
+              style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">With
+              value</label>
+            <input class="v-input" value="0x1a2B3c4D5e6F…">
+          </div>
+          <div>
+            <label class="text-xs font-semibold"
+              style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Error
+              state</label>
+            <input class="v-input" style="border-color:var(--danger)" placeholder="Invalid value">
+            <div class="text-xs mt-1" style="color:var(--danger)">This field is required.</div>
+          </div>
+          <div>
+            <label class="text-xs font-semibold"
+              style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Disabled</label>
+            <input class="v-input" disabled value="Read-only value">
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="text-xs font-semibold mb-3"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Select</div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-semibold"
+              style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Default
+              select</label>
+            <select class="v-select">
+              <option>Option A</option>
+              <option>Option B</option>
+              <option>Option C</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs font-semibold"
+              style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Disabled</label>
+            <select class="v-select" disabled>
+              <option>Locked option</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="text-xs font-semibold mt-5 mb-3"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Toggle (v-toggle)</div>
+        <div class="space-y-3">
+          <div class="v-surface-muted flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium">Daemon Enabled</div>
+              <div class="text-xs mt-0.5" style="color:var(--text-muted)">Start/stop the background service</div>
+            </div>
+            <div class="v-toggle"></div>
+          </div>
+          <div class="v-surface-muted flex items-center justify-between">
+            <div>
+              <div class="text-sm font-medium">Follow Sell Orders</div>
+              <div class="text-xs mt-0.5" style="color:var(--text-muted)">Mirror sell orders from tracked wallets</div>
+            </div>
+            <div class="v-toggle" style="opacity:.5;pointer-events:none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 6 · BADGES
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">6 · Badges</span>
+      <span class="badge badge-neutral">badge · badge-*</span>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Semantic Status Badges</div>
+    <div class="flex flex-wrap gap-3 mb-5">
+      <span class="badge badge-success">Success · Active</span>
+      <span class="badge badge-danger">Danger · Error</span>
+      <span class="badge badge-warning">Warning · Pending</span>
+      <span class="badge badge-info">Info · Syncing</span>
+      <span class="badge badge-neutral">Neutral · Default</span>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Pill Meta Tags (v-pill-meta)</div>
+    <div class="flex flex-wrap gap-3 mb-5">
+      <span class="v-pill-meta v-pill-meta-accent">Accent</span>
+      <span class="v-pill-meta v-pill-meta-success">Success</span>
+      <span class="v-pill-meta" style="background:rgba(245,158,11,0.12);color:#fcd34d">Warning</span>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Page Chips (v-page-chip)</div>
+    <div class="v-page-chips">
+      <span class="v-page-chip">Polygon</span>
+      <span class="v-page-chip">pUSD</span>
+      <span class="v-page-chip">Gnosis Safe</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 7 · CARDS — ALL VARIANTS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">7 · Cards</span>
+      <span class="badge badge-neutral">v-card · v-card-l-* · stat-card</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="v-card">
+        <div class="v-card-header">
+          <span class="v-card-title">Default Card</span>
+          <span class="badge badge-neutral">v-card</span>
+        </div>
+        <div class="text-sm" style="color:var(--text-secondary)">Base card with border, bg-card-solid, radius-lg,
+          padding 20px, and surface shadow.</div>
+      </div>
+      <div class="v-card v-card-l-accent">
+        <div class="v-card-header">
+          <span class="v-card-title">Accent Left Border</span>
+          <span class="badge badge-info">v-card-l-accent</span>
+        </div>
+        <div class="text-sm" style="color:var(--text-secondary)">Left border accent stripe (3px solid --accent). Use for
+          primary KPI or wallet cards.</div>
+      </div>
+      <div class="v-card v-card-l-success">
+        <div class="v-card-header">
+          <span class="v-card-title">Success Left Border</span>
+          <span class="badge badge-success">v-card-l-success</span>
+        </div>
+        <div class="text-sm" style="color:var(--text-secondary)">Left border success stripe (3px solid --success). Use
+          for positive metrics.</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="v-card v-card-l-warning">
+        <div class="v-card-header">
+          <span class="v-card-title">Warning Left Border</span>
+          <span class="badge badge-warning">v-card-l-warning</span>
+        </div>
+        <div class="text-sm" style="color:var(--text-secondary)">Left border warning stripe (3px solid --warning). Use
+          for exposure or at-risk metrics.</div>
+      </div>
+    </div>
+    <div class="text-xs font-semibold mb-3"
+      style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Stat Cards (stat-card)</div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="stat-card">
+        <div class="label">Balance</div>
+        <div class="value" style="color:var(--text-primary)">1,234.56</div>
+        <div class="sub">pUSD available</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Open Positions</div>
+        <div class="value" style="color:var(--accent)">12</div>
+        <div class="sub">active bets</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total P&amp;L</div>
+        <div class="value" style="color:var(--success)">+87.20</div>
+        <div class="sub">pUSD lifetime</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Risk Level</div>
+        <div class="value" style="color:var(--danger)">High</div>
+        <div class="sub">drawdown 18%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 8 · SEMANTIC SURFACE PANELS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">8 · Semantic Surface Panels</span>
+      <span class="badge badge-neutral">v-surface-*</span>
+    </div>
+    <div class="space-y-3">
+      <div class="v-surface-info">
+        <strong>v-surface-info</strong> — Use for neutral informational notices, policy hints, and general guidance
+        blocks.
+        Background rgba(58,191,248,0.09) · border rgba(58,191,248,0.25) · color #bae6fd
+      </div>
+      <div class="v-surface-success">
+        <strong>v-surface-success</strong> — Use for confirmed positive states: MFA enabled, wallet bound, deposit
+        confirmed.
+        Background rgba(16,185,129,0.10) · border rgba(16,185,129,0.25) · color #86efac
+      </div>
+      <div class="v-surface-warning">
+        <strong>v-surface-warning</strong> — Use for cautionary notices: MFA disabled, unbound wallet, withdrawal fee
+        alerts.
+        Background rgba(245,158,11,0.10) · border rgba(245,158,11,0.25) · color #fcd34d
+      </div>
+      <div class="v-surface-danger">
+        <strong>v-surface-danger</strong> — Use for error states and irreversible-action warnings: network mismatch,
+        fund loss risks.
+        Background rgba(240,68,56,0.10) · border rgba(240,68,56,0.25) · color #fca5a5
+      </div>
+      <div class="v-surface-muted">
+        <strong>v-surface-muted</strong> — Use for neutral control rows: toggle lists, settings rows, form group
+        backgrounds.
+        Background var(--bg-body) · border var(--border) · color var(--text-secondary)
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 9 · TABLE (v-table)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">9 · Data Table</span>
+      <span class="badge badge-neutral">v-table</span>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="v-table">
+        <thead>
+          <tr>
+            <th>Market</th>
+            <th>Outcome</th>
+            <th style="text-align:right">Size (pUSD)</th>
+            <th style="text-align:right">Entry Price</th>
+            <th style="text-align:right">P&amp;L</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>BTC above 100K by Dec 2025</td>
+            <td>YES</td>
+            <td class="v-mono" style="text-align:right">50.00</td>
+            <td class="v-mono" style="text-align:right">0.72</td>
+            <td class="v-mono" style="text-align:right;color:var(--success)">+8.40</td>
+            <td><span class="badge badge-success">Open</span></td>
+          </tr>
+          <tr>
+            <td>ETH merge complete</td>
+            <td>NO</td>
+            <td class="v-mono" style="text-align:right">25.00</td>
+            <td class="v-mono" style="text-align:right">0.31</td>
+            <td class="v-mono" style="text-align:right;color:var(--danger)">−3.20</td>
+            <td><span class="badge badge-danger">Closed</span></td>
+          </tr>
+          <tr>
+            <td>US election winner 2028</td>
+            <td>YES</td>
+            <td class="v-mono" style="text-align:right">100.00</td>
+            <td class="v-mono" style="text-align:right">0.55</td>
+            <td class="v-mono" style="text-align:right;color:var(--text-muted)">—</td>
+            <td><span class="badge badge-warning">Pending</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="text-xs mt-3" style="color:var(--text-muted)">
+      Row height 40-44px · Header: uppercase xs/600 · Body: primary color · Row hover: bg rgba 3% ·
+      Last row has no bottom border · Numeric columns use v-mono + tabular-nums.
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 10 · PAGE HERO (v-page-hero)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">10 · Page Hero Template</span>
+      <span class="badge badge-neutral">v-page-hero</span>
+    </div>
+    <div class="text-sm mb-4" style="color:var(--text-secondary)">
+      Every page should open with a <code
+        style="background:var(--bg-body);padding:2px 5px;border-radius:4px;font-size:11px">v-page-hero</code> section
+      inside a
+      <code style="background:var(--bg-body);padding:2px 5px;border-radius:4px;font-size:11px">v-page-shell</code>
+      wrapper. Structure:
+      kicker → title → sub → chips.
+    </div>
+    <section class="v-page-hero">
+      <div class="v-page-kicker">Veyra · Section</div>
+      <h1 class="v-page-title">Feature Page Title</h1>
+      <div class="v-page-sub">A one-or-two-sentence description of what this page does and why the user is here. Keep it
+        concise.</div>
+      <div class="v-page-chips">
+        <span class="v-page-chip">Key fact 1</span>
+        <span class="v-page-chip">Key fact 2</span>
+        <span class="v-page-chip">Key fact 3</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 11 · LOADING + EMPTY STATES
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">11 · Loading &amp; Empty States</span>
+      <span class="badge badge-neutral">skeleton · spinner · empty-state</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <div class="text-xs font-semibold mb-3"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Skeleton Loaders</div>
+        <div class="skeleton" style="height:18px;width:80%;margin-bottom:8px;border-radius:4px"></div>
+        <div class="skeleton" style="height:18px;width:60%;margin-bottom:8px;border-radius:4px"></div>
+        <div class="skeleton" style="height:18px;width:70%;border-radius:4px"></div>
+        <div class="text-xs mt-2" style="color:var(--text-muted)">class: skeleton</div>
+      </div>
+      <div>
+        <div class="text-xs font-semibold mb-3"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Spinner</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="spinner"></div>
+          <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+          <div class="spinner" style="width:14px;height:14px;border-width:2px"></div>
+        </div>
+        <div class="text-xs mt-2" style="color:var(--text-muted)">class: spinner · sizes: 24/20/14px</div>
+      </div>
+      <div>
+        <div class="text-xs font-semibold mb-3"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Empty State</div>
+        <div class="empty-state" style="padding:20px 16px">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+            style="opacity:0.3;margin-bottom:10px">
+            <rect x="3" y="3" width="18" height="18" rx="3" />
+            <path d="M3 9h18M9 21V9" />
+          </svg>
+          <p class="text-sm font-semibold mb-1" style="color:var(--text-primary)">No data found</p>
+          <p style="color:var(--text-muted);font-size:12px">Adjust filters or add new records.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 12 · LINK + MONO UTILITIES
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">12 · Utility Classes</span>
+      <span class="badge badge-neutral">v-link-reset · v-mono</span>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <div class="text-xs font-semibold mb-2"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Links</div>
+        <div class="flex flex-wrap gap-4 items-center">
+          <a href="#" style="color:var(--accent)">Standard accent link →</a>
+          <a href="#" class="v-link-reset" style="color:var(--text-secondary)">v-link-reset (no underline, inherits
+            color) →</a>
+          <a href="#" style="color:var(--text-muted);text-decoration:none;font-size:12px">Muted helper link →</a>
+        </div>
+      </div>
+      <div>
+        <div class="text-xs font-semibold mb-2"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Monospace (v-mono)</div>
+        <div class="v-mono" style="font-size:13px;color:var(--text-secondary)">0x7aBC1d2E3f4A5b6C · 1,234.56 pUSD ·
+          Chain ID 137 · +0.72%</div>
+        <div class="text-xs mt-1" style="color:var(--text-muted)">class: v-mono — use for wallet addresses, numbers,
+          hashes, chain data</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 13 · AVATAR PLACEHOLDER
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">13 · Avatar</span>
+      <span class="badge badge-neutral">sizes: 24 / 32 / 40 / 68px</span>
+    </div>
+    <div class="flex flex-wrap items-end gap-5">
+      {% for sz in [24, 32, 40, 68] %}
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div
+          style="width:{{ sz }}px;height:{{ sz }}px;border-radius:50%;background:var(--bg-card-solid);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--accent)">
+          <svg width="{{ (sz * 0.5) | int }}" height="{{ (sz * 0.5) | int }}" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">{{ sz }}px</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 14 · MOTION TOKENS
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">14 · Motion Tokens</span>
+      <span class="badge badge-neutral">transition · easing</span>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="v-surface-muted">
+        <div class="text-xs font-semibold mb-1"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Fast</div>
+        <div class="v-mono" style="font-size:12px">120ms</div>
+        <div class="text-xs mt-1" style="color:var(--text-muted)">Button hover, badge flash</div>
+      </div>
+      <div class="v-surface-muted">
+        <div class="text-xs font-semibold mb-1"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Standard</div>
+        <div class="v-mono" style="font-size:12px">180ms</div>
+        <div class="text-xs mt-1" style="color:var(--text-muted)">Input focus, toggle, tab switch</div>
+      </div>
+      <div class="v-surface-muted">
+        <div class="text-xs font-semibold mb-1"
+          style="color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Panel Reveal</div>
+        <div class="v-mono" style="font-size:12px">280–340ms</div>
+        <div class="text-xs mt-1" style="color:var(--text-muted)">Modal open, panel expand</div>
+      </div>
+    </div>
+    <div class="v-surface-info mt-3">
+      <strong>Easing:</strong> <span class="v-mono">cubic-bezier(0.2, 0.8, 0.2, 1)</span> — applies to all meaningful
+      transitions.
+      Disable non-essential motion for <code>prefers-reduced-motion</code>.
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 15 · MODAL STRUCTURE (static preview)
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">15 · Modal Structure</span>
+      <span class="badge badge-neutral">vp-modal</span>
+    </div>
+    <div class="text-sm mb-4" style="color:var(--text-secondary)">
+      Static preview of modal anatomy. Use <code
+        style="background:var(--bg-body);padding:2px 5px;border-radius:4px;font-size:11px">vp-modal</code> class (from
+      vp_ui.css).
+      Action order: secondary left · primary right.
+    </div>
+    <div style="position:relative;padding:20px;background:rgba(0,0,0,0.6);border-radius:10px">
+      <div
+        style="background:var(--bg-card-solid);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:440px;margin:0 auto;box-shadow:0 24px 80px rgba(0,0,0,0.5)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="font-size:16px;font-weight:600;color:var(--text-primary)">Confirm Action</div>
+          <button class="v-btn v-btn-outline v-btn-sm" style="width:28px;padding:0;font-size:16px">✕</button>
+        </div>
+        <div class="v-surface-warning mb-4">
+          <strong>This action is irreversible.</strong> Once confirmed, the position will be closed immediately at
+          market price.
+        </div>
+        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:16px">
+          Are you sure you want to close 50 pUSD on <strong style="color:var(--text-primary)">BTC &gt; 100K</strong>?
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="v-btn v-btn-outline">Cancel</button>
+          <button class="v-btn v-btn-danger">Confirm &amp; Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 16 · TOAST NOTIFICATION PREVIEW
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">16 · Toast Notifications</span>
+      <span class="badge badge-neutral">toast · toast-container</span>
+    </div>
+    <div class="text-sm mb-4" style="color:var(--text-secondary)">
+      Toasts appear top-right (88px from top, 24px from right). They auto-dismiss after timeout.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;max-width:360px">
+      <div
+        style="background:var(--bg-card-solid);border:1px solid rgba(16,185,129,0.35);border-radius:8px;padding:12px 16px;font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" fill="none" stroke="var(--success)" stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        <span>Settings saved successfully.</span>
+      </div>
+      <div
+        style="background:var(--bg-card-solid);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:12px 16px;font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" fill="none" stroke="var(--warning)" stroke-width="2.5" viewBox="0 0 24 24">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <span>API rate limit approaching.</span>
+      </div>
+      <div
+        style="background:var(--bg-card-solid);border:1px solid rgba(240,68,56,0.35);border-radius:8px;padding:12px 16px;font-size:14px;color:var(--text-primary);display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" fill="none" stroke="var(--danger)" stroke-width="2.5" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+          <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+        <span>Transaction failed. Please retry.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SECTION 17 · ACCESSIBILITY CHECKLIST
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="v-card">
+    <div class="v-card-header">
+      <span class="v-card-title">17 · Accessibility Baseline</span>
+      <span class="badge badge-warning">Required for all pages</span>
+    </div>
+    <ul style="font-size:14px;color:var(--text-secondary);line-height:2;padding-left:20px;list-style:disc">
+      <li>Text contrast &ge; WCAG AA (4.5:1 normal, 3:1 large)</li>
+      <li>Keyboard focus ring visible — <code
+          style="background:var(--bg-body);padding:1px 4px;border-radius:3px;font-size:12px">box-shadow: 0 0 0 3px var(--focus-ring)</code>
+      </li>
+      <li>Click targets &ge; 36px height (all v-btn variants comply)</li>
+      <li>Icon-only buttons must have <code
+          style="background:var(--bg-body);padding:1px 4px;border-radius:3px;font-size:12px">aria-label</code></li>
+      <li>Error messages connected to inputs via <code
+          style="background:var(--bg-body);padding:1px 4px;border-radius:3px;font-size:12px">aria-describedby</code>
+      </li>
+      <li>Modals must trap focus and dismiss on Escape</li>
+      <li>Respect <code
+          style="background:var(--bg-body);padding:1px 4px;border-radius:3px;font-size:12px">prefers-reduced-motion</code>
+        — disable non-essential animations</li>
+    </ul>
+    <div class="v-surface-info mt-4 text-sm">
+      <strong>Focus ring token:</strong> <span class="v-mono">--focus-ring: rgba(70,95,255,0.48)</span> — applied via
+      <span class="v-mono">:focus-visible</span> on all interactive components.
+    </div>
+  </div>
+
+</div>
+{% endblock %}

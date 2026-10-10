@@ -1,0 +1,12 @@
+{
+  "fixture.title": "경기 상세",
+  "fixture.back": "뒤로",
+  "fixture.fixtureName": "경기",
+  "fixture.startDate": "시작일",
+  "fixture.empty": "이 경기에 사용 가능한 마켓이 없습니다.",
+  "fixture.clv.title": "클로징 라인 가치",
+  "fixture.clv.empty": "CLV 데이터 없음.",
+  "fixture.history.title": "거래 내역",
+  "fixture.history.empty": "거래 내역 없음.",
+  "fixture.settlement.title": "결제"
+}

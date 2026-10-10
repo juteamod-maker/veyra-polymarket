@@ -1,0 +1,1266 @@
+{% extends "base.html" %}
+
+{# T511 Wave 10A: enable PM polling so guests on /preview see the live
+trade-flow marquee + the search box dropdown. #}
+{% block body_attrs %} data-requires-pm="1"{% endblock %}
+
+{#
+T509追加 (Wave 8A) — Polymarket Builders Directory.
+Layout reuses base.html's top nav + left sidebar; right pane is a
+TailAdmin file-manager inspired skeleton:
+- Stats grid (Total / Verified / Volume / Active Users)
+- Featured Builders cards
+- All Builders table with logo, rank, verified badge, volume,
+active users, tags, website link.
+
+T513 Wave 10C — "Active Users" column replaced with "Description";
+"Tags" column replaced with "Website" (URL link only);
+pagination 20 entries per page.
+T512 Wave 10B — admin-managed Ecosystem Navigation entries are merged
+into the same table by /api/builders/list (source field
+= ecosystem | polymarket).
+
+Data source: Polymarket official Builders APIs
+https://data-api.polymarket.com/v1/builders/leaderboard
+https://data-api.polymarket.com/v1/builders/volume
+Admin extends each builder's metadata via /api/admin/builders/meta/upsert.
+#}
+
+{% block title %}V e Y r a — {{ i18n_dict.get('preview.builders.title','Polymarket Builders') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('preview.builders.breadcrumb','Builders Directory') }}{% endblock %}
+
+{% block content %}
+{% if ssr_builders_json %}
+<script id="vp-builders-ssr" type="application/json">{{ ssr_builders_json | escape_script_json | safe }}</script>
+{% endif %}
+
+<style>
+  .bd-page {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .bd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .bd-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .bd-title .bd-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, .4);
+    animation: bd-pulse 1.6s infinite;
+  }
+
+  @keyframes bd-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, .55);
+    }
+
+    70% {
+      box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+  }
+
+  .bd-sub {
+    color: var(--text-secondary);
+    font-size: .82rem;
+    margin-top: 4px;
+  }
+
+  .bd-period {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .bd-period button {
+    background: transparent;
+    color: var(--text-muted);
+    border: 0;
+    padding: 6px 14px;
+    font-size: .78rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .bd-period button.active {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  .bd-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+
+  @media (max-width:1100px) {
+    .bd-stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width:520px) {
+    .bd-stats {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .bd-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    transition: transform .15s, border-color .15s;
+  }
+
+  .bd-stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent);
+  }
+
+  .bd-stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .bd-stat-icon.green {
+    background: rgba(16, 185, 129, .12);
+    color: #10b981;
+  }
+
+  .bd-stat-icon.purple {
+    background: rgba(139, 92, 246, .12);
+    color: #8b5cf6;
+  }
+
+  .bd-stat-icon.amber {
+    background: rgba(245, 158, 11, .12);
+    color: #f59e0b;
+  }
+
+  .bd-stat-icon.cyan {
+    background: rgba(6, 182, 212, .12);
+    color: #06b6d4;
+  }
+
+  .bd-stat-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .bd-stat-label {
+    font-size: .72rem;
+    color: var(--text-muted);
+    letter-spacing: .4px;
+    text-transform: uppercase;
+  }
+
+  .bd-stat-value {
+    font-size: 1.18rem;
+    color: var(--text-primary);
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bd-stat-foot {
+    font-size: .7rem;
+    color: var(--text-muted);
+  }
+
+  .bd-section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+
+  .bd-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .bd-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .bd-section-count {
+    font-size: .75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    padding: 2px 10px;
+    background: var(--bg-primary);
+    border-radius: 999px;
+    border: 1px solid var(--border);
+  }
+
+  .bd-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    min-width: 240px;
+  }
+
+  .bd-search input {
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: var(--text-primary);
+    font-size: .83rem;
+    width: 100%;
+  }
+
+  .bd-search i {
+    color: var(--text-muted);
+  }
+
+  .bd-featured-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  @media (max-width:1100px) {
+    .bd-featured-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width:680px) {
+    .bd-featured-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .bd-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: transform .15s, border-color .15s, box-shadow .2s;
+    min-height: 172px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bd-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: 0 12px 28px rgba(139, 92, 246, .18);
+  }
+
+  .bd-card-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .bd-logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    background: #1f2937;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #e2e8f0;
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .bd-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .bd-name {
+    font-size: .95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .bd-name span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bd-verified {
+    color: #3b82f6;
+    font-size: .85rem;
+  }
+
+  .bd-rank {
+    font-size: .7rem;
+    color: var(--text-muted);
+  }
+
+  .bd-card-desc {
+    font-size: .78rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    min-height: 34px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .bd-card-stats {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+  }
+
+  .bd-card-stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .bd-card-stat-l {
+    font-size: .66rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+
+  .bd-card-stat-v {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .bd-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .bd-card-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .bd-tag {
+    font-size: .62rem;
+    color: #a78bfa;
+    background: rgba(139, 92, 246, .10);
+    padding: 2px 7px;
+    border-radius: 6px;
+  }
+
+  .bd-card-link {
+    font-size: .74rem;
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all .12s;
+  }
+
+  .bd-card-link:hover {
+    border-color: var(--accent);
+    background: rgba(139, 92, 246, .08);
+  }
+
+  .bd-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .bd-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 780px;
+    table-layout: fixed;
+  }
+
+  .bd-table th {
+    text-align: left;
+    font-size: .7rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    padding: 12px 14px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+  }
+
+  .bd-table td {
+    padding: 12px 14px;
+    font-size: .83rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .bd-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .bd-table tr.bd-row:hover td {
+    background: rgba(139, 92, 246, .05);
+    cursor: pointer;
+  }
+
+  .bd-table tr.bd-row.bd-row-noexpand:hover td {
+    cursor: default;
+  }
+
+  .bd-table .bd-cell-builder {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 160px;
+  }
+
+  /* T523 P1 #518 — column widths so the rightmost Visit button never wraps. */
+  .bd-table th:nth-child(1),
+  .bd-table td:nth-child(1) {
+    width: 46px;
+  }
+
+  .bd-table th:nth-child(2),
+  .bd-table td:nth-child(2) {
+    width: 22%;
+    max-width: 200px;
+  }
+
+  .bd-table th:nth-child(3),
+  .bd-table td:nth-child(3) {
+    width: 90px;
+  }
+
+  .bd-table th:nth-child(4),
+  .bd-table td:nth-child(4) {
+    width: 32%;
+  }
+
+  .bd-table th:nth-child(5),
+  .bd-table td:nth-child(5) {
+    width: 18%;
+  }
+
+  .bd-table th:nth-child(6),
+  .bd-table td:nth-child(6) {
+    width: 78px;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  .bd-cell-rank {
+    width: 42px;
+    text-align: center;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+
+  .bd-cell-rank.top {
+    color: #f59e0b;
+  }
+
+  .bd-cell-num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bd-cell-actions {
+    white-space: nowrap;
+  }
+
+  .bd-cell-actions a {
+    font-size: .76rem;
+    color: var(--accent);
+    text-decoration: none;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    white-space: nowrap;
+    display: inline-block;
+  }
+
+  .bd-cell-actions a:hover {
+    border-color: var(--accent);
+    background: rgba(139, 92, 246, .08);
+  }
+
+  .bd-empty {
+    padding: 34px 14px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: .85rem;
+  }
+
+  /* T523 P2 #519 — expandable detail row */
+  .bd-row-caret {
+    display: inline-block;
+    width: 12px;
+    color: var(--text-muted);
+    transition: transform .12s;
+    margin-right: 6px;
+  }
+
+  .bd-row.expanded .bd-row-caret {
+    transform: rotate(90deg);
+    color: var(--accent);
+  }
+
+  .bd-detail-row td {
+    background: var(--bg-secondary);
+    padding: 18px 22px !important;
+    border-top: 1px solid var(--border);
+  }
+
+  .bd-detail-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 18px;
+  }
+
+  @media (max-width:920px) {
+    .bd-detail-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .bd-detail-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .bd-detail-card h4 {
+    margin: 0 0 10px;
+    font-size: .78rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .bd-detail-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .bd-detail-stat {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .bd-detail-stat-l {
+    font-size: .66rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 5px;
+  }
+
+  .bd-detail-stat-v {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    display: block;
+  }
+
+  .bd-detail-stat-foot {
+    font-size: .66rem;
+    color: var(--text-muted);
+    margin-top: 3px;
+    display: block;
+  }
+
+  .bd-detail-chart {
+    width: 100%;
+    height: 140px;
+  }
+
+  .bd-detail-chart .ax {
+    stroke: rgba(148, 163, 184, .18);
+    stroke-width: 1;
+  }
+
+  .bd-detail-chart .area {
+    fill: url(#bdAreaGrad);
+  }
+
+  .bd-detail-chart .line {
+    fill: none;
+    stroke: #a78bfa;
+    stroke-width: 1.6;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .bd-detail-chart text {
+    fill: rgba(148, 163, 184, .7);
+    font-size: 9px;
+  }
+
+  .bd-detail-loading {
+    color: var(--text-muted);
+    font-size: .78rem;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .bd-detail-tags-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+  }
+
+  .bd-detail-meta {
+    font-size: .78rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .bd-detail-meta a {
+    color: var(--accent);
+    text-decoration: none;
+    word-break: break-all;
+  }
+
+  .bd-detail-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .bd-detail-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .7rem;
+  }
+
+  .bd-detail-bar-label {
+    width: 62px;
+    color: var(--text-muted);
+  }
+
+  .bd-detail-bar-track {
+    flex: 1;
+    height: 6px;
+    background: rgba(148, 163, 184, .12);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .bd-detail-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+    border-radius: 3px;
+  }
+
+  .bd-detail-bar-val {
+    width: 78px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+  }
+
+  .bd-banner {
+    padding: 10px 14px;
+    border: 1px solid #f59e0b;
+    background: rgba(245, 158, 11, .08);
+    color: #f59e0b;
+    border-radius: 10px;
+    font-size: .78rem;
+    display: none;
+  }
+
+  .bd-banner.show {
+    display: block;
+  }
+
+  /* T513 Wave 10C — pagination */
+  .bd-pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 14px 4px 4px;
+  }
+
+  .bd-pager-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    font-size: .78rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .12s;
+  }
+
+  .bd-pager-btn:hover:not([disabled]) {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(139, 92, 246, .06);
+  }
+
+  .bd-pager-btn[disabled] {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+
+  .bd-pager-info {
+    font-size: .78rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* T512 Wave 10B — ecosystem entry badge */
+  .bd-source-eco {
+    font-size: .6rem;
+    color: #60a5fa;
+    background: rgba(59, 130, 246, .10);
+    padding: 1px 6px;
+    border-radius: 5px;
+    margin-left: 6px;
+    vertical-align: middle;
+    letter-spacing: .4px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  /* T511 Wave 10A — hard‑override search dropdown to fixed positioning so
+     the menu always renders directly under the input (script computes
+     top/left from the input's bounding rect on every show / scroll / resize). */
+  .header-search .hsr-dropdown {
+    position: fixed !important;
+    top: auto;
+    left: auto;
+  }
+</style>
+
+<div class="bd-page">
+
+  <div class="bd-head">
+    <div>
+      <h1 class="bd-title"><span class="bd-pulse"></span>{{ i18n_dict.get('preview.builders.title','Polymarket
+        Builders') }}</h1>
+      <div class="bd-sub">{{ i18n_dict.get('preview.builders.subtitle','Discover the builders powering Polymarket\'s
+        trading experience.') }}</div>
+    </div>
+    <div class="bd-period" id="bdPeriodSwitch">
+      <button data-period="DAY" class="active">{{ i18n_dict.get('preview.builders.period.day','24h') }}</button>
+      <button data-period="WEEK">{{ i18n_dict.get('preview.builders.period.week','7d') }}</button>
+      <button data-period="MONTH">{{ i18n_dict.get('preview.builders.period.month','30d') }}</button>
+      <button data-period="ALL">{{ i18n_dict.get('preview.builders.period.all','All') }}</button>
+    </div>
+  </div>
+
+  <div id="bdBanner" class="bd-banner">
+    {{ i18n_dict.get('preview.builders.banner.upstreamDown','Polymarket builders endpoint did not respond — showing
+    cached snapshot.') }}
+  </div>
+
+  <!-- Stats grid -->
+  <div class="bd-stats" id="bdStats">
+    <div class="bd-stat-card">
+      <div class="bd-stat-icon green"><i data-lucide="users"></i></div>
+      <div class="bd-stat-meta">
+        <span class="bd-stat-label">{{ i18n_dict.get('preview.builders.stat.total','Total Builders') }}</span>
+        <span class="bd-stat-value" id="bdStatTotal">—</span>
+        <span class="bd-stat-foot" id="bdStatTotalFoot">{{ i18n_dict.get('preview.builders.stat.totalFoot','across all
+          programs') }}</span>
+      </div>
+    </div>
+    <div class="bd-stat-card">
+      <div class="bd-stat-icon cyan"><i data-lucide="badge-check"></i></div>
+      <div class="bd-stat-meta">
+        <span class="bd-stat-label">{{ i18n_dict.get('preview.builders.stat.verified','Verified Builders') }}</span>
+        <span class="bd-stat-value" id="bdStatVerified">—</span>
+        <span class="bd-stat-foot" id="bdStatVerifiedFoot">{{
+          i18n_dict.get('preview.builders.stat.verifiedFoot','official Polymarket badge') }}</span>
+      </div>
+    </div>
+    <div class="bd-stat-card">
+      <div class="bd-stat-icon purple"><i data-lucide="trending-up"></i></div>
+      <div class="bd-stat-meta">
+        <span class="bd-stat-label">{{ i18n_dict.get('preview.builders.stat.volume','Volume (Period)') }}</span>
+        <span class="bd-stat-value" id="bdStatVolume">—</span>
+        <span class="bd-stat-foot" id="bdStatVolumeFoot">{{ i18n_dict.get('preview.builders.stat.volumeFoot','attributed
+          trading') }}</span>
+      </div>
+    </div>
+    <div class="bd-stat-card">
+      <div class="bd-stat-icon amber"><i data-lucide="user-check"></i></div>
+      <div class="bd-stat-meta">
+        <span class="bd-stat-label">{{ i18n_dict.get('preview.builders.stat.active','Active Users') }}</span>
+        <span class="bd-stat-value" id="bdStatActive">—</span>
+        <span class="bd-stat-foot" id="bdStatActiveFoot">{{ i18n_dict.get('preview.builders.stat.activeFoot','unique
+          traders routed') }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Featured -->
+  <div class="bd-section-card" id="bdFeaturedSection" style="display:none;">
+    <div class="bd-section-head">
+      <h2 class="bd-section-title"><i data-lucide="star"></i> {{ i18n_dict.get('preview.builders.featured','Featured
+        Builders') }} <span class="bd-section-count" id="bdFeaturedCount">0</span></h2>
+    </div>
+    <div class="bd-featured-grid" id="bdFeaturedGrid"></div>
+  </div>
+
+  <!-- All Builders table -->
+  <div class="bd-section-card">
+    <div class="bd-section-head">
+      <h2 class="bd-section-title"><i data-lucide="list"></i> {{ i18n_dict.get('preview.builders.all','All Builders') }}
+        <span class="bd-section-count" id="bdAllCount">0</span></h2>
+      <div class="bd-search">
+        <i data-lucide="search" style="width:14px; height:14px;"></i>
+        <input id="bdSearch" type="text"
+          placeholder="{{ i18n_dict.get('preview.builders.search.placeholder','Search builder name…') }}"
+          autocomplete="off">
+      </div>
+    </div>
+    <div class="bd-table-wrap">
+      <table class="bd-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{{ i18n_dict.get('preview.builders.col.builder','Builder') }}</th>
+            <th class="bd-cell-num">{{ i18n_dict.get('preview.builders.col.volume','Volume') }}</th>
+            <th>{{ i18n_dict.get('preview.builders.col.description','Description') }}</th>
+            <th>{{ i18n_dict.get('preview.builders.col.tags','Tags') }}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="bdTableBody">
+          <tr>
+            <td colspan="6" class="bd-empty">{{ i18n_dict.get('preview.builders.loading','Loading…') }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="bd-pager" id="bdPager" style="display:none;">
+      <button class="bd-pager-btn" data-act="prev" type="button">{{ i18n_dict.get('preview.builders.pager.prev','‹
+        Prev') }}</button>
+      <span class="bd-pager-info" id="bdPagerInfo">{{ i18n_dict.get('preview.builders.pager.page','Page') }} 1 /
+        1</span>
+      <button class="bd-pager-btn" data-act="next" type="button">{{ i18n_dict.get('preview.builders.pager.next','Next
+        ›') }}</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    const SSR_NODE = document.getElementById('vp-builders-ssr');
+    let initial = null;
+    if (SSR_NODE) {
+      try { initial = JSON.parse(SSR_NODE.textContent || 'null'); } catch (_) { }
+    }
+    const state = {
+      period: {{ builders_period | tojson
+  }},
+  payload: initial,
+    search: '',
+      page: 1,
+        pageSize: 20,
+  };
+
+  function fmtNum(n) {
+    n = Number(n) || 0;
+    if (n >= 1e9) return (n / 1e9).toFixed(2).replace(/\.?0+$/, '') + 'B';
+    if (n >= 1e6) return (n / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.?0+$/, '') + 'K';
+    return n.toLocaleString();
+  }
+  function fmtMoney(n) { return '$' + fmtNum(n); }
+
+  function logoMarkup(b) {
+    if (b.logo) {
+      return '<div class="bd-logo"><img src="' + escapeAttr(b.logo) + '" alt="" loading="lazy" onerror="this.parentElement.innerText=\'' + escapeAttr((b.name || '?').slice(0, 1).toUpperCase()) + '\'"></div>';
+    }
+    const ch = (b.name || '?').slice(0, 1).toUpperCase();
+    return '<div class="bd-logo">' + escapeAttr(ch) + '</div>';
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  function renderStats(p) {
+    const s = p && p.stats || {};
+    document.getElementById('bdStatTotal').textContent = fmtNum(s.total_builders || 0);
+    document.getElementById('bdStatVerified').textContent = fmtNum(s.verified_builders || 0);
+    document.getElementById('bdStatVolume').textContent = fmtMoney(s.total_volume || 0);
+    document.getElementById('bdStatActive').textContent = fmtNum(s.total_active_users || 0);
+    const periodLabel = ({ DAY: '24h', WEEK: '7d', MONTH: '30d', ALL: 'all-time' })[state.period] || state.period;
+    document.getElementById('bdStatVolumeFoot').textContent = 'attributed trading · ' + periodLabel;
+    if (s.top_builder) {
+      document.getElementById('bdStatTotalFoot').textContent = 'top: ' + s.top_builder;
+    }
+    const banner = document.getElementById('bdBanner');
+    if (p && p.upstream_alive === false) banner.classList.add('show'); else banner.classList.remove('show');
+  }
+
+  function renderFeatured(p) {
+    const featured = (p && p.featured) || [];
+    const sec = document.getElementById('bdFeaturedSection');
+    const grid = document.getElementById('bdFeaturedGrid');
+    document.getElementById('bdFeaturedCount').textContent = featured.length;
+    if (!featured.length) { sec.style.display = 'none'; return; }
+    sec.style.display = '';
+    grid.innerHTML = featured.map(function (b) {
+      const tags = (b.tags || []).slice(0, 3).map(function (t) { return '<span class="bd-tag">' + escapeHtml(t) + '</span>'; }).join('');
+      const link = b.website
+        ? ('<a class="bd-card-link" href="' + escapeAttr(b.website) + '" target="_blank" rel="noopener">Visit <i data-lucide="external-link" style="width:12px;height:12px"></i></a>')
+        : '';
+      return ''
+        + '<div class="bd-card">'
+        + '<div class="bd-card-head">'
+        + logoMarkup(b)
+        + '<div style="min-width:0; flex:1;">'
+        + '<div class="bd-name"><span>' + escapeHtml(b.name) + '</span>' + (b.verified ? '<i data-lucide="badge-check" class="bd-verified" style="width:14px;height:14px"></i>' : '') + '</div>'
+        + '<div class="bd-rank">Rank #' + (b.rank || '—') + '</div>'
+        + '</div>'
+        + '</div>'
+        + '<div class="bd-card-desc">' + escapeHtml(b.description || 'Polymarket builder routing trades on the official CLOB.') + '</div>'
+        + '<div class="bd-card-stats">'
+        + '<div class="bd-card-stat"><span class="bd-card-stat-l">Volume</span><span class="bd-card-stat-v">' + fmtMoney(b.volume) + '</span></div>'
+        + '<div class="bd-card-stat"><span class="bd-card-stat-l">Active</span><span class="bd-card-stat-v">' + fmtNum(b.active_users) + '</span></div>'
+        + '</div>'
+        + '<div class="bd-card-foot"><div class="bd-card-tags">' + tags + '</div>' + link + '</div>'
+        + '</div>';
+    }).join('');
+    if (window.lucide && window.lucide.createIcons) try { window.lucide.createIcons(); } catch (_) { }
+  }
+
+  function renderTable(p) {
+    const all = ((p && p.builders) || []).filter(function (b) {
+      if (!state.search) return true;
+      return (b.name || '').toLowerCase().indexOf(state.search) !== -1
+        || (b.raw_name || '').toLowerCase().indexOf(state.search) !== -1
+        || (b.description || '').toLowerCase().indexOf(state.search) !== -1
+        || (b.tags || []).some(function (t) { return t.toLowerCase().indexOf(state.search) !== -1; });
+    });
+    document.getElementById('bdAllCount').textContent = all.length;
+
+    // T513 Wave 10C — pagination (20 per page)
+    const total = all.length;
+    const pages = Math.max(1, Math.ceil(total / state.pageSize));
+    if (state.page > pages) state.page = pages;
+    if (state.page < 1) state.page = 1;
+    const startIdx = (state.page - 1) * state.pageSize;
+    const builders = all.slice(startIdx, startIdx + state.pageSize);
+
+    const pager = document.getElementById('bdPager');
+    if (total > state.pageSize) {
+      pager.style.display = 'flex';
+      document.getElementById('bdPagerInfo').textContent = 'Page ' + state.page + ' / ' + pages + ' · ' + total + ' total';
+      const prevBtn = pager.querySelector('[data-act="prev"]');
+      const nextBtn = pager.querySelector('[data-act="next"]');
+      prevBtn.disabled = state.page <= 1;
+      nextBtn.disabled = state.page >= pages;
+    } else {
+      pager.style.display = 'none';
+    }
+
+    const tbody = document.getElementById('bdTableBody');
+    if (!builders.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="bd-empty">No builders match the current filter.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = builders.map(function (b) {
+      const isEco = b.source === 'ecosystem';
+      const rankCls = (b.rank > 0 && b.rank <= 3 && !isEco) ? 'bd-cell-rank top' : 'bd-cell-rank';
+      const rankTxt = isEco
+        ? '<i data-lucide="thumbs-up" style="width:13px;height:13px;vertical-align:middle;"></i>'
+        : (b.rank > 0 ? '#' + b.rank : '—');
+      const ecoBadge = (b.source === 'ecosystem')
+        ? '<span class="bd-source-eco" title="Manually added via Ecosystem Navigation">eco</span>'
+        : '';
+      // T523 P1 #518 — Description: tighter max-width so the row stays
+      // single-line and never pushes the right-side Visit button onto a
+      // second line.
+      const desc = b.description
+        ? '<span style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;">' + escapeHtml(b.description) + '</span>'
+        : '<span style="color:var(--text-muted);font-size:.74rem;">—</span>';
+      const tagsCell = (b.tags && b.tags.length)
+        ? '<div style="display:flex;flex-wrap:wrap;gap:4px;max-width:100%;">'
+        + b.tags.slice(0, 3).map(function (t) { return '<span class="bd-tag">' + escapeHtml(t) + '</span>'; }).join('')
+        + '</div>'
+        : '<span style="color:var(--text-muted);font-size:.74rem;">—</span>';
+      const link = b.website
+        ? ('<a href="' + escapeAttr(b.website) + '" target="_blank" rel="noopener noreferrer" data-noexpand="1">Visit <i data-lucide="external-link" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i></a>')
+        : '<span style="color:var(--text-muted);font-size:.74rem;">—</span>';
+      const builderName = '<div style="min-width:0;overflow:hidden;"><div style="display:flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'
+        + (isEco ? '' : '<span class="bd-row-caret">▶</span>')
+        + '<span style="overflow:hidden;text-overflow:ellipsis;">' + escapeHtml(b.name) + '</span>'
+        + (b.verified ? '<i data-lucide="badge-check" class="bd-verified" style="width:13px;height:13px;flex-shrink:0;"></i>' : '')
+        + ecoBadge
+        + '</div></div>';
+      return ''
+        + '<tr class="bd-row' + (isEco ? ' bd-row-noexpand' : '') + '" data-bkey="' + escapeAttr(b.key || '') + '" data-bname="' + escapeAttr(b.raw_name || b.name || '') + '" data-source="' + escapeAttr(b.source || 'polymarket') + '">'
+        + '<td class="' + rankCls + '">' + rankTxt + '</td>'
+        + '<td><div class="bd-cell-builder">' + logoMarkup(b) + builderName + '</div></td>'
+        + '<td class="bd-cell-num">' + (b.volume > 0 ? fmtMoney(b.volume) : '<span style="color:var(--text-muted);font-size:.78rem;">—</span>') + '</td>'
+        + '<td>' + desc + '</td>'
+        + '<td>' + tagsCell + '</td>'
+        + '<td class="bd-cell-actions">' + link + '</td>'
+        + '</tr>';
+    }).join('');
+    if (window.lucide && window.lucide.createIcons) try { window.lucide.createIcons(); } catch (_) { }
+  }
+
+  function renderAll() {
+    if (!state.payload) return;
+    renderStats(state.payload);
+    renderFeatured(state.payload);
+    renderTable(state.payload);
+  }
+
+  function load(period) {
+    state.period = period || state.period;
+    fetch('/api/builders/list?timePeriod=' + encodeURIComponent(state.period), { credentials: 'include' })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (data && data.ok) { state.payload = data; renderAll(); }
+      }).catch(function () { });
+  }
+
+  // Period switcher
+  document.getElementById('bdPeriodSwitch').addEventListener('click', function (e) {
+    const btn = e.target.closest('button[data-period]');
+    if (!btn) return;
+    const p = btn.getAttribute('data-period');
+    if (p === state.period) return;
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (b) {
+      b.classList.toggle('active', b === btn);
+    });
+    state.page = 1;
+    load(p);
+  });
+
+  // Search
+  document.getElementById('bdSearch').addEventListener('input', function (e) {
+    state.search = (e.target.value || '').trim().toLowerCase();
+    state.page = 1;
+    renderTable(state.payload || {});
+  });
+
+  // T513 Wave 10C — pagination controls
+  document.getElementById('bdPager').addEventListener('click', function (e) {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn || btn.disabled) return;
+    if (btn.getAttribute('data-act') === 'prev') state.page -= 1;
+    else if (btn.getAttribute('data-act') === 'next') state.page += 1;
+    renderTable(state.payload || {});
+    // Scroll the table back into view so users see the new page from the top
+    const tw = document.querySelector('.bd-table-wrap');
+    if (tw && tw.getBoundingClientRect().top < 0) tw.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ── T523 P2 #519 — row-click expandable detail panel ────────────────
+  // Click anywhere on a builder row (except the Visit anchor) → expand a
+  // detail panel underneath that row containing key stats + a 30/90/365-day
+  // volume sparkline + meta. Click again to collapse.
+  function _renderDetailContent(b) {
+    var tagsHtml = (b.tags || []).map(function (t) { return '<span class="bd-tag">' + escapeHtml(t) + '</span>'; }).join('');
+    var websiteRow = b.website
+      ? '<div class="bd-detail-meta"><b>Website</b> &nbsp; <a href="' + escapeAttr(b.website) + '" target="_blank" rel="noopener">' + escapeHtml(b.website) + '</a></div>'
+      : '';
+    var descRow = b.description ? '<div class="bd-detail-meta" style="margin-top:6px;"><b>Description</b><br>' + escapeHtml(b.description) + '</div>' : '';
+    return ''
+      + '<div class="bd-detail-stats">'
+      + '<div class="bd-detail-stat"><span class="bd-detail-stat-l">Current Volume</span><span class="bd-detail-stat-v">' + fmtMoney(b.volume || 0) + '</span><span class="bd-detail-stat-foot">current period</span></div>'
+      + '<div class="bd-detail-stat"><span class="bd-detail-stat-l">Active Users</span><span class="bd-detail-stat-v">' + fmtNum(b.active_users || 0) + '</span><span class="bd-detail-stat-foot">current period</span></div>'
+      + '<div class="bd-detail-stat"><span class="bd-detail-stat-l">Rank</span><span class="bd-detail-stat-v">' + (b.rank > 0 ? ('#' + b.rank) : '—') + '</span><span class="bd-detail-stat-foot">current board</span></div>'
+      + '</div>'
+      + (tagsHtml ? '<div class="bd-detail-tags-row">' + tagsHtml + '</div>' : '')
+      + websiteRow
+      + descRow;
+  }
+
+  function _toggleRow(tr, b) {
+    if ((b.source || '') === 'ecosystem') {
+      return;
+    }
+    var next = tr.nextElementSibling;
+    if (next && next.classList.contains('bd-detail-row') && next.dataset.bkey === (b.key || '')) {
+      // collapse
+      next.parentNode.removeChild(next);
+      tr.classList.remove('expanded');
+      return;
+    }
+    // collapse any existing detail row in the table
+    Array.prototype.forEach.call(document.querySelectorAll('.bd-detail-row'), function (r) { r.parentNode.removeChild(r); });
+    Array.prototype.forEach.call(document.querySelectorAll('.bd-row.expanded'), function (r) { r.classList.remove('expanded'); });
+    // insert new detail row
+    var detail = document.createElement('tr');
+    detail.className = 'bd-detail-row';
+    detail.dataset.bkey = b.key || '';
+    var td = document.createElement('td');
+    td.colSpan = 6;
+    td.innerHTML = _renderDetailContent(b);
+    detail.appendChild(td);
+    tr.parentNode.insertBefore(detail, tr.nextSibling);
+    tr.classList.add('expanded');
+    if (window.lucide && window.lucide.createIcons) try { window.lucide.createIcons(); } catch (_) { }
+  }
+
+  document.getElementById('bdTableBody').addEventListener('click', function (e) {
+    if (e.target.closest('a[data-noexpand]')) return;
+    var tr = e.target.closest('tr.bd-row');
+    if (!tr) return;
+    if ((tr.getAttribute('data-source') || '') === 'ecosystem') return;
+    var key = tr.getAttribute('data-bkey');
+    var rawName = tr.getAttribute('data-bname');
+    var b = (state.payload && state.payload.builders || []).find(function (x) { return (x.key || '') === key; })
+      || { key: key, raw_name: rawName, name: rawName, tags: [], description: '', website: '', rank: 0 };
+    _toggleRow(tr, b);
+  });
+
+  // T511 Wave 10A — header search dropdown auto-positioning.
+  // Some pages (incl. /preview) place the search inside a flex/overflow
+  // context where position:absolute under .header-search positions
+  // the menu off-screen. We override to position:fixed via CSS and
+  // compute top/left from the input rect on every show + scroll + resize.
+  (function fixHeaderSearchDropdown() {
+    function pin() {
+      var input = document.getElementById('header-search-input');
+      var dd = document.querySelector('.header-search .hsr-dropdown');
+      if (!input || !dd) return;
+      if (!dd.classList.contains('show')) return;
+      var r = input.getBoundingClientRect();
+      var w = Math.max(320, r.width);
+      var left = Math.min(window.innerWidth - w - 12, Math.max(8, r.left));
+      dd.style.top = (r.bottom + 6) + 'px';
+      dd.style.left = left + 'px';
+      dd.style.width = w + 'px';
+    }
+    var input = document.getElementById('header-search-input');
+    var dd = document.querySelector('.header-search .hsr-dropdown');
+    if (!input || !dd) return;
+    // Observe class mutations so we re-pin every time the menu opens.
+    try {
+      var mo = new MutationObserver(function (muts) {
+        muts.forEach(function (m) {
+          if (m.attributeName === 'class' || m.attributeName === 'style') pin();
+        });
+      });
+      mo.observe(dd, { attributes: true });
+    } catch (_) { }
+    input.addEventListener('focus', pin);
+    input.addEventListener('input', pin);
+    window.addEventListener('resize', pin);
+    window.addEventListener('scroll', pin, true);
+    setInterval(pin, 800); // safety: keep aligned even when content height changes
+  })();
+
+  // Initial render from SSR; then SWR fetch fresh data in background
+  if (state.payload) {
+    renderAll();
+    // Background refresh after 1s so SSR paints immediately
+    setTimeout(function () { load(state.period); }, 1200);
+  } else {
+    load(state.period);
+  }
+}) ();
+</script>
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('preview');
+  }
+</script>
+{% endblock %}

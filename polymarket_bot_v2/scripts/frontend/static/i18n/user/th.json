@@ -1,0 +1,22 @@
+{
+  "user.mfa.disabledLabel": "MFA ปิดอยู่ · แนะนำอย่างยิ่งเพื่อปกป้องบัญชีของคุณ",
+  "user.mfa.enabledLabel": "MFA เปิดอยู่ · วิธีที่ใช้งาน:",
+  "user.mfa.hintNoSecret": "ระบบนี้ไม่แตะต้องคีย์ส่วนตัว OTP/Passkey ของคุณเลย โฟลว์ MFA จัดโดย Privy",
+  "user.mfa.manageBtn": "จัดการ / ปิด MFA",
+  "user.mfa.openBtn": "เปิด MFA (แนะนำ)",
+  "user.mfa.readPolicy": "อ่านนโยบายความปลอดภัย V e Y r a →",
+  "user.mfa.title": "ความปลอดภัยบัญชี · การยืนยันตัวตนหลายปัจจัย (MFA)",
+  "user.pmWallet.bound": "เชื่อมต่อสำเร็จ (ระบบปรับใช้ Gnosis Safe แล้ว)",
+  "user.pmWallet.fundWallet": "กระเป๋าเงินทุน (Safe)",
+  "user.pmWallet.gotoBind": "อนุมัติและเชื่อมต่อกระเป๋าเงิน",
+  "user.pmWallet.lockedHint": "เพื่อความปลอดภัยของเงิน กระเป๋า Polymarket จะถูกปรับใช้โดยอัตโนมัติผ่าน Gnosis Safe Proxy และเชื่อมต่อกับการเข้าสู่ระบบ Privy ของคุณ ไม่สามารถแก้ไขด้วยตนเองได้",
+  "user.pmWallet.notBoundHtml": "ยังไม่มีกระเป๋าเงินทุน Polymarket ที่เชื่อมต่อ ด้วยเหตุผลด้านความปลอดภัย การป้อนกระเป๋าเงินด้วยตนเองถูกปิดใช้งาน คุณต้องอนุมัติผ่าน Privy",
+  "user.pmWallet.title": "กระเป๋า Polymarket",
+  "user.profile.active": "ใช้งาน",
+  "user.profile.authWalletLabel": "ที่อยู่กระเป๋าเงินยืนยันตัวตน",
+  "user.profile.copy": "คัดลอก",
+  "user.profile.displayNameLabel": "ชื่อที่แสดง",
+  "user.profile.editTitle": "แก้ไขโปรไฟล์",
+  "user.profile.registeredAt": "ลงทะเบียนเมื่อ",
+  "user.profile.save": "บันทึกการเปลี่ยนแปลง"
+}

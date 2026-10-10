@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+
+{% block body_attrs %} data-requires-pm="1"{% endblock %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('valuelab.detail.title','Value Lab Analysis') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('valuelab.detail.breadcrumb','Value Lab Analysis') }}{% endblock %}
+
+{% block content %}
+<style>
+  .vld-wrap { display:grid; gap:16px; }
+  .vld-report {
+    border:1px solid var(--border);
+    border-radius:16px;
+    background:
+      radial-gradient(circle at 85% 10%, rgba(245,158,11,.16), transparent 42%),
+      linear-gradient(165deg, rgba(15,23,42,.88), rgba(17,24,39,.96));
+    padding:20px;
+  }
+  .vld-report-head {
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:14px;
+    align-items:start;
+  }
+  .vld-eyebrow {
+    color:#fbbf24;
+    font-size:.72rem;
+    font-weight:700;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+  }
+  .vld-title { margin:4px 0 0; font-size:1.38rem; color:#f8fafc; line-height:1.35; }
+  .vld-digest { margin:10px 0 0; color:#cbd5e1; font-size:.88rem; line-height:1.7; max-width:860px; }
+
+  .vld-stance {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border-radius:999px;
+    border:1px solid rgba(148,163,184,.35);
+    padding:7px 12px;
+    font-size:.78rem;
+    font-weight:700;
+    color:#e2e8f0;
+    background:rgba(2,6,23,.4);
+  }
+  .vld-stance.strong { border-color:rgba(245,158,11,.55); color:#fde68a; }
+  .vld-stance.watch { border-color:rgba(16,185,129,.55); color:#a7f3d0; }
+  .vld-stance.observe { border-color:rgba(59,130,246,.55); color:#bfdbfe; }
+  .vld-stance.avoid { border-color:rgba(239,68,68,.5); color:#fecaca; }
+
+  .vld-summary-strip {
+    margin-top:14px;
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+  }
+  .vld-snap {
+    border:1px solid rgba(148,163,184,.25);
+    border-radius:12px;
+    padding:10px;
+    background:rgba(2,6,23,.34);
+  }
+  .vld-snap span { display:block; font-size:.66rem; color:#94a3b8; }
+  .vld-snap b { display:block; margin-top:5px; font-size:1rem; color:#f8fafc; }
+
+  .vld-section {
+    border:1px solid rgba(148,163,184,.22);
+    border-radius:12px;
+    background:rgba(2,6,23,.24);
+    padding:14px;
+    display:grid;
+    gap:10px;
+  }
+  .vld-section h2 { margin:0; font-size:1rem; color:var(--text-primary); }
+  .vld-sub { color:var(--text-muted); font-size:.78rem; line-height:1.65; }
+
+  .vld-decision {
+    display:grid;
+    grid-template-columns:1.2fr .8fr;
+    gap:12px;
+    align-items:stretch;
+  }
+  @media (max-width: 980px) {
+    .vld-report-head,
+    .vld-decision { grid-template-columns:1fr; }
+    .vld-summary-strip { grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width: 640px) {
+    .vld-summary-strip { grid-template-columns:1fr; }
+  }
+
+  .vld-action-line {
+    border-left:3px solid rgba(245,158,11,.65);
+    padding:8px 10px;
+    background:rgba(245,158,11,.08);
+    border-radius:8px;
+    color:var(--text-secondary);
+    font-size:.84rem;
+    line-height:1.65;
+  }
+
+  .vld-checklist { margin:0; padding:0; list-style:none; display:grid; gap:8px; }
+  .vld-checklist li {
+    border:1px solid rgba(148,163,184,.25);
+    border-radius:9px;
+    padding:8px 10px;
+    font-size:.78rem;
+    color:var(--text-secondary);
+    line-height:1.55;
+  }
+  .vld-checklist b { color:var(--text-primary); }
+
+  .vld-bars { display:grid; gap:8px; }
+  .vld-bar-row { display:grid; grid-template-columns:120px 1fr 70px; gap:10px; align-items:center; }
+  .vld-bar-row label { font-size:.74rem; color:var(--text-muted); }
+  .vld-bar { border:1px solid rgba(148,163,184,.25); border-radius:999px; height:10px; overflow:hidden; background:rgba(148,163,184,.18); }
+  .vld-bar i { display:block; height:100%; width:0%; border-radius:999px; }
+  .vld-bar.market i { background:#60a5fa; }
+  .vld-bar.fair i { background:#fbbf24; }
+  .vld-bar.edge i { background:#34d399; }
+
+  .vld-grid-two { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+  @media (max-width: 900px) { .vld-grid-two { grid-template-columns:1fr; } }
+
+  .vld-driver {
+    border:1px solid rgba(148,163,184,.22);
+    border-radius:10px;
+    padding:10px;
+    display:grid;
+    gap:6px;
+    background:rgba(15,23,42,.35);
+  }
+  .vld-driver .k { font-size:.76rem; color:var(--text-muted); }
+  .vld-driver .v { font-size:.95rem; color:var(--text-primary); font-weight:700; }
+  .vld-driver .d { font-size:.74rem; color:var(--text-secondary); line-height:1.6; }
+
+  .vld-scenario {
+    border:1px solid rgba(148,163,184,.22);
+    border-radius:10px;
+    padding:11px;
+    background:rgba(15,23,42,.36);
+    display:grid;
+    gap:6px;
+  }
+  .vld-scenario h3 { margin:0; font-size:.86rem; color:var(--text-primary); }
+  .vld-scenario p { margin:0; font-size:.77rem; color:var(--text-secondary); line-height:1.6; }
+
+  .vld-backtest { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  @media (max-width: 760px) { .vld-backtest { grid-template-columns:1fr; } }
+  .vld-backtest article {
+    border:1px solid rgba(148,163,184,.25);
+    border-radius:10px;
+    padding:10px;
+    background:rgba(2,6,23,.3);
+  }
+  .vld-backtest h3 { margin:0 0 6px; font-size:.84rem; color:var(--text-primary); }
+  .vld-backtest p { margin:2px 0; font-size:.75rem; color:var(--text-secondary); }
+
+  .vld-risks { display:grid; gap:8px; }
+  .vld-risk-item {
+    border:1px solid rgba(239,68,68,.28);
+    border-radius:10px;
+    background:rgba(239,68,68,.06);
+    padding:10px;
+  }
+  .vld-risk-item b { color:#fecaca; font-size:.78rem; }
+  .vld-risk-item p { margin:4px 0 0; color:#fda4af; font-size:.75rem; line-height:1.6; }
+
+  .vld-footer-note {
+    border:1px dashed rgba(148,163,184,.28);
+    border-radius:10px;
+    padding:10px;
+    color:var(--text-muted);
+    font-size:.74rem;
+    line-height:1.6;
+  }
+
+  .vld-cta-btn {
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:8px;
+    border-radius:14px;
+    border:1px solid rgba(245,158,11,.6);
+    color:#fde68a;
+    text-decoration:none;
+    padding:13px 18px;
+    font-weight:800;
+    font-size:.95rem;
+    background:linear-gradient(135deg, rgba(245,158,11,.28), rgba(234,88,12,.18));
+    box-shadow:0 4px 18px rgba(245,158,11,.25), inset 0 1px 0 rgba(255,255,255,.08);
+    letter-spacing:.02em;
+    transition:all .2s ease;
+    white-space:nowrap;
+  }
+  .vld-cta-btn:hover {
+    background:linear-gradient(135deg, rgba(245,158,11,.42), rgba(234,88,12,.32));
+    border-color:rgba(245,158,11,.85);
+    box-shadow:0 6px 26px rgba(245,158,11,.38), inset 0 1px 0 rgba(255,255,255,.12);
+    transform:translateY(-1px);
+    color:#fff;
+  }
+  .vld-header-right {
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    gap:12px;
+  }
+
+  /* AI Analysis section */
+  .vld-ai-section {
+    border-radius:12px;
+    border:1px solid rgba(99,102,241,.38);
+    background:linear-gradient(135deg, rgba(99,102,241,.08), rgba(139,92,246,.06));
+    padding:14px;
+    display:grid;
+    gap:10px;
+  }
+  .vld-ai-text {
+    color:var(--text-secondary);
+    font-size:.84rem;
+    line-height:1.75;
+  }
+  .vld-ai-decision-wrap {
+    display:flex;
+    align-items:stretch;
+    margin-top:4px;
+  }
+  .vld-ai-decision-wrap .vld-cta-btn {
+    width:100%;
+    min-height:44px;
+    font-size:1rem;
+  }
+  .vld-ai-loading {
+    color:var(--text-muted);
+    font-size:.8rem;
+    animation:vlPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes vlPulse { 0%,100%{opacity:.6} 50%{opacity:1} }
+
+  /* Paywall card */
+  .vld-paywall {
+    display:grid;
+    gap:8px;
+    text-align:center;
+    padding:12px;
+  }
+  .vld-paywall-icon { font-size:1.8rem; }
+  .vld-paywall h4 { margin:0; font-size:.95rem; color:var(--text-primary); }
+  .vld-paywall p { margin:0; font-size:.78rem; color:var(--text-muted); line-height:1.6; }
+  .vld-paywall-btn {
+    display:inline-flex;
+    justify-content:center;
+    align-items:center;
+    border-radius:10px;
+    border:1px solid rgba(99,102,241,.55);
+    color:#c4b5fd;
+    text-decoration:none;
+    padding:8px 16px;
+    font-weight:700;
+    font-size:.8rem;
+    background:rgba(99,102,241,.14);
+    width:max-content;
+    margin:0 auto;
+  }
+  .vld-paywall-btn:hover {
+    background:rgba(99,102,241,.28);
+    border-color:rgba(99,102,241,.8);
+    color:#fff;
+  }
+  /* T787: Upgrade Now tooltip (TailAdmin Default Tooltip style) */
+  .vld-tooltip-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .vld-paywall-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 999;
+  }
+  .vld-paywall-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    margin-top: -6px;
+  }
+  .vld-tooltip-wrap:hover .vld-paywall-tooltip { opacity: 1; }
+  .vld-paywall-btn-disabled {
+    cursor: default;
+  }
+
+  .vld-pos { color:#34d399 !important; }
+  .vld-neg { color:#f87171 !important; }
+
+</style>
+
+<div class="vld-wrap" id="vld-app" data-slug="{{ valuelab_slug }}">
+  <section class="vld-report">
+    <div class="vld-report-head">
+      <div>
+        <div class="vld-eyebrow" data-i18n="valuelab.detail.reportTag">Veyra Value Memo</div>
+        <h1 class="vld-title" id="vld-title">{{ i18n_dict.get('valuelab.detail.loading','Loading analysis…') }}</h1>
+        <p class="vld-digest" id="vld-digest">{{ i18n_dict.get('valuelab.detail.digestFallback','Building a human-readable valuation summary…') }}</p>
+      </div>
+      <div class="vld-header-right">
+        <a class="vld-cta-btn" id="vld-bet" href="#">
+          ⚡ {{ i18n_dict.get('valuelab.detail.bet','Open Event & Bet') }}
+        </a>
+      </div>
+    </div>
+    <div class="vld-summary-strip">
+      <div class="vld-snap"><span>{{ i18n_dict.get('valuelab.card.score','Value Score') }}</span><b id="vld-score">--</b></div>
+      <div class="vld-snap"><span>{{ i18n_dict.get('valuelab.card.implied','Implied Prob') }}</span><b id="vld-implied">--</b></div>
+      <div class="vld-snap"><span>{{ i18n_dict.get('valuelab.card.fair','Fair Prob') }}</span><b id="vld-fair">--</b></div>
+      <div class="vld-snap"><span>{{ i18n_dict.get('valuelab.card.ev','+EV') }}</span><b id="vld-ev">--</b></div>
+    </div>
+  </section>
+
+  <article class="vld-section vld-decision">
+    <div class="vld-ai-section" id="vld-ai-section">
+      <div class="vld-ai-loading" id="vld-ai-loading">{{ i18n_dict.get('valuelab.detail.aiLoading','Analyzing market data…') }}</div>
+      <div class="vld-ai-text" id="vld-ai-text" style="display:none"></div>
+      <div class="vld-paywall" id="vld-ai-paywall" style="display:none">
+        <div class="vld-paywall-icon">🔒</div>
+        <h4>{{ i18n_dict.get('valuelab.detail.aiPaywallTitle','AI Deep Analysis') }}</h4>
+        <p>{{ i18n_dict.get('valuelab.detail.aiPaywallDesc','Subscribe to Pro or Enterprise to unlock AI-powered market analysis for this event.') }}</p>
+        <span class="vld-tooltip-wrap">
+          <button type="button" class="vld-paywall-btn vld-paywall-btn-disabled">{{ i18n_dict.get('valuelab.detail.aiPaywallBtn','Upgrade Now →') }}</button>
+          <span class="vld-paywall-tooltip" role="tooltip">{{ i18n_dict.get('valuelab.detail.aiPaywallBtnTooltip','Coming soon, stay tuned') }}</span>
+        </span>
+      </div>
+    </div>
+    <ul class="vld-checklist" id="vld-checklist">
+      <li>--</li>
+    </ul>
+  </article>
+
+  <article class="vld-section">
+    <h2 data-i18n="valuelab.detail.whyTitle">Why This Conclusion</h2>
+    <p class="vld-sub" id="vld-why-intro">--</p>
+    <div class="vld-bars">
+      <div class="vld-bar-row">
+        <label>{{ i18n_dict.get('valuelab.card.implied','Implied Prob') }}</label>
+        <div class="vld-bar market"><i id="vld-bar-implied"></i></div>
+        <span id="vld-bar-implied-text" class="vld-sub">--</span>
+      </div>
+      <div class="vld-bar-row">
+        <label>{{ i18n_dict.get('valuelab.card.fair','Fair Prob') }}</label>
+        <div class="vld-bar fair"><i id="vld-bar-fair"></i></div>
+        <span id="vld-bar-fair-text" class="vld-sub">--</span>
+      </div>
+      <div class="vld-bar-row">
+        <label>{{ i18n_dict.get('valuelab.card.ev','+EV') }}</label>
+        <div class="vld-bar edge"><i id="vld-bar-edge"></i></div>
+        <span id="vld-bar-edge-text" class="vld-sub">--</span>
+      </div>
+    </div>
+  </article>
+
+  <div class="vld-grid-two">
+    <article class="vld-section">
+      <h2>{{ i18n_dict.get('valuelab.detail.drivers','Key Drivers') }}</h2>
+      <div id="vld-drivers" class="vld-grid-two"></div>
+    </article>
+
+    <article class="vld-section">
+      <h2 data-i18n="valuelab.detail.scenarioTitle">Scenario View</h2>
+      <div id="vld-scenarios" style="display:grid;gap:8px"></div>
+    </article>
+  </div>
+
+  <article class="vld-section">
+    <h2>{{ i18n_dict.get('valuelab.detail.backtest','Backtest Snapshot') }}</h2>
+    <div id="vld-backtest" class="vld-backtest"></div>
+  </article>
+
+  <article class="vld-section">
+    <h2>{{ i18n_dict.get('valuelab.detail.riskNotes','Risk Notes') }}</h2>
+    <div class="vld-risks" id="vld-risks"></div>
+  </article>
+
+  <article class="vld-footer-note" id="vld-disclaimer">{{ i18n_dict.get('valuelab.detail.disclaimer','This analysis is for research only and does not constitute investment advice.') }}</article>
+</div>
+
+<script id="vld-ssr-json" type="application/json">{{ (ssr_valuelab_detail_json or '') | escape_script_json | safe }}</script>
+<script id="vld-labels" type="application/json">
+{
+  "whyIntro": "{{ i18n_dict.get('valuelab.detail.whyIntro','We compare current market pricing with model fair value, then convert that gap into beginner-friendly action guidance.') }}",
+  "scenarioBase": "{{ i18n_dict.get('valuelab.detail.scenarioBase','Base Case') }}",
+  "scenarioBull": "{{ i18n_dict.get('valuelab.detail.scenarioBull','Upside Case') }}",
+  "scenarioBear": "{{ i18n_dict.get('valuelab.detail.scenarioBear','Defensive Case') }}",
+  "check1": "{{ i18n_dict.get('valuelab.detail.check1','Position size: start small (for example 1%-3% of bankroll), add only after validation.') }}",
+  "check2": "{{ i18n_dict.get('valuelab.detail.check2','Recheck trigger: if market probability moves beyond model band, pause and reassess.') }}",
+  "check3": "{{ i18n_dict.get('valuelab.detail.check3','Execution rule: avoid all-in entries; use staged entries and predefined exit points.') }}",
+  "riskTitle1": "{{ i18n_dict.get('valuelab.detail.risk1Title','Model Risk') }}",
+  "riskText1": "{{ i18n_dict.get('valuelab.detail.risk1Text','Any model can be wrong during regime shifts. Keep risk budget fixed.') }}",
+  "riskTitle2": "{{ i18n_dict.get('valuelab.detail.risk2Title','Liquidity Risk') }}",
+  "riskText2": "{{ i18n_dict.get('valuelab.detail.risk2Text','When depth is thin, price can jump quickly and increase slippage.') }}",
+  "riskTitle3": "{{ i18n_dict.get('valuelab.detail.risk3Title','Event Timing Risk') }}",
+  "riskText3": "{{ i18n_dict.get('valuelab.detail.risk3Text','Unexpected news can invalidate the thesis before your next review window.') }}",
+  "driverBiasPos": "{{ i18n_dict.get('valuelab.detail.driverBiasPos','Supports current thesis') }}",
+  "driverBiasMid": "{{ i18n_dict.get('valuelab.detail.driverBiasMid','Neutral impact') }}",
+  "driverBiasNeg": "{{ i18n_dict.get('valuelab.detail.driverBiasNeg','Potential drag on thesis') }}",
+  "back30": "{{ i18n_dict.get('valuelab.detail.back30','30d Validation Window') }}",
+  "back90": "{{ i18n_dict.get('valuelab.detail.back90','90d Stability Window') }}",
+  "aiLoading": "{{ i18n_dict.get('valuelab.detail.aiLoading','Analyzing market data…') }}",
+  "aiError": "{{ i18n_dict.get('valuelab.detail.aiError','AI analysis unavailable. Please try again later.') }}",
+  "digestStrong": "{{ i18n_dict.get('valuelab.detail.digestStrong','Current pricing appears to discount this event too much. Model fair value is above market by {edge}, creating a meaningful but still risky entry window.') }}",
+  "digestWatch": "{{ i18n_dict.get('valuelab.detail.digestWatch','There is a modest valuation gap of {edge}. This is a watchlist-quality setup: interesting, but not a high-conviction all-in signal.') }}",
+  "digestAvoid": "{{ i18n_dict.get('valuelab.detail.digestAvoid','Model fair value sits below current pricing by {edge}. Risk-reward is currently unfavorable for new entries.') }}",
+  "digestObserve": "{{ i18n_dict.get('valuelab.detail.digestObserve','Market pricing and model fair value are close ({edge}). The edge is thin, so patience and selective timing matter more than speed.') }}",
+  "scenarioBullText": "{{ i18n_dict.get('valuelab.detail.scenarioBullText','If supportive catalysts continue, probability may drift toward the upper bound and reward early scaled entries.') }}",
+  "scenarioBaseText": "{{ i18n_dict.get('valuelab.detail.scenarioBaseText','Most likely path under current data. Use this as primary anchor for position sizing.') }}",
+  "scenarioBearText": "{{ i18n_dict.get('valuelab.detail.scenarioBearText','If risk events hit, fair value can move lower. Keep this scenario in mind for stop decisions.') }}",
+  "backtestHitRate": "{{ i18n_dict.get('valuelab.detail.backtestHitRate','Hit rate') }}",
+  "backtestAvgEv": "{{ i18n_dict.get('valuelab.detail.backtestAvgEv','Average EV') }}",
+  "backtestSample": "{{ i18n_dict.get('valuelab.detail.backtestSample','Sample size') }}",
+  "backtestDrawdown": "{{ i18n_dict.get('valuelab.detail.backtestDrawdown','Drawdown proxy') }}"
+}
+</script>
+<script src="/v2/static/js/vendor/htmx.min.js?v={{ asset_version | default('1') }}" defer></script>
+{% endblock %}

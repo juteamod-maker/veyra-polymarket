@@ -1,0 +1,1912 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event_slug or i18n_dict.get('event.title.fallback','Event Detail') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('event.breadcrumb','Discover / Event Detail') }}{% endblock %}
+
+{% block content %}
+<script>
+  document.body.setAttribute('data-requires-pm', '1');
+  window.__EVENT_SLUG__ = {{ event_slug | tojson | safe }};
+</script>
+
+<style>
+  .ev-hero {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .ev-hero-img {
+    width: 88px;
+    height: 88px;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+  }
+
+  .ev-hero-meta {
+    flex: 1;
+    min-width: 260px;
+  }
+
+  .ev-hero-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+  }
+
+  .ev-hero-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 8px;
+    font-size: .78rem;
+    color: var(--text-muted);
+  }
+
+  .ev-cat-badge {
+    background: rgba(139, 92, 246, .15);
+    color: #a78bfa;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    letter-spacing: .4px;
+    font-size: .7rem;
+  }
+
+  .ev-stat-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .ev-stat-item {
+    font-size: .82rem;
+    color: var(--text-secondary);
+  }
+
+  .ev-stat-item b {
+    color: var(--text-primary);
+    font-size: .95rem;
+    margin-left: 4px;
+  }
+
+  .ev-stat-vol b {
+    color: #a78bfa;
+  }
+
+  .ev-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 16px;
+    align-items: start;
+  }
+
+  @media (max-width: 960px) {
+    .ev-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .ev-right-sticky {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .ev-right-sticky::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .ev-right-sticky::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+
+  .ev-right-sticky::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  @media (max-width: 960px) {
+    .ev-right-sticky {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+  }
+
+  .ev-section-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .ev-section-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .ev-section-body {
+    padding: 14px 16px;
+  }
+
+  .ev-desc {
+    font-size: .86rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+
+  .ev-ai-card {
+    background: linear-gradient(135deg, rgba(139, 92, 246, .08), rgba(34, 197, 94, .05));
+    border: 1px solid rgba(139, 92, 246, .25);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .ev-ai-title {
+    font-size: .85rem;
+    font-weight: 700;
+    color: #a78bfa;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .ev-ai-text {
+    font-size: .84rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+  }
+
+  .sub-mkt {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    transition: background .15s;
+    cursor: pointer;
+  }
+
+  .sub-mkt:last-child {
+    border-bottom: 0;
+  }
+
+  .sub-mkt:hover,
+  .sub-mkt.selected {
+    background: rgba(139, 92, 246, .05);
+  }
+
+  .sub-mkt.selected {
+    border-left: 3px solid var(--accent);
+    padding-left: 13px;
+  }
+
+  .sub-mkt-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sub-mkt-q {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.35;
+  }
+
+  .sub-mkt-stats {
+    display: flex;
+    gap: 12px;
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .sub-mkt-buttons {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .sub-mkt-btn {
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .82rem;
+    min-width: 96px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    transition: all .15s;
+  }
+
+  .sub-mkt-btn:hover {
+    transform: scale(1.04);
+    filter: brightness(1.1);
+  }
+
+  .sub-mkt-btn .sb-label {
+    font-size: .66rem;
+    opacity: .85;
+    font-weight: 500;
+    letter-spacing: .02em;
+  }
+
+  .sub-mkt-btn .sb-cents {
+    font-size: 1.45rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sub-mkt-btn.yes {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(34, 197, 94, .22);
+  }
+
+  .sub-mkt-btn.no {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    box-shadow: 0 4px 10px rgba(239, 68, 68, .22);
+  }
+
+  .order-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0;
+    overflow: hidden;
+    position: sticky;
+    top: 80px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+  }
+
+  .op-balance-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border);
+    font-size: .78rem;
+  }
+
+  .op-balance-strip .bal {
+    color: var(--text-muted);
+  }
+
+  .op-balance-strip .bal b {
+    color: #22c55e;
+    font-size: .92rem;
+    margin-left: 4px;
+  }
+
+  .op-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .op-tabs {
+    display: flex;
+  }
+
+  .op-tab {
+    background: transparent;
+    border: 0;
+    padding: 14px 18px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .95rem;
+    border-bottom: 2px solid transparent;
+  }
+
+  .op-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--accent);
+  }
+
+  .op-otype-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .op-otype-select {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    padding: 5px 10px;
+    font-size: .78rem;
+    cursor: pointer;
+  }
+
+  .op-gear {
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px 6px;
+    font-size: 1.05rem;
+  }
+
+  .op-gear:hover {
+    color: var(--text-primary);
+  }
+
+  .op-gear-pop {
+    position: absolute;
+    top: 48px;
+    right: 14px;
+    background: #000;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    width: 240px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    z-index: 50;
+  }
+
+  .op-gear-pop h4 {
+    margin: 0 0 8px;
+    font-size: .82rem;
+    color: var(--text-primary);
+  }
+
+  .op-gear-pop .gear-item {
+    padding: 6px 0;
+    font-size: .78rem;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .op-gear-pop .gear-item .gear-tag {
+    font-size: .65rem;
+    color: var(--text-muted);
+    padding: 2px 6px;
+    background: var(--bg-primary);
+    border-radius: 4px;
+  }
+
+  .op-body {
+    padding: 16px;
+  }
+
+  .op-mkt-info {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: .82rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    margin-bottom: 12px;
+    line-height: 1.4;
+  }
+
+  .op-outcome-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .op-outcome-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: .88rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    transition: all .15s;
+  }
+
+  .op-outcome-btn .qb-out-px {
+    font-size: 1.42rem;
+    opacity: 1;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .op-outcome-btn.yes-active {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(34, 197, 94, .25);
+  }
+
+  .op-outcome-btn.no-active {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, .25);
+  }
+
+  .ev-share-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, .18), rgba(139, 92, 246, .12));
+    border: 1px solid rgba(139, 92, 246, .4);
+    cursor: pointer;
+    transition: all .18s;
+    box-shadow: 0 6px 22px rgba(99, 102, 241, .18);
+    user-select: none;
+  }
+
+  .ev-share-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 28px rgba(99, 102, 241, .30);
+    border-color: rgba(139, 92, 246, .65);
+  }
+
+  .ev-share-card .ev-share-ico {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, .45);
+  }
+
+  .ev-share-card .ev-share-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
+  .ev-share-card .ev-share-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .ev-share-card .ev-share-sub {
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .ev-share-card .ev-share-ref-tag {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: .66rem;
+    font-weight: 700;
+    background: rgba(34, 197, 94, .18);
+    color: #22c55e;
+    letter-spacing: .04em;
+  }
+
+  .op-section {
+    margin-bottom: 14px;
+  }
+
+  .op-section-label {
+    font-size: .78rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .op-amt-display {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-align: right;
+    padding: 6px 0;
+    min-height: 1em;
+  }
+
+  .op-amt-display.dim {
+    color: var(--text-muted);
+  }
+
+  .op-quick-amts {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .op-quick-amt {
+    flex: 1;
+    padding: 8px 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: .82rem;
+    font-weight: 600;
+    transition: all .12s;
+  }
+
+  .op-quick-amt:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+  }
+
+  .op-quick-amt.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .op-quick-amt:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+  }
+
+  .stepper-input {
+    display: flex;
+    align-items: center;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .stepper-input button {
+    background: transparent;
+    border: 0;
+    width: 40px;
+    height: 40px;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .12s;
+  }
+
+  .stepper-input button:hover:not(:disabled) {
+    background: var(--bg-card);
+    color: var(--accent);
+  }
+
+  .stepper-input button:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+  }
+
+  .stepper-input input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 8px 4px;
+    -moz-appearance: textfield;
+  }
+
+  .stepper-input input::-webkit-outer-spin-button,
+  .stepper-input input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .stepper-input input:focus {
+    outline: none;
+  }
+
+  .stepper-suffix {
+    padding-right: 12px;
+    color: var(--text-muted);
+    font-size: .85rem;
+    font-weight: 500;
+  }
+
+  .op-share-adjusts {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .op-share-adj {
+    flex: 1;
+    padding: 6px 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .74rem;
+    font-weight: 600;
+    transition: all .12s;
+  }
+
+  .op-share-adj:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+  }
+
+  .op-summary {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-top: 12px;
+  }
+
+  .op-sum-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: .82rem;
+    padding: 3px 0;
+  }
+
+  .op-sum-row b {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .op-sum-row b.profit {
+    color: #22c55e;
+  }
+
+  .op-sum-row b.cost {
+    color: #a78bfa;
+  }
+
+  .op-msg {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: .82rem;
+  }
+
+  .op-msg.ok {
+    background: rgba(16, 185, 129, .10);
+    border: 1px solid #10b981;
+    color: #6ee7b7;
+  }
+
+  .op-msg.err {
+    background: rgba(239, 68, 68, .10);
+    border: 1px solid #ef4444;
+    color: #fca5a5;
+  }
+
+  .op-submit {
+    width: 100%;
+    padding: 13px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 0;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: .95rem;
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    color: #fff;
+    transition: all .15s;
+  }
+
+  .op-submit:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(139, 92, 246, .3);
+  }
+
+  .op-submit:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+  }
+
+  .ev-tabs-nav {
+    display: flex;
+    gap: 2px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-card);
+    border-radius: 12px 12px 0 0;
+  }
+
+  .ev-tab-btn {
+    background: transparent;
+    border: 0;
+    padding: 12px 18px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: .86rem;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    transition: all .12s;
+  }
+
+  .ev-tab-btn:hover {
+    color: var(--text-primary);
+  }
+
+  .ev-tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .ob-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 8px;
+  }
+
+  .ob-toggle {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .ob-toggle button {
+    background: transparent;
+    color: var(--text-muted);
+    padding: 4px 12px;
+    border: 0;
+    font-size: .78rem;
+    cursor: pointer;
+    transition: all .15s;
+  }
+
+  .ob-toggle button.active.yes {
+    background: rgba(34, 197, 94, .18);
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  .ob-toggle button.active.no {
+    background: rgba(239, 68, 68, .18);
+    color: #ef4444;
+    font-weight: 600;
+  }
+
+  .ob-table {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: .78rem;
+  }
+
+  .ob-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 6px 10px;
+    color: var(--text-muted);
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    background: rgba(255, 255, 255, .02);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ob-header span:nth-child(2),
+  .ob-header span:nth-child(3) {
+    text-align: right;
+  }
+
+  .ob-section {
+    display: block;
+  }
+
+  .ob-section.asks .ob-row {
+    color: #fca5a5;
+  }
+
+  .ob-section.bids .ob-row {
+    color: #86efac;
+  }
+
+  .ob-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    padding: 3px 10px;
+    cursor: pointer;
+    transition: background .1s;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ob-row:hover {
+    background: rgba(255, 255, 255, .04);
+  }
+
+  .ob-row .ob-cell-bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    opacity: .18;
+  }
+
+  .ob-section.asks .ob-row .ob-cell-bar {
+    background: linear-gradient(to left, #ef4444, #ef4444 var(--depth, 0%), transparent var(--depth, 0%));
+  }
+
+  .ob-section.bids .ob-row .ob-cell-bar {
+    background: linear-gradient(to left, #22c55e, #22c55e var(--depth, 0%), transparent var(--depth, 0%));
+  }
+
+  .ob-row span {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ob-row span:nth-child(2),
+  .ob-row span:nth-child(3) {
+    text-align: right;
+  }
+
+  .ob-row .ob-price {
+    font-weight: 600;
+  }
+
+  .ob-spread {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, .03);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    font-size: .78rem;
+    color: var(--text-secondary);
+  }
+
+  .ob-spread .ob-last {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .ob-spread .ob-spread-val {
+    color: var(--text-muted);
+    font-size: .72rem;
+  }
+
+  .ob-empty {
+    padding: 14px 10px;
+    color: var(--text-muted);
+    font-size: .78rem;
+    text-align: center;
+  }
+
+  .empty-tab {
+    padding: 30px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: .86rem;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -400px 0;
+    }
+
+    100% {
+      background-position: 400px 0;
+    }
+  }
+
+  @keyframes spinrot {
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .skel-line,
+  .skel-block {
+    background: linear-gradient(90deg, rgba(139, 92, 246, .06) 0%, rgba(139, 92, 246, .22) 50%, rgba(139, 92, 246, .06) 100%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s linear infinite;
+    border-radius: 6px;
+  }
+
+  .skel-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 38px;
+    height: 38px;
+    border: 3px solid rgba(139, 92, 246, .18);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spinrot .9s linear infinite;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .skel-wrap {
+    position: relative;
+  }
+
+  .ev-skel-static {
+    display: block;
+  }
+
+  .ev-app-ready .ev-skel-static {
+    display: none !important;
+  }
+
+  /* =====================================================================
+   * T923 — Mobile-only refactor (≤768px). First-principles goals:
+   *   - 修复横向溢出（保证内容卡严格不超过容器宽度）
+   *   - 紧凑且仍易读的间距，腾出更多内容面积
+   *   - KPI / 标签栏 / 选项卡可水平滚动 + 吸附，避免折行抖动
+   *   - 触控目标 ≥ 44×44，安全区适配 iOS Home 指示条
+   *   - 交易面板"贴底悬浮"：用户在任何位置都能一指可达，无需滚到底
+   *
+   * 所有规则仅作用于 ≤768px，桌面/平板布局完全不受影响。
+   * 全部沿用既有 token：var(--bg-card) / var(--border) / var(--accent) /
+   * var(--text-primary) / var(--text-secondary) / var(--text-muted) /
+   * var(--bg-primary)。无新增组件、无新增 DOM、无 JS 变更。
+   * ===================================================================== */
+  @media (max-width: 768px) {
+
+    /* —— 0. 横向溢出兜底：所有 grid/section/order-panel 子元素都不允许超出 —— */
+    #ev-app-root,
+    #ev-app-root .ev-grid,
+    #ev-app-root .ev-grid>*,
+    #ev-app-root .ev-section-card,
+    #ev-app-root .ev-section-card>*,
+    #ev-app-root .order-panel,
+    #ev-app-root .order-panel>* {
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    #ev-app-root,
+    #ev-app-root .ev-grid {
+      overflow-x: clip;
+    }
+
+    /* —— 1. Hero 紧凑化 —— */
+    #ev-app-root .ev-hero {
+      padding: 14px;
+      gap: 12px;
+      border-radius: 12px;
+    }
+
+    #ev-app-root .ev-hero-img {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+    }
+
+    #ev-app-root .ev-hero-meta {
+      min-width: 0;
+      flex: 1 1 0%;
+    }
+
+    #ev-app-root .ev-hero-title {
+      font-size: 1.05rem;
+      line-height: 1.3;
+    }
+
+    #ev-app-root .ev-hero-tags {
+      margin-top: 6px;
+      font-size: .72rem;
+    }
+
+    /* —— 2. KPI 统计栏：横向滚动 + 吸附，永不折行 —— */
+    #ev-app-root .ev-stat-row {
+      margin-top: 10px;
+      gap: 14px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+
+    #ev-app-root .ev-stat-row::-webkit-scrollbar {
+      display: none;
+    }
+
+    #ev-app-root .ev-stat-item {
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+      font-size: .76rem;
+      white-space: nowrap;
+    }
+
+    #ev-app-root .ev-stat-item b {
+      font-size: .9rem;
+    }
+
+    /* —— 3. Share 卡：移动端整宽、降高 —— */
+    #ev-app-root .ev-share-card {
+      width: 100%;
+      flex: 1 1 100%;
+      padding: 12px 14px;
+      gap: 12px;
+      border-radius: 12px;
+    }
+
+    #ev-app-root .ev-share-card .ev-share-ico {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+    }
+
+    #ev-app-root .ev-share-card .ev-share-title {
+      font-size: .92rem;
+    }
+
+    #ev-app-root .ev-share-card .ev-share-sub {
+      font-size: .68rem;
+    }
+
+    /* —— 4. 主网格：移动端预留底部安全空间，给吸底交易面板让位 —— */
+    #ev-app-root>.ev-grid {
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    #ev-app-root {
+      padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* —— 5. 内容卡：紧凑内边距 —— */
+    #ev-app-root .ev-section-head {
+      padding: 10px 12px;
+      font-size: .9rem;
+    }
+
+    #ev-app-root .ev-section-body {
+      padding: 12px;
+    }
+
+    #ev-app-root .ev-ai-card {
+      padding: 12px 14px;
+      border-radius: 12px;
+    }
+
+    #ev-app-root .ev-ai-title {
+      font-size: .8rem;
+    }
+
+    /* —— 6. Tabs Nav：横向滚动 + 吸附，触控 ≥44px —— */
+    #ev-app-root .ev-tabs-nav {
+      padding: 0 8px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    #ev-app-root .ev-tabs-nav::-webkit-scrollbar {
+      display: none;
+    }
+
+    #ev-app-root .ev-tab-btn {
+      padding: 12px 14px;
+      font-size: .82rem;
+      min-height: 44px;
+      white-space: nowrap;
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+    }
+
+    /* —— 7. Markets / Holders 列表：限高，避免吃掉整屏 —— */
+    #ev-app-root .ev-section-card>div[style*="max-height"] {
+      max-height: 46vh !important;
+    }
+
+    /* —— 8. 交易面板（移动端）：保持静态布局并优化触感 —— */
+    /* 设计取舍：sticky-bottom 会与上方 Markets 卡的 YES/NO 按钮在 z 轴叠加导致视觉
+     * 冲突；改为静态流式布局 + 紧凑触控目标，配合上方所有内容卡的 token 紧凑化，
+     * 用户可在 1–2 次轻滑内达到交易面板，且不会遮挡任何上下文信息。 */
+    #ev-app-root .ev-right-sticky {
+      position: static;
+      top: auto;
+      max-height: none;
+      overflow: visible;
+      margin-top: 12px;
+    }
+
+    #ev-app-root .order-panel {
+      position: relative;
+      top: auto;
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, .28);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    #ev-app-root .order-panel .op-balance-strip {
+      padding: 10px 12px;
+      font-size: .76rem;
+    }
+
+    #ev-app-root .order-panel .op-head-row {
+      padding: 0 8px;
+    }
+
+    #ev-app-root .order-panel .op-tab {
+      padding: 12px 14px;
+      font-size: .9rem;
+      min-height: 44px;
+    }
+
+    /* —— 9. 触控目标 & 输入区域 —— */
+    #ev-app-root .op-outcome-btn {
+      min-height: 48px;
+      font-size: .95rem;
+    }
+
+    #ev-app-root .op-quick-amt {
+      min-height: 40px;
+      font-size: .8rem;
+    }
+
+    #ev-app-root .op-amt-display {
+      font-size: 1.4rem;
+    }
+
+    /* —— 10. 表格内文本不换行截断（持仓/订单簿） —— */
+    #ev-app-root .ev-section-card table {
+      font-size: .74rem;
+    }
+
+    #ev-app-root .ev-section-card table td,
+    #ev-app-root .ev-section-card table th {
+      white-space: nowrap;
+    }
+  }
+</style>
+
+<div id="ev-skel-static" class="ev-skel-static">
+  <div class="ev-hero skel-wrap" style="display:block;min-height:120px">
+    <div style="display:flex;gap:16px;align-items:center">
+      <div class="skel-block" style="width:88px;height:88px;border-radius:12px"></div>
+      <div style="flex:1">
+        <div class="skel-line" style="height:18px;width:65%"></div>
+        <div class="skel-line" style="height:12px;width:40%;margin-top:8px"></div>
+        <div class="skel-line" style="height:12px;width:55%;margin-top:6px"></div>
+      </div>
+      <div class="skel-block" style="width:140px;height:64px;border-radius:14px"></div>
+    </div>
+  </div>
+  <div class="ev-grid">
+    <div class="skel-wrap">
+      <div class="skel-block" style="height:280px;border-radius:12px"></div>
+      <div class="skel-spinner" aria-label="loading"></div>
+    </div>
+    <div class="skel-wrap">
+      <div class="skel-block" style="height:380px;border-radius:12px"></div>
+      <div class="skel-spinner" aria-label="loading"></div>
+    </div>
+  </div>
+</div>
+
+<div id="ev-app-root">
+
+  <template>
+    <div>
+      <div class="ev-hero skel-wrap" style="display:block;min-height:120px">
+        <div style="display:flex;gap:16px;align-items:center">
+          <div class="skel-block" style="width:88px;height:88px;border-radius:12px"></div>
+          <div style="flex:1">
+            <div class="skel-line" style="height:18px;width:65%"></div>
+            <div class="skel-line" style="height:12px;width:40%;margin-top:8px"></div>
+            <div class="skel-line" style="height:12px;width:55%;margin-top:6px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="ev-grid">
+        <div class="skel-wrap">
+          <div class="skel-block" style="height:280px;border-radius:12px"></div>
+          <div class="skel-spinner" aria-label="loading"></div>
+        </div>
+        <div class="skel-wrap">
+          <div class="skel-block" style="height:380px;border-radius:12px"></div>
+          <div class="skel-spinner" aria-label="loading"></div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template>
+    <div class="v-card" style="border:1px solid #dc2626;background:rgba(220,38,38,.08);color:#fca5a5"><span
+        data-i18n="event.loadFailed">{{ i18n_dict.get('event.loadFailed','Load failed: ') }}</span><span></span></div>
+  </template>
+
+  <template>
+    <div>
+
+      <div class="ev-hero">
+        <img class="ev-hero-img" loading="lazy" onerror="this.style.visibility='hidden'">
+        <div class="ev-hero-meta">
+          <div class="ev-hero-title"></div>
+          <div class="ev-hero-tags">
+            <span></span>
+            <span></span>
+          </div>
+          <div class="ev-stat-row">
+            <div class="ev-stat-item ev-stat-vol"><span data-i18n="event.stat.vol24h">{{
+                i18n_dict.get('event.stat.vol24h','24h Volume') }}</span><b></b></div>
+            <div class="ev-stat-item"><span data-i18n="event.stat.totalVol">{{
+                i18n_dict.get('event.stat.totalVol','Total Volume') }}</span><b></b></div>
+            <div class="ev-stat-item"><span data-i18n="event.stat.liquidity">{{
+                i18n_dict.get('event.stat.liquidity','Liquidity') }}</span><b></b></div>
+          </div>
+        </div>
+        <div class="ev-share-card" role="button" tabindex="0">
+          <div class="ev-share-ico" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+          </div>
+          <div class="ev-share-text">
+            <span class="ev-share-title"></span>
+            <span class="ev-share-sub"></span>
+            <template>
+              <span class="ev-share-ref-tag"></span>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="ev-grid">
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="ev-ai-card">
+            <div class="ev-ai-title"><span></span></div>
+            <div class="ev-ai-text"></div>
+          </div>
+
+          <template>
+            <details class="ev-section-card" style="cursor:pointer">
+              <summary class="ev-section-head" style="cursor:pointer; list-style:none">
+                <span>📄 <span></span></span>
+                <span style="font-size:.72rem;color:var(--text-muted);font-weight:400" data-i18n="event.expand">{{
+                  i18n_dict.get('event.expand','Click to expand') }}</span>
+              </summary>
+              <div class="ev-section-body">
+                <div class="ev-desc"></div>
+              </div>
+            </details>
+          </template>
+
+          <div class="ev-section-card">
+            <div class="ev-section-head">
+              <span><span></span></span>
+              <span style="font-size:.72rem;color:var(--text-muted);font-weight:400">
+                <span></span> / <span></span> <span data-i18n="event.options.unit">{{
+                  i18n_dict.get('event.options.unit','shown') }}</span>
+              </span>
+            </div>
+
+            <div>
+              <template>
+                <div class="sub-mkt">
+                  <div class="sub-mkt-meta">
+                    <div class="sub-mkt-q"></div>
+                    <div class="sub-mkt-stats">
+                      <span></span>
+                      <span>24h $<span></span></span>
+                      <span><span data-i18n="event.stat.liquidity">{{ i18n_dict.get('event.stat.liquidity','Liquidity')
+                          }}</span> $<span></span></span>
+                    </div>
+                  </div>
+                  <div class="sub-mkt-buttons">
+                    <button class="sub-mkt-btn yes">
+                      <span class="sb-label" data-i18n="event.buy.yes">{{ i18n_dict.get('event.buy.yes','Buy YES')
+                        }}</span>
+                      <span class="sb-cents"></span>
+                    </button>
+                    <button class="sub-mkt-btn no">
+                      <span class="sb-label" data-i18n="event.buy.no">{{ i18n_dict.get('event.buy.no','Buy NO')
+                        }}</span>
+                      <span class="sb-cents"></span>
+                    </button>
+                  </div>
+                </div>
+              </template>
+              <template>
+                <div class="empty-tab" data-i18n="event.options.empty">{{ i18n_dict.get('event.options.empty','No
+                  tradable options for this event') }}</div>
+              </template>
+            </div>
+          </div>
+
+          <div class="ev-section-card">
+            <div class="ev-section-head">
+              <span>📊 <span></span></span>
+              <span style="font-size:.72rem;color:var(--text-muted);font-weight:400">
+                <span></span> <span data-i18n="event.holding.outcomeUnit">{{
+                  i18n_dict.get('event.holding.outcomeUnit','outcomes') }}</span>
+              </span>
+            </div>
+            <div class="ev-section-body" style="padding:0">
+              <table style="width:100%;border-collapse:collapse;font-size:.78rem;">
+                <thead>
+                  <tr style="color:var(--text-muted);text-align:left;border-bottom:1px solid var(--border)">
+                    <th style="padding:8px 10px;font-weight:500" data-i18n="event.holding.col.market">{{
+                      i18n_dict.get('event.holding.col.market','Market / Outcome') }}</th>
+                    <th style="padding:8px 6px;font-weight:500;text-align:right" data-i18n="event.holding.col.shares">{{
+                      i18n_dict.get('event.holding.col.shares','Shares') }}</th>
+                    <th style="padding:8px 6px;font-weight:500;text-align:right" data-i18n="event.holding.col.avgPrice">
+                      {{ i18n_dict.get('event.holding.col.avgPrice','Avg Price') }}</th>
+                    <th style="padding:8px 6px;font-weight:500;text-align:right"
+                      data-i18n="event.holding.col.markPrice">{{ i18n_dict.get('event.holding.col.markPrice','Mark') }}
+                    </th>
+                    <th style="padding:8px 6px;font-weight:500;text-align:right" data-i18n="event.holding.col.value">{{
+                      i18n_dict.get('event.holding.col.value','Value') }}</th>
+                    <th style="padding:8px 10px;font-weight:500;text-align:right" data-i18n="event.holding.col.pnl">{{
+                      i18n_dict.get('event.holding.col.pnl','P&L') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template>
+                    <tr style="border-bottom:1px solid rgba(148,163,184,.08);cursor:pointer">
+                      <td
+                        style="padding:8px 10px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                        <span></span>
+                        <span
+                          style="margin-left:6px;padding:1px 6px;border-radius:3px;font-size:.65rem;font-weight:600"></span>
+                      </td>
+                      <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums"></td>
+                      <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums"></td>
+                      <td
+                        style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums;color:var(--text-secondary)">
+                      </td>
+                      <td style="padding:8px 6px;text-align:right;font-variant-numeric:tabular-nums"></td>
+                      <td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:600">
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+              <div style="padding:6px 10px;font-size:.68rem;color:var(--text-muted);border-top:1px solid var(--border)"
+                data-i18n="event.holding.tip">{{ i18n_dict.get('event.holding.tip','Click a row to switch to the sell
+                panel for that market + outcome') }}</div>
+            </div>
+          </div>
+          <div class="ev-section-card" style="background:rgba(139,92,246,.04)">
+            <div style="padding:12px;text-align:center;font-size:.78rem;color:var(--text-muted)"
+              data-i18n="event.holding.loading">{{ i18n_dict.get('event.holding.loading','Loading my positions...') }}
+            </div>
+          </div>
+
+          <div class="ev-section-card">
+            <div class="ev-tabs-nav">
+              <button class="ev-tab-btn">📈 <span></span></button>
+              <button class="ev-tab-btn">📖 <span></span></button>
+              <button class="ev-tab-btn">📜 <span></span></button>
+              <button class="ev-tab-btn">👥 <span></span></button>
+            </div>
+            <div class="ev-section-body">
+              <template>
+                <div>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.chart.selectFirst">{{
+                      i18n_dict.get('event.chart.selectFirst','Please select an option above') }}</div>
+                  </template>
+                  <template>
+                    <div>
+                      <div
+                        style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+                        <div style="display:flex;gap:6px;align-items:center">
+                          <button class="v-btn v-btn-sm">YES</button>
+                          <button class="v-btn v-btn-sm">NO</button>
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                          <template>
+                            <button class="v-btn v-btn-sm"></button>
+                          </template>
+                        </div>
+                      </div>
+                      <div
+                        style="position:relative;height:340px;background:var(--bg-primary);border:1px solid var(--border);border-radius:10px;padding:8px">
+                        <canvas id="ev-price-chart" style="width:100%;height:100%"></canvas>
+                        <template>
+                          <div
+                            style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(15,17,26,.55);border-radius:10px">
+                            <div class="skel-spinner" style="position:relative;top:auto;left:auto;transform:none"
+                              aria-label="loading"></div>
+                          </div>
+                        </template>
+                        <template>
+                          <div
+                            style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fca5a5;font-size:.8rem">
+                          </div>
+                        </template>
+                        <template>
+                          <div
+                            style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:.8rem"
+                            data-i18n="event.chart.empty">{{ i18n_dict.get('event.chart.empty','No price history
+                            available') }}</div>
+                        </template>
+                      </div>
+                      <div style="font-size:.7rem;color:var(--text-muted);margin-top:6px;line-height:1.5">
+                        <span data-i18n="event.chart.help">{{ i18n_dict.get('event.chart.help','💡 Realtime price (¢)
+                          reconstructed from on-chain trades. Hover for exact value.') }}</span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template>
+                <div>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.ob.selectFirst">{{
+                      i18n_dict.get('event.ob.selectFirst','Please select an option above') }}</div>
+                  </template>
+                  <template>
+                    <div>
+
+                      <div class="ob-toolbar">
+                        <div class="ob-toggle">
+                          <button>YES</button>
+                          <button>NO</button>
+                        </div>
+                        <button class="v-btn v-btn-outline v-btn-sm"></button>
+                      </div>
+                      <div class="ob-table">
+                        <div class="ob-header">
+                          <span data-i18n="event.ob.col.price">{{ i18n_dict.get('event.ob.col.price','Price (¢)')
+                            }}</span><span data-i18n="event.ob.col.size">{{ i18n_dict.get('event.ob.col.size','Size')
+                            }}</span><span data-i18n="event.ob.col.cum">{{ i18n_dict.get('event.ob.col.cum','Cum')
+                            }}</span>
+                        </div>
+
+                        <template>
+                          <div class="ob-empty" data-i18n="event.ob.empty.asks">{{
+                            i18n_dict.get('event.ob.empty.asks','No asks') }}</div>
+                        </template>
+                        <div class="ob-section asks">
+                          <template>
+                            <div class="ob-row">
+                              <span class="ob-price"></span>
+                              <span></span>
+                              <span></span>
+                              <span class="ob-cell-bar"></span>
+                            </div>
+                          </template>
+                        </div>
+
+                        <div class="ob-spread">
+                          <span>
+                            <span data-i18n="event.ob.last">{{ i18n_dict.get('event.ob.last','Last') }}</span> <span
+                              class="ob-last"></span>
+                          </span>
+                          <span class="ob-spread-val"></span>
+                        </div>
+
+                        <template>
+                          <div class="ob-empty" data-i18n="event.ob.empty.bids">{{
+                            i18n_dict.get('event.ob.empty.bids','No bids') }}</div>
+                        </template>
+                        <div class="ob-section bids">
+                          <template>
+                            <div class="ob-row">
+                              <span class="ob-price"></span>
+                              <span></span>
+                              <span></span>
+                              <span class="ob-cell-bar"></span>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                      <div style="font-size:.7rem;color:var(--text-muted);margin-top:6px;line-height:1.5">
+                        <span data-i18n="event.ob.help.line1">{{ i18n_dict.get('event.ob.help.line1','💡 Prices shown in
+                          cents (¢), unit = $0.01.') }}</span>
+                        <span style="color:#fca5a5" data-i18n="event.ob.help.askLabel">{{
+                          i18n_dict.get('event.ob.help.askLabel','Red ASK') }}</span><span
+                          data-i18n="event.ob.help.askDesc">{{ i18n_dict.get('event.ob.help.askDesc',' is the price
+                          others want to sell at (click = buy now); ') }}</span>
+                        <span style="color:#86efac" data-i18n="event.ob.help.bidLabel">{{
+                          i18n_dict.get('event.ob.help.bidLabel','Green BID') }}</span><span
+                          data-i18n="event.ob.help.bidDesc">{{ i18n_dict.get('event.ob.help.bidDesc',' is the price
+                          others want to buy at (click = sell now).') }}</span>
+                        <span data-i18n="event.ob.help.cumDesc">{{ i18n_dict.get('event.ob.help.cumDesc','The Cum column
+                          shows total size from the best price down (liquidity depth).') }}</span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template>
+                <div>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.trades.selectFirst">{{
+                      i18n_dict.get('event.trades.selectFirst','Please select an option above') }}</div>
+                  </template>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.trades.loading">{{
+                      i18n_dict.get('event.trades.loading','Loading trade history…') }}</div>
+                  </template>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.trades.empty">{{ i18n_dict.get('event.trades.empty','No
+                      trades') }}</div>
+                  </template>
+                  <template>
+                    <div style="max-height:360px;overflow-y:auto">
+                      <div
+                        style="display:grid;grid-template-columns:1.6fr .9fr .8fr .9fr;gap:6px;padding:6px 8px;font-size:.72rem;color:var(--text-muted);border-bottom:1px solid var(--border)">
+                        <span data-i18n="event.trades.col.user">{{ i18n_dict.get('event.trades.col.user','User /
+                          Address') }}</span><span data-i18n="event.trades.col.side">{{
+                          i18n_dict.get('event.trades.col.side','Side') }}</span><span style="text-align:right"
+                          data-i18n="event.trades.col.price">{{ i18n_dict.get('event.trades.col.price','Price')
+                          }}</span><span style="text-align:right" data-i18n="event.trades.col.shares">{{
+                          i18n_dict.get('event.trades.col.shares','Shares') }}</span>
+                      </div>
+                      <template>
+                        <div
+                          style="display:grid;grid-template-columns:1.6fr .9fr .8fr .9fr;gap:6px;padding:5px 8px;font-size:.78rem;border-bottom:1px solid rgba(255,255,255,.04);align-items:center">
+                          <a target="_blank" rel="noopener"
+                            style="color:var(--text-secondary);text-decoration:none;display:inline-flex;align-items:center;gap:4px">
+                            <span></span>
+                            <span style="color:var(--accent);font-size:.7rem">↗</span>
+                          </a>
+                          <span></span>
+                          <span style="text-align:right"></span>
+                          <span style="text-align:right"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+              <template>
+                <div>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.holders.selectFirst">{{
+                      i18n_dict.get('event.holders.selectFirst','Please select an option above') }}</div>
+                  </template>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.holders.loading">{{
+                      i18n_dict.get('event.holders.loading','Loading holders…') }}</div>
+                  </template>
+                  <template>
+                    <div class="empty-tab" data-i18n="event.holders.empty">{{ i18n_dict.get('event.holders.empty','No
+                      holder data') }}</div>
+                  </template>
+                  <template>
+                    <div style="max-height:360px;overflow-y:auto">
+                      <div
+                        style="display:grid;grid-template-columns:1.8fr .9fr .9fr;gap:6px;padding:6px 8px;font-size:.72rem;color:var(--text-muted);border-bottom:1px solid var(--border)">
+                        <span style="text-align:left" data-i18n="event.holders.col.user">{{
+                          i18n_dict.get('event.holders.col.user','User / Address') }}</span>
+                        <button
+                          style="background:transparent;border:0;color:var(--text-muted);cursor:pointer;font-size:.72rem;text-align:left;padding:0;display:inline-flex;align-items:center;gap:4px">
+                          <span></span>
+                          <span style="color:var(--accent);font-size:.7rem"></span>
+                        </button>
+                        <span style="text-align:right" data-i18n="event.holders.col.shares">{{
+                          i18n_dict.get('event.holders.col.shares','Shares') }}</span>
+                      </div>
+                      <template>
+                        <div
+                          style="display:grid;grid-template-columns:1.8fr .9fr .9fr;gap:6px;padding:5px 8px;font-size:.78rem;border-bottom:1px solid rgba(255,255,255,.04);align-items:center">
+                          <a target="_blank" rel="noopener"
+                            style="color:var(--text-secondary);text-decoration:none;display:inline-flex;align-items:center;gap:4px;justify-content:flex-start">
+                            <span></span>
+                            <span style="color:var(--accent);font-size:.7rem">↗</span>
+                          </a>
+                          <span></span>
+                          <span style="text-align:right"></span>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div class="ev-right-sticky">
+          <div class="order-panel">
+            <div class="op-balance-strip">
+              <div class="bal"><span data-i18n="event.panel.tradableBalance">{{
+                  i18n_dict.get('event.panel.tradableBalance','Tradable Balance') }}</span><b></b></div>
+              <div style="display:flex;gap:6px">
+                <button class="v-btn v-btn-outline v-btn-sm">↻</button>
+                <a href="/v2/deposit" class="v-btn v-btn-primary v-btn-sm" data-i18n="event.panel.deposit">{{
+                  i18n_dict.get('event.panel.deposit','Deposit') }}</a>
+              </div>
+            </div>
+
+            <div class="op-head-row">
+              <div class="op-tabs">
+                <button class="op-tab"></button>
+                <button class="op-tab"></button>
+              </div>
+              <div class="op-otype-row">
+                <select class="op-otype-select">
+                  <option value="market"></option>
+                  <option value="limit"></option>
+                </select>
+                <button class="op-gear">⚙</button>
+              </div>
+
+              <template>
+                <div class="op-gear-pop">
+                  <h4></h4>
+                  <div class="gear-item"><span></span><span class="gear-tag"></span></div>
+                  <div class="gear-item"><span></span><span class="gear-tag"></span></div>
+                  <div style="font-size:.7rem;color:var(--text-muted);margin-top:8px;line-height:1.4">
+                    <span data-i18n="event.panel.gear.splitDesc">{{ i18n_dict.get('event.panel.gear.splitDesc','Split: 1
+                      USDC → 1 YES + 1 NO shares.') }}</span><br>
+                    <span data-i18n="event.panel.gear.mergeDesc">{{ i18n_dict.get('event.panel.gear.mergeDesc','Merge: 1
+                      YES + 1 NO shares → 1 USDC.') }}</span><br>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <div class="op-body">
+              <template>
+                <div style="text-align:center;color:var(--text-muted);padding:30px 10px;font-size:.86rem"
+                  data-i18n="event.panel.selectFirst">{{ i18n_dict.get('event.panel.selectFirst','Please select an
+                  option from the left') }}</div>
+              </template>
+              <template>
+                <div>
+                  <div class="op-mkt-info"></div>
+
+                  <div style="display:flex;align-items:center;gap:6px;font-size:.7rem;margin:4px 0;">
+                    <span style="color:#16a34a;display:inline-flex;align-items:center;gap:3px;">
+                      <svg width="8" height="8" viewBox="0 0 8 8">
+                        <circle cx="4" cy="4" r="3" fill="currentColor" />
+                      </svg>
+                      <span></span>
+                    </span>
+                    <span style="color:#f59e0b;display:inline-flex;align-items:center;gap:3px;">
+                      <svg width="8" height="8" viewBox="0 0 8 8">
+                        <circle cx="4" cy="4" r="3" fill="currentColor" />
+                      </svg>
+                      <span></span>
+                    </span>
+                    <span style="color:var(--text-muted);"></span>
+                  </div>
+
+                  <div class="op-outcome-row">
+                    <button class="op-outcome-btn">
+                      <span></span>
+                      <span class="qb-out-px"></span>
+                    </button>
+                    <button class="op-outcome-btn">
+                      <span></span>
+                      <span class="qb-out-px"></span>
+                    </button>
+                  </div>
+
+                  <template>
+                    <div>
+
+                      <template>
+                        <div>
+                          <div class="op-section">
+                            <div class="op-section-label">
+                              <span></span>
+                              <span style="font-size:.72rem;color:var(--text-muted)">
+                                <span></span><span></span>
+                              </span>
+                            </div>
+
+                            <div class="stepper-input">
+                              <button>−</button>
+                              <input type="number" step="1">
+                              <span class="stepper-suffix"></span>
+                              <button>+</button>
+                            </div>
+                            <div class="op-quick-amts" style="margin-top:8px">
+                              <template>
+                                <button class="op-quick-amt"></button>
+                              </template>
+                              <button class="op-quick-amt"></button>
+                            </div>
+                          </div>
+
+                          <div class="op-summary">
+                            <div class="op-sum-row"><span></span><b class="cost"></b></div>
+                            <div class="op-sum-row"><span></span><b class="profit"></b></div>
+                          </div>
+                        </div>
+                      </template>
+
+                      <template>
+                        <div class="op-section">
+                          <div class="op-section-label">
+                            <span></span>
+                            <span style="font-size:.72rem;color:var(--text-muted)">
+                              <span></span><span></span> <span></span>
+                            </span>
+                          </div>
+
+                          <template>
+                            <div
+                              style="margin:6px 0;padding:8px 10px;background:#fef3c7;color:#92400e;border-left:3px solid #f59e0b;border-radius:4px;font-size:.75rem"
+                              data-i18n="event.qb.noPosition">{{ i18n_dict.get('event.qb.noPosition','⚠ You have no
+                              sellable position in this outcome') }}</div>
+                          </template>
+                          <div class="stepper-input">
+                            <button>−</button>
+                            <input type="number" min="0" step="0.01">
+                            <span class="stepper-suffix" style="padding-right:16px"></span>
+                            <button>+</button>
+                          </div>
+                          <div class="op-share-adjusts" style="margin-top:8px">
+                            <button class="op-share-adj">25%</button>
+                            <button class="op-share-adj">50%</button>
+                            <button class="op-share-adj">MAX</button>
+                          </div>
+                          <div style="font-size:.7rem;color:var(--text-muted);margin-top:6px">
+                            <span></span><b style="color:var(--text)"></b>
+                            <span style="color:#10b981;margin-left:6px"></span>
+                          </div>
+                          <template>
+                            <div style="font-size:.72rem;color:var(--text-muted);margin-top:6px"
+                              data-i18n="event.qb.queryingHoldings">{{
+                              i18n_dict.get('event.qb.queryingHoldings','Querying position...') }}</div>
+                          </template>
+                        </div>
+
+                        <div class="op-summary">
+                          <div class="op-sum-row"><span></span><b></b></div>
+                          <div class="op-sum-row"><span></span><b class="cost"></b></div>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+
+                  <template>
+                    <div>
+                      <div class="op-section">
+                        <div class="op-section-label"><span></span></div>
+                        <div class="stepper-input">
+                          <button>−</button>
+                          <input type="number" min="1" max="99" step="1">
+                          <span class="stepper-suffix">¢</span>
+                          <button>+</button>
+                        </div>
+                      </div>
+
+                      <div class="op-section">
+                        <div class="op-section-label">
+                          <span></span>
+                          <template>
+                            <span style="font-size:.72rem;color:var(--text-muted)"><span></span><span></span></span>
+                          </template>
+                        </div>
+
+                        <template>
+                          <div
+                            style="margin:6px 0;padding:8px 10px;background:#fef3c7;color:#92400e;border-left:3px solid #f59e0b;border-radius:4px;font-size:.75rem"
+                            data-i18n="event.qb.noPosition">{{ i18n_dict.get('event.qb.noPosition','⚠ You have no
+                            sellable position in this outcome') }}</div>
+                        </template>
+                        <div class="stepper-input">
+                          <button>−</button>
+                          <input type="number">
+                          <span class="stepper-suffix" style="padding-right:16px"></span>
+                          <button>+</button>
+                        </div>
+                        <div class="op-share-adjusts">
+                          <template>
+                            <button class="op-share-adj">-100</button>
+                          </template>
+                          <template>
+                            <button class="op-share-adj">-10</button>
+                          </template>
+                          <template>
+                            <button class="op-share-adj">+10</button>
+                          </template>
+                          <template>
+                            <button class="op-share-adj">+100</button>
+                          </template>
+                          <template>
+                            <button class="op-share-adj"></button>
+                          </template>
+                          <template>
+                            <button class="op-share-adj">25%</button>
+                          </template>
+                          <template>
+                            <button class="op-share-adj">50%</button>
+                          </template>
+                          <template>
+                            <button class="op-share-adj"></button>
+                          </template>
+                        </div>
+                      </div>
+
+                      <div class="op-summary">
+                        <template>
+                          <div>
+                            <div class="op-sum-row"><span></span><b class="cost"></b></div>
+                            <div class="op-sum-row"><span></span><b class="profit"></b></div>
+                          </div>
+                        </template>
+                        <template>
+                          <div>
+                            <div class="op-sum-row"><span></span><b class="cost"></b></div>
+                            <div class="op-sum-row"><span></span><b></b></div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
+                  <button class="op-submit">
+                    <span></span>
+                    <span></span>
+                  </button>
+
+                  <template>
+                    <div class="op-msg"></div>
+                  </template>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+{% endblock %}

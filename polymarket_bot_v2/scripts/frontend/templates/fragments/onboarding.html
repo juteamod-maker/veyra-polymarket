@@ -1,0 +1,234 @@
+{# T875 — New-user 6-step onboarding modal.
+Lazy-loaded only when /api/user/onboard-modal is hit (i.e. session
+has needs_onboarding=True). i18n strings are inlined as JSON so the
+client controller can render validation messages without an extra
+round-trip. CSS + JS are static files referenced here so they only
+download when the modal actually mounts.
+#}
+{%- set t = i18n.get -%}
+<link rel="stylesheet" href="/v2/static/css/onboarding.css?v={{ asset_version | default('0') }}">
+<script id="ob-i18n-data" type="application/json">{{ i18n_json | escape_script_json | safe }}</script>
+
+<div id="onboarding-modal" role="dialog" aria-modal="true" aria-label="{{ t('modal.aria', 'New user welcome guide') }}"
+    aria-labelledby="ob-step-title-1">
+    <div class="ob-shell" role="document">
+
+        {# ===== HEADER (fixed) ===== #}
+        <div class="ob-header">
+            <div class="ob-header-row">
+                <div id="ob-step-indicator" class="ob-step-indicator">{{ t('step.indicator', 'Step 1 of 6') |
+                    replace('{current}', '1') | replace('{total}', '6') }}</div>
+                <button type="button" id="ob-skip-btn" class="ob-skip-btn">{{ t('btn.skip', 'Skip') }}</button>
+            </div>
+            <div class="ob-progress" role="progressbar" aria-valuemin="1" aria-valuemax="6" aria-valuenow="1">
+                <span class="ob-progress-dot is-active" data-step="1"></span>
+                <span class="ob-progress-dot" data-step="2"></span>
+                <span class="ob-progress-dot" data-step="3"></span>
+                <span class="ob-progress-dot" data-step="4"></span>
+                <span class="ob-progress-dot" data-step="5"></span>
+                <span class="ob-progress-dot" data-step="6"></span>
+            </div>
+        </div>
+
+        {# ===== BODY (scrollable) ===== #}
+        <div class="ob-body">
+
+            {# --- Step 1 --- #}
+            <section class="ob-step is-active" data-step="1">
+                <h2 id="ob-step-title-1" class="ob-title">{{ t('step1.title', 'Welcome to Veyra.Trade') }}</h2>
+                <p class="ob-lead">{{ t('step1.body', '') }}</p>
+                <div class="ob-card">
+                    <p class="ob-card-title">{{ t('step1.exampleTitle', 'Example') }}</p>
+                    <p class="ob-card-body">{{ t('step1.example', '') }}</p>
+                </div>
+                <div class="ob-card">
+                    <p class="ob-card-title">{{ t('step1.valueTitle', 'Why it pays off') }}</p>
+                    <p class="ob-card-body">{{ t('step1.value', '') }}</p>
+                </div>
+            </section>
+
+            {# --- Step 2 — comparison (grid, no <table>) --- #}
+                <section class="ob-step" data-step="2">
+                    <h2 class="ob-title">{{ t('step2.title', 'How Veyra.Trade differs from gambling') }}</h2>
+                    <p class="ob-subtitle">{{ t('step2.subtitle', '') }}</p>
+                    <div class="ob-cmp-grid">
+                        <div class="ob-cmp-col ob-cmp-col--gambling">
+                            <p class="ob-cmp-head">{{ t('step2.col.gambling', 'Traditional gambling') }}</p>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.essence.label', 'Essence') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.essence.gambling', '') }}</p>
+                            </div>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.price.label', 'Price') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.price.gambling', '') }}</p>
+                            </div>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.win.label', 'Winning logic') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.win.gambling', '') }}</p>
+                            </div>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.exit.label', 'Exit') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.exit.gambling', '') }}</p>
+                            </div>
+                        </div>
+                        <div class="ob-cmp-col ob-cmp-col--veyra">
+                            <p class="ob-cmp-head">{{ t('step2.col.veyra', 'Veyra.Trade') }}</p>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.essence.label', 'Essence') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.essence.veyra', '') }}</p>
+                            </div>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.price.label', 'Price') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.price.veyra', '') }}</p>
+                            </div>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.win.label', 'Winning logic') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.win.veyra', '') }}</p>
+                            </div>
+                            <div class="ob-cmp-row">
+                                <p class="ob-cmp-row-label">{{ t('step2.row.exit.label', 'Exit') }}</p>
+                                <p class="ob-cmp-row-text">{{ t('step2.row.exit.veyra', '') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ob-card">
+                        <p class="ob-card-title">{{ t('step2.takeawayTitle', 'The edge') }}</p>
+                        <p class="ob-card-body">{{ t('step2.takeaway', '') }}</p>
+                    </div>
+                </section>
+
+                {# --- Step 3 — 4-step ordered list --- #}
+                <section class="ob-step" data-step="3">
+                    <h2 class="ob-title">{{ t('step3.title', 'How to place a bet') }}</h2>
+                    <p class="ob-subtitle">{{ t('step3.subtitle', '') }}</p>
+                    <ol class="ob-numlist">
+                        <li>
+                            <span class="ob-num">1</span>
+                            <div class="ob-num-body">
+                                <p class="ob-num-title">{{ t('step3.s1.title', '') }}</p>
+                                <p class="ob-num-text">{{ t('step3.s1.body', '') }}</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="ob-num">2</span>
+                            <div class="ob-num-body">
+                                <p class="ob-num-title">{{ t('step3.s2.title', '') }}</p>
+                                <p class="ob-num-text">{{ t('step3.s2.body', '') }}</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="ob-num">3</span>
+                            <div class="ob-num-body">
+                                <p class="ob-num-title">{{ t('step3.s3.title', '') }}</p>
+                                <p class="ob-num-text">{{ t('step3.s3.body', '') }}</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="ob-num">4</span>
+                            <div class="ob-num-body">
+                                <p class="ob-num-title">{{ t('step3.s4.title', '') }}</p>
+                                <p class="ob-num-text">{{ t('step3.s4.body', '') }}</p>
+                            </div>
+                        </li>
+                    </ol>
+                    <p class="ob-lead" style="font-size:13px;color:rgba(232,221,255,.78)">{{ t('step3.note', '') }}</p>
+                    <div class="ob-card">
+                        <p class="ob-card-title">{{ t('step3.tipTitle', 'Tip') }}</p>
+                        <p class="ob-card-body">{{ t('step3.tip', '') }}</p>
+                    </div>
+                </section>
+
+                {# --- Step 4 — safety features --- #}
+                <section class="ob-step" data-step="4">
+                    <h2 class="ob-title">{{ t('step4.title', 'Platform safety') }}</h2>
+                    <p class="ob-subtitle">{{ t('step4.subtitle', '') }}</p>
+                    <div class="ob-feat-grid">
+                        <div class="ob-feat-card">
+                            <p class="ob-feat-title">{{ t('step4.f1.title', '') }}</p>
+                            <p class="ob-feat-body">{{ t('step4.f1.body', '') }}</p>
+                        </div>
+                        <div class="ob-feat-card">
+                            <p class="ob-feat-title">{{ t('step4.f2.title', '') }}</p>
+                            <p class="ob-feat-body">{{ t('step4.f2.body', '') }}</p>
+                        </div>
+                        <div class="ob-feat-card">
+                            <p class="ob-feat-title">{{ t('step4.f3.title', '') }}</p>
+                            <p class="ob-feat-body">{{ t('step4.f3.body', '') }}</p>
+                        </div>
+                        <div class="ob-feat-card">
+                            <p class="ob-feat-title">{{ t('step4.f4.title', '') }}</p>
+                            <p class="ob-feat-body">{{ t('step4.f4.body', '') }}</p>
+                        </div>
+                    </div>
+                </section>
+
+                {# --- Step 5 — beginner playbook --- #}
+                <section class="ob-step" data-step="5">
+                    <h2 class="ob-title">{{ t('step5.title', 'Beginner playbook') }}</h2>
+                    <p class="ob-subtitle">{{ t('step5.subtitle', '') }}</p>
+                    <ul class="ob-checklist">
+                        <li>{{ t('step5.t1', '') }}</li>
+                        <li>{{ t('step5.t2', '') }}</li>
+                        <li>{{ t('step5.t3', '') }}</li>
+                        <li>{{ t('step5.t4', '') }}</li>
+                    </ul>
+                    <div class="ob-card">
+                        <p class="ob-card-title">{{ t('step5.summaryTitle', 'The long game') }}</p>
+                        <p class="ob-card-body">{{ t('step5.summary', '') }}</p>
+                    </div>
+                </section>
+
+                {# --- Step 6 — username + terms --- #}
+                <section class="ob-step" data-step="6">
+                    <h2 class="ob-title">{{ t('step6.title', 'Ready to start?') }}</h2>
+                    <p class="ob-subtitle">{{ t('step6.subtitle', '') }}</p>
+
+                    <div class="ob-recap">
+                        <p class="ob-recap-title">{{ t('step6.recapTitle', 'Quick recap') }}</p>
+                        <ul class="ob-recap-list">
+                            <li>{{ t('step6.recap.r1', '') }}</li>
+                            <li>{{ t('step6.recap.r2', '') }}</li>
+                            <li>{{ t('step6.recap.r3', '') }}</li>
+                        </ul>
+                    </div>
+
+                    <form id="ob-final-form" class="ob-modal-form" autocomplete="off" novalidate>
+                        <div class="ob-form-group">
+                            <label class="ob-label" for="ob-display-name">{{ t('step6.usernameLabel', 'Choose your
+                                username') }}</label>
+                            <input id="ob-display-name" class="ob-input" type="text" name="display_name"
+                                value="{{ value or '' }}" minlength="2" maxlength="40" autocomplete="off"
+                                placeholder="{{ t('step6.usernamePlaceholder', 'e.g. VegaTrader') }}">
+                            <p id="ob-name-error" class="ob-field-error" role="alert"></p>
+                            <p class="ob-hint">{{ t('step6.usernameHint', '') }}</p>
+                        </div>
+
+                        <label class="ob-terms" for="ob-terms">
+                            <input id="ob-terms" type="checkbox" name="terms_accepted" value="1">
+                            <span class="ob-terms-text">
+                                {{ t('step6.termsPrefix', '') }}
+                                <a href="/v2/terms" target="_blank" rel="noopener">{{ t('step6.termsLinkTos', 'Terms')
+                                    }}</a>
+                                {{ t('step6.termsAnd', 'and') }}
+                                <a href="/v2/privacy" target="_blank" rel="noopener">{{ t('step6.termsLinkPrivacy',
+                                    'Privacy') }}</a>{{ t('step6.termsSuffix', '.') }}
+                            </span>
+                        </label>
+                    </form>
+                </section>
+
+        </div>{# /.ob-body #}
+
+        {# ===== FOOTER (fixed) ===== #}
+        <div class="ob-footer">
+            <p id="ob-footer-error" class="ob-footer-error" role="alert"></p>
+            <button type="button" id="ob-back-btn" class="ob-back-btn" hidden>{{ t('btn.back', '← Back') }}</button>
+            <button type="button" id="ob-next-btn" class="ob-cta">{{ t('btn.next', 'Next →') }}</button>
+            <button type="submit" form="ob-final-form" id="ob-submit-btn" class="ob-cta" hidden>{{ t('btn.submit',
+                'Enter platform') }}</button>
+        </div>
+
+    </div>{# /.ob-shell #}
+</div>
+
+<script src="/v2/static/js/onboarding.js?v={{ asset_version | default('0') }}"></script>

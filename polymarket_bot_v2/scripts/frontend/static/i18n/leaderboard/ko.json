@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "포인트",
+  "leaderboard.col.earned": "획득",
+  "leaderboard.col.joined": "가입",
+  "leaderboard.col.spent": "사용",
+  "leaderboard.empty": "리더보드에 사용자가 없습니다 — 가입하고 거래하여 첫 포인트를 획득하세요.",
+  "leaderboard.error": "리더보드 로드 실패. 다시 시도해 주세요.",
+  "leaderboard.hero.sub": "포인트 잔액에 따른 VeYra 전체 사용자 순위 — 가입, 거래, 일일 로그인, 추천 등으로 포인트 획득.",
+  "leaderboard.hero.title": "포인트 리더보드",
+  "leaderboard.joined.dayUnit": "일",
+  "leaderboard.joined.monthUnit": "개월",
+  "leaderboard.joined.today": "오늘",
+  "leaderboard.joined.yearUnit": "년",
+  "leaderboard.loading": "리더보드 로딩 중…",
+  "leaderboard.stat.balance": "랭킹 포인트",
+  "leaderboard.stat.earned": "총 소비",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "포인트 리더보드",
+  "leaderboard.toolbar.note": "실시간 순위 · 현재 포인트 잔액 상위 50명",
+  "leaderboard.toolbar.refresh": "새로고침"
+}

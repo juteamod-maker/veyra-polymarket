@@ -1,0 +1,424 @@
+.trades-v2-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 4px 0 20px;
+}
+
+.trades-hero-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(1200px 220px at -10% -80%, rgba(70, 95, 255, 0.24), transparent 62%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+}
+
+.trades-hero-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trades-hero-subtitle {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.trades-hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bets-filter-card {
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(900px 180px at 12% -80%, rgba(34, 197, 94, 0.11), transparent 60%),
+    radial-gradient(800px 180px at 88% -80%, rgba(6, 182, 212, 0.09), transparent 58%),
+    var(--bg-card-solid);
+}
+
+.bets-toolbar-scroll {
+  padding-bottom: 2px;
+}
+
+.bets-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* T314: 实时刷新+记录数推到最右侧, 与筛选同行 */
+.bets-toolbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.bets-toolbar-sep {
+  width: 1px;
+  height: 22px;
+  background: rgba(148, 163, 184, 0.32);
+  margin: 0 2px;
+}
+
+.bets-search-input {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  min-width: 200px;
+  width: 240px;
+  flex: 1 1 200px;
+  max-width: 320px;
+}
+
+.bets-search-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.bets-filter-select {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.bets-filter-perpage { width: 96px; }
+
+.bets-filter-date {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.bets-custom-dates {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bets-record-count {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.bets-sort-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 2px;
+}
+
+.bets-sort-btn {
+  padding: 4px 9px;
+  font-size: 0.69rem;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.bets-sort-btn:hover {
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+.bets-sort-btn.active {
+  background: rgba(70, 95, 255, 0.12);
+  color: var(--accent-text);
+  border-color: rgba(70, 95, 255, 0.35);
+}
+
+.bets-sort-icon {
+  font-size: 0.56rem;
+  margin-left: 1px;
+}
+
+.bets-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bc-col-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 4px 48px 4px 12px;
+  gap: 20px;
+  color: #475569;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.bc-col-header span { text-align: right; min-width: 58px; }
+.bc-col-header .bc-h-pnl { min-width: 76px; }
+
+.bc-item {
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+.bc-item-shell {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.bc-item-shell .bc-item {
+  flex: 1 1 auto;
+}
+
+.bc-side-action {
+  width: 156px;
+  background: linear-gradient(180deg, rgba(16,185,129,0.16), rgba(30,41,59,0.9));
+  border: 1px solid rgba(52,211,153,0.38);
+  border-radius: 10px;
+  box-shadow: 0 10px 22px rgba(16,185,129,0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.bc-side-action-inner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bc-item-pinned { border-left: 3px solid #eab308; }
+
+.bc-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  gap: 10px;
+}
+
+.bc-r-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.bc-r-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bc-r-title {
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bc-q-link { color: var(--text-secondary); text-decoration: none; }
+.bc-q-link:hover { color: var(--accent-text); }
+.bc-link-arrow { font-size: 0.45rem; opacity: 0.4; margin-left: 2px; }
+
+.bc-r-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.bc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.bc-badge-yes { background: #22c55e14; color: #22c55e; }
+.bc-badge-no { background: #94a3b814; color: #94a3b8; }
+.bc-badge-open { background: #eab30810; color: #eab308; }
+.bc-badge-sold { background: #06b6d410; color: #06b6d4; }
+.bc-badge-win { background: #22c55e10; color: #22c55e; }
+.bc-badge-loss { background: #ef444410; color: #ef4444; }
+.bc-badge-time { background: #1e2130; color: #64748b; font-size: 0.58rem; }
+.bc-badge-id { background: #1e2130; color: #475569; font-size: 0.56rem; font-family: monospace; }
+.bc-badge-shares { background: #1e2130; color: #64748b; font-size: 0.58rem; }
+
+.bc-r-data { display: flex; align-items: center; gap: 20px; flex-shrink: 0; }
+.bc-r-col { text-align: right; min-width: 58px; }
+.bc-r-entry { font-size: 0.92rem; font-weight: 600; color: #64748b; }
+.bc-r-live { font-size: 1rem; font-weight: 700; }
+.bc-r-pnl { min-width: 76px; }
+.bc-r-pnl-val { font-size: 1.1rem; font-weight: 800; line-height: 1.1; }
+.bc-r-pnl-pct { font-size: 0.75rem; font-weight: 600; }
+
+.bc-pin {
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 0.8rem;
+  opacity: 0.25;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+}
+
+.bc-pin:hover,
+.bc-pin.pinned { opacity: 1; }
+
+.bets-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.bets-page-controls { display: flex; align-items: center; gap: 8px; }
+
+.bets-page-btn {
+  padding: 4px 12px;
+  font-size: 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.bets-page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.bets-page-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  min-width: 60px;
+  text-align: center;
+}
+
+.bc-empty { padding: 60px 20px; text-align: center; }
+.bc-empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+.bc-empty-title { font-size: 1rem; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+.bc-empty-desc { font-size: 0.75rem; color: #475569; }
+
+.bc-skeleton { pointer-events: none; }
+.bc-skel-block {
+  background: linear-gradient(90deg, #1e2130 25%, #252840 50%, #1e2130 75%);
+  background-size: 200% 100%;
+  border-radius: 6px;
+  animation: bc-skel-shimmer 1.5s infinite;
+}
+
+.bc-refreshing { opacity: 0.5; pointer-events: none; }
+
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #3b82f6;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes bc-skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* T460: 赎回 / 平仓按钮 */
+.bc-r-actions { margin-top: 5px; display: flex; gap: 6px; flex-wrap: wrap; }
+.bc-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity .15s, transform .1s;
+  border: none;
+  white-space: nowrap;
+}
+.bc-action-btn:hover { opacity: .85; transform: scale(1.03); }
+.bc-action-btn:disabled { opacity: .5; cursor: default; transform: none; }
+.bc-action-btn-lg {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 10px;
+  border-radius: 10px;
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.bc-btn-redeem {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(34,197,94,.38);
+}
+.bc-btn-close {
+  background: rgba(251,191,36,.12);
+  color: #fbbf24;
+  border: 1px solid rgba(251,191,36,.3);
+}
+
+@media (max-width: 900px) {
+  .trades-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .bc-item-shell { flex-direction: column; gap: 8px; }
+  .bc-side-action { width: 100%; }
+  .bc-row { flex-wrap: wrap; gap: 6px; }
+  .bc-r-data {
+    width: 100%;
+    justify-content: space-between;
+    border-top: 1px solid #1e2130;
+    padding-top: 6px;
+    margin-top: 2px;
+  }
+  .bc-r-col { text-align: center; }
+  .bc-col-header { display: none; }
+  .bets-search-input { width: 100%; max-width: 100%; }
+  .bets-toolbar-right { margin-left: 0; width: 100%; justify-content: flex-end; }
+}

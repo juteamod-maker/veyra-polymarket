@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+{% block body_attrs %} data-requires-pm="0"{% endblock %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('futures.title','Futures') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('futures.title','Futures') }}{% endblock %}
+
+{% block content %}
+{# T873 — 期货市场聚合页（OddsPapi /futures + /futures/odds 代理） #}
+<style>
+    .vfu-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 6px 0 36px;
+    }
+
+    .vfu-hero {
+        background: linear-gradient(135deg, rgba(245, 158, 11, .10), rgba(99, 102, 241, .06) 60%, transparent);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .vfu-hero h1 {
+        margin: 0;
+        font-size: 1.45rem;
+        font-weight: 700;
+        letter-spacing: -.01em;
+        color: var(--text-primary);
+    }
+
+    .vfu-hero .vfu-sub {
+        font-size: .85rem;
+        color: var(--text-muted);
+    }
+
+    .vfu-controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .vfu-select {
+        background: var(--bg-card-solid);
+        border: 1px solid var(--border);
+        color: var(--text-primary);
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: .9rem;
+    }
+
+    .vfu-status {
+        font-size: .85rem;
+        color: var(--text-muted);
+    }
+
+    .vfu-status b {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .vfu-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+    }
+
+    .vfu-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: var(--bg-card-solid);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: transform .15s, border-color .15s;
+    }
+
+    .vfu-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(99, 102, 241, .45);
+    }
+
+    .vfu-card-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: .95rem;
+        line-height: 1.35;
+    }
+
+    .vfu-card-meta {
+        font-size: .78rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .vfu-tag {
+        font-size: .7rem;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(245, 158, 11, .15);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, .3);
+    }
+
+    .vfu-empty,
+    .vfu-loading,
+    .vfu-error {
+        padding: 30px;
+        text-align: center;
+        color: var(--text-muted);
+        background: var(--bg-card-solid);
+        border: 1px dashed var(--border);
+        border-radius: 14px;
+    }
+
+    .vfu-error {
+        color: #ef4444;
+        border-color: rgba(239, 68, 68, .4);
+    }
+
+    /* T874 — 右侧赔率抽屉 */
+    .vfu-card {
+        cursor: pointer;
+    }
+
+    .vfu-drawer-mask {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .45);
+        z-index: 998;
+    }
+
+    .vfu-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: min(480px, 100vw);
+        height: 100vh;
+        background: var(--bg-card-solid);
+        border-left: 1px solid var(--border);
+        z-index: 999;
+        display: flex;
+        flex-direction: column;
+        box-shadow: -8px 0 32px rgba(0, 0, 0, .35);
+        transform: translateX(0);
+    }
+
+    .vfu-drawer[hidden] {
+        display: none;
+    }
+
+    .vfu-drawer-head {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .vfu-drawer-title {
+        flex: 1;
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--text-primary);
+        line-height: 1.4;
+    }
+
+    .vfu-drawer-close {
+        background: none;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        border-radius: 8px;
+        padding: 4px 10px;
+        cursor: pointer;
+        font-size: .85rem;
+    }
+
+    .vfu-drawer-close:hover {
+        color: var(--text-primary);
+        border-color: rgba(99, 102, 241, .45);
+    }
+
+    .vfu-drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 14px 16px;
+        font-size: .9rem;
+    }
+
+    .vfu-drawer-meta {
+        font-size: .78rem;
+        color: var(--text-muted);
+        margin-bottom: 12px;
+    }
+
+    .vfu-bm-row {
+        border-bottom: 1px solid var(--border);
+        padding: 10px 0;
+    }
+
+    .vfu-bm-name {
+        font-weight: 600;
+        font-size: .85rem;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+    }
+
+    .vfu-bm-outcomes {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 4px 12px;
+        font-size: .82rem;
+    }
+
+    .vfu-bm-outcomes .o-name {
+        color: var(--text-muted);
+    }
+
+    .vfu-bm-outcomes .o-price {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .vfu-drawer-empty,
+    .vfu-drawer-error,
+    .vfu-drawer-loading {
+        text-align: center;
+        padding: 30px 10px;
+        color: var(--text-muted);
+        font-size: .85rem;
+    }
+
+    .vfu-drawer-error {
+        color: #ef4444;
+    }
+</style>
+
+<div class="vfu-wrap" id="vfuWrap">
+    <div class="vfu-hero">
+        <h1 data-i18n="futures.title">{{ i18n_dict.get('futures.title','Futures Markets') }}</h1>
+        <p class="vfu-sub" data-i18n="futures.subtitle">{{ i18n_dict.get('futures.subtitle','Long-horizon markets —
+            championship odds, season winners, and more.') }}</p>
+        <div class="vfu-controls">
+            <label class="vfu-status">
+                <span data-i18n="futures.filter.sport">{{ i18n_dict.get('futures.filter.sport','Sport') }}</span>:
+                <select id="vfuSportSelect" class="vfu-select">
+                    <option value="0" data-i18n="futures.filter.all">{{ i18n_dict.get('futures.filter.all','All') }}
+                    </option>
+                    <option value="10">Soccer</option>
+                    <option value="11">Basketball</option>
+                    <option value="12">Tennis</option>
+                    <option value="14">American Football</option>
+                    <option value="15">Ice Hockey</option>
+                    <option value="16">Baseball</option>
+                </select>
+            </label>
+            <span class="vfu-status">
+                <b id="vfuCount">{{ initial_items | length }}</b>
+                <span data-i18n="futures.summary.results">{{ i18n_dict.get('futures.summary.results','results')
+                    }}</span>
+            </span>
+        </div>
+    </div>
+
+    <div id="vfuLoading" class="vfu-loading" hidden data-i18n="futures.loading">{{
+        i18n_dict.get('futures.loading','Loading futures markets…') }}</div>
+    <div id="vfuError" class="vfu-error" hidden data-i18n="futures.error">{{ i18n_dict.get('futures.error','Failed to
+        load futures markets. Please retry later.') }}</div>
+    <div id="vfuEmpty" class="vfu-empty" {% if initial_items|length> 0 %}hidden{% endif %} data-i18n="futures.empty">{{
+        i18n_dict.get('futures.empty','No futures markets are currently available.') }}</div>
+
+    <div id="vfuGrid" class="vfu-grid"></div>
+</div>
+
+<!-- T874 — 右侧赔率详情抽屉 -->
+<div id="vfuDrawerMask" class="vfu-drawer-mask" hidden></div>
+<aside id="vfuDrawer" class="vfu-drawer" hidden aria-modal="true" role="dialog">
+    <div class="vfu-drawer-head">
+        <div id="vfuDrawerTitle" class="vfu-drawer-title"></div>
+        <button id="vfuDrawerClose" class="vfu-drawer-close" type="button" data-i18n="futures.drawer.close">{{
+            i18n_dict.get('futures.drawer.close','Close') }}</button>
+    </div>
+    <div id="vfuDrawerBody" class="vfu-drawer-body"></div>
+</aside>
+
+<script id="futures-bootstrap"
+    type="application/json">{{ {"sport_id": initial_sport_id, "items": initial_items} | tojson | safe }}</script>
+<script>
+    (function () {
+        var boot = { sport_id: 0, items: [] };
+        try {
+            var el = document.getElementById('futures-bootstrap');
+            if (el && el.textContent) boot = JSON.parse(el.textContent);
+        } catch (_) { }
+
+        var grid = document.getElementById('vfuGrid');
+        var sel = document.getElementById('vfuSportSelect');
+        var loadingEl = document.getElementById('vfuLoading');
+        var errorEl = document.getElementById('vfuError');
+        var emptyEl = document.getElementById('vfuEmpty');
+        var countEl = document.getElementById('vfuCount');
+
+        function tt(key, fallback) {
+            try {
+                if (window.tCore) {
+                    var v = window.tCore(key);
+                    if (v && v !== key) return v;
+                }
+            } catch (_) { }
+            return fallback || key;
+        }
+
+        function fmtEnds(v) {
+            if (!v) return '';
+            var ms = (typeof v === 'number') ? (v < 1e12 ? v * 1000 : v) : Date.parse(v);
+            var d = new Date(ms);
+            if (isNaN(d.getTime())) return '';
+            return tt('futures.card.ends', 'Ends') + ' ' + d.toLocaleDateString();
+        }
+
+        function escHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+            });
+        }
+
+        function render(items) {
+            items = items || [];
+            countEl.textContent = items.length;
+            if (!items.length) {
+                grid.innerHTML = '';
+                emptyEl.hidden = false;
+                return;
+            }
+            emptyEl.hidden = true;
+            var parts = [];
+            items.forEach(function (it, idx) {
+                var tour = (it.tournament && it.tournament.tournamentName) || it.tournamentName || '';
+                var season = (it.season && it.season.seasonName) || '';
+                var sport = (it.sport && it.sport.sportName) || it.sportName || '';
+                var statusName = (it.status && it.status.statusName) || (typeof it.status === 'string' ? it.status : '');
+                var endTs = it.endTime || it.endDate;
+                var title = season || tour || it.title || it.name || ('Future #' + (it.futureId || it.id || idx));
+                var sportHtml = sport ? '<span>' + escHtml(sport) + '</span>' : '';
+                var tourHtml = (tour && tour !== title) ? '<span>' + escHtml(tour) + '</span>' : '';
+                var endsHtml = endTs ? '<span>' + escHtml(fmtEnds(endTs)) + '</span>' : '';
+                var statusHtml = statusName ? '<span class="vfu-tag">' + escHtml(statusName) + '</span>' : '';
+                parts.push(
+                    '<div class="vfu-card" data-future-id="' + escHtml(it.futureId || it.id || '') + '" tabindex="0" role="button">' +
+                    '<div class="vfu-card-title">' + escHtml(title) + '</div>' +
+                    '<div class="vfu-card-meta">' + sportHtml + tourHtml + endsHtml + '</div>' +
+                    '<div>' + statusHtml + '</div>' +
+                    '</div>'
+                );
+            });
+            grid.innerHTML = parts.join('');
+        }
+
+        async function reload() {
+            var sportId = parseInt(sel.value || '0', 10) || 0;
+            loadingEl.hidden = false;
+            errorEl.hidden = true;
+            try {
+                var r = await fetch('/api/oddsapi/futures?sport_id=' + sportId, { credentials: 'same-origin' });
+                if (!r.ok) throw new Error('http_' + r.status);
+                var j = await r.json();
+                render((j && j.data) || []);
+            } catch (e) {
+                console.warn('[futures] reload failed', e);
+                errorEl.hidden = false;
+                render([]);
+            } finally {
+                loadingEl.hidden = true;
+            }
+            try {
+                var u = new URL(window.location.href);
+                if (sportId > 0) u.searchParams.set('sport_id', String(sportId));
+                else u.searchParams.delete('sport_id');
+                window.history.replaceState({}, '', u.toString());
+            } catch (_) { }
+        }
+
+        sel.value = String(boot.sport_id || 0);
+        sel.addEventListener('change', reload);
+        render(boot.items || []);
+
+        // T874 — 右侧赔率详情抽屉（按需调用 /api/oddsapi/futures/odds，6h 服务端缓存）
+        var drawer = document.getElementById('vfuDrawer');
+        var drawerMask = document.getElementById('vfuDrawerMask');
+        var drawerTitle = document.getElementById('vfuDrawerTitle');
+        var drawerBody = document.getElementById('vfuDrawerBody');
+        var drawerClose = document.getElementById('vfuDrawerClose');
+
+        function closeDrawer() {
+            drawer.hidden = true;
+            drawerMask.hidden = true;
+            drawerBody.innerHTML = '';
+            drawerTitle.textContent = '';
+        }
+
+        async function openDrawer(card) {
+            var fid = card.getAttribute('data-future-id') || '';
+            if (!fid) return;
+            var title = (card.querySelector('.vfu-card-title') || {}).textContent || ('Future #' + fid);
+            drawerTitle.textContent = title;
+            drawerBody.innerHTML = '<div class="vfu-drawer-loading">' +
+                escHtml(tt('futures.drawer.loading', 'Loading bookmaker odds…')) + '</div>';
+            drawer.hidden = false;
+            drawerMask.hidden = false;
+            try {
+                var r = await fetch('/api/oddsapi/futures/odds?future_id=' +
+                    encodeURIComponent(fid), { credentials: 'same-origin' });
+                if (!r.ok) throw new Error('http_' + r.status);
+                var j = await r.json();
+                renderOdds(j && j.data);
+            } catch (e) {
+                drawerBody.innerHTML = '<div class="vfu-drawer-error">' +
+                    escHtml(tt('futures.drawer.error', 'Failed to load odds.')) + '</div>';
+            }
+        }
+
+        function renderOdds(data) {
+            // odds_fetcher 返回结构：{ futureId, bookmakers: [{ bookmakerName, outcomes: [{outcomeName, price/odd}] }, ...] }
+            // 兼容多种字段命名。
+            var bms = [];
+            if (Array.isArray(data)) bms = data;
+            else if (data && Array.isArray(data.bookmakers)) bms = data.bookmakers;
+            else if (data && Array.isArray(data.odds)) bms = data.odds;
+            if (!bms.length) {
+                drawerBody.innerHTML = '<div class="vfu-drawer-empty">' +
+                    escHtml(tt('futures.drawer.empty', 'No bookmaker odds available.')) + '</div>';
+                return;
+            }
+            var html = '<div class="vfu-drawer-meta">' +
+                escHtml(tt('futures.drawer.subtitle', 'Bookmaker odds (cached up to 6h)')) +
+                '</div>';
+            bms.forEach(function (bm) {
+                var name = bm.bookmakerName || bm.name || bm.bookmaker || 'Bookmaker';
+                var outs = bm.outcomes || bm.markets || bm.prices || [];
+                var rows = '';
+                outs.forEach(function (o) {
+                    var oName = o.outcomeName || o.name || o.label || '-';
+                    var oPrice = o.price != null ? o.price : (o.odd != null ? o.odd : (o.value != null ? o.value : '-'));
+                    rows += '<span class="o-name">' + escHtml(oName) + '</span>' +
+                        '<span class="o-price">' + escHtml(String(oPrice)) + '</span>';
+                });
+                if (!rows) rows = '<span class="o-name">' +
+                    escHtml(tt('futures.drawer.no_outcomes', 'No outcomes')) + '</span><span></span>';
+                html += '<div class="vfu-bm-row">' +
+                    '<div class="vfu-bm-name">' + escHtml(name) + '</div>' +
+                    '<div class="vfu-bm-outcomes">' + rows + '</div>' +
+                    '</div>';
+            });
+            drawerBody.innerHTML = html;
+        }
+
+        grid.addEventListener('click', function (e) {
+            var card = e.target.closest('.vfu-card[data-future-id]');
+            if (card) openDrawer(card);
+        });
+        grid.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            var card = e.target.closest('.vfu-card[data-future-id]');
+            if (card) { e.preventDefault(); openDrawer(card); }
+        });
+        drawerClose.addEventListener('click', closeDrawer);
+        drawerMask.addEventListener('click', closeDrawer);
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !drawer.hidden) closeDrawer();
+        });
+    })();
+</script>
+<script>
+    if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+        window.veyraI18n.registerPagePack('futures');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,12 @@
+{
+  "fixture.title": "Détail du Match",
+  "fixture.back": "Retour",
+  "fixture.fixtureName": "Match",
+  "fixture.startDate": "Date de début",
+  "fixture.empty": "Aucun marché disponible pour ce match.",
+  "fixture.clv.title": "Valeur de Ligne de Clôture",
+  "fixture.clv.empty": "Pas de données CLV disponibles.",
+  "fixture.history.title": "Historique",
+  "fixture.history.empty": "Aucun historique de trading.",
+  "fixture.settlement.title": "Règlement"
+}

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privy Diagnostic — VeYra.Trade</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; padding: 20px; max-width: 900px; margin: 0 auto; }
+    h1 { color: #7af; }
+    h2 { color: #fa7; margin-top: 30px; border-bottom: 1px solid #444; padding-bottom: 5px; }
+    .box { background: #1e1e1e; border: 1px solid #444; border-radius: 6px; padding: 15px; margin: 10px 0; }
+    .ok   { color: #4f4; }
+    .warn { color: #fa4; }
+    .err  { color: #f44; }
+    .dim  { color: #888; }
+    pre   { white-space: pre-wrap; word-break: break-all; background: #0d0d0d; padding: 10px; border-radius: 4px; font-size: 13px; }
+    button { background: #2266cc; color: #fff; border: none; padding: 10px 22px; border-radius: 4px; cursor: pointer; font-size: 14px; margin: 4px; }
+    button:hover { background: #3377dd; }
+    button:disabled { background: #555; cursor: not-allowed; }
+    .label { color: #aaa; font-size: 12px; margin-bottom: 4px; }
+    .val { font-size: 14px; }
+    #status-bar { position: fixed; top: 0; left: 0; right: 0; background: #333; padding: 8px 20px; font-size: 13px; z-index: 999; }
+  </style>
+</head>
+<body>
+
+<div id="status-bar">Privy Diagnostic Tool — Loading SDK...</div>
+
+<h1>Privy Auth Diagnostic</h1>
+<p class="dim">按照 <a href="https://docs.privy.io/authentication/user-authentication/access-tokens" style="color:#7af" target="_blank">官方文档</a> 使用 <code>getAccessToken()</code> 验证登录链路。</p>
+
+<div id="app-root"></div>
+
+<script type="module">
+import { React, ReactDOMClient, PrivyReact } from '/v2/static/js/vendor/mfa_runtime_bundle.mjs';
+
+const { useState, useEffect, useCallback } = React;
+const {
+  PrivyProvider,
+  usePrivy,
+  useLogin,
+  useIdentityToken,
+} = PrivyReact;
+
+// ─── Token helpers ───────────────────────────────────────────────
+function shapeOf(t) {
+  if (!t) return 'null/empty';
+  if (typeof t !== 'string') return `type:${typeof t}`;
+  const parts = t.split('.');
+  return `len=${t.length} dots=${parts.length - 1} prefix="${t.substring(0,20)}..."`;
+}
+
+function isValidJwt(t) {
+  if (!t || typeof t !== 'string') return false;
+  const parts = t.split('.');
+  return parts.length === 3 && parts[0].length > 10 && parts[1].length > 10;
+}
+
+// ─── Main diagnostic component ───────────────────────────────────
+function DiagApp() {
+  const privy = usePrivy();
+  const { ready, authenticated, user } = privy;
+  const getAccessToken = privy.getAccessToken;
+
+  // Identity token hook (official: useIdentityToken)
+  let identityTokenState = null;
+  try {
+    identityTokenState = useIdentityToken ? useIdentityToken() : null;
+  } catch (_) {}
+
+  const { login } = useLogin({
+    onComplete: async () => {
+      setLog(prev => [...prev, { t: Date.now(), msg: '✅ useLogin.onComplete fired', cls: 'ok' }]);
+      setTimeout(() => runDiag(), 500); // slight delay so state settles
+    },
+    onError: (err) => {
+      setLog(prev => [...prev, { t: Date.now(), msg: `❌ useLogin.onError: ${err}`, cls: 'err' }]);
+    },
+  });
+
+  const [log, setLog] = useState([]);
+  const [tokenInfo, setTokenInfo] = useState(null);
+  const [verifyResult, setVerifyResult] = useState(null);
+  const [running, setRunning] = useState(false);
+
+  function addLog(msg, cls = '') {
+    setLog(prev => [...prev, { t: Date.now(), msg, cls }]);
+  }
+
+  // ── Step 1: Read all available tokens ──────────────────────────
+  async function readAllTokens() {
+    const info = {};
+
+    // Official primary method: getAccessToken() from usePrivy()
+    // See: https://docs.privy.io/authentication/user-authentication/access-tokens
+    addLog('📋 Step 1: Reading tokens via official Privy API...', 'dim');
+
+    try {
+      const accessToken = await getAccessToken();
+      info.accessToken = accessToken;
+      info.accessTokenShape = shapeOf(accessToken);
+      info.accessTokenValid = isValidJwt(accessToken);
+      addLog(`  getAccessToken() → ${info.accessTokenShape}`, info.accessTokenValid ? 'ok' : 'err');
+    } catch (e) {
+      info.accessToken = null;
+      info.accessTokenError = String(e);
+      addLog(`  getAccessToken() threw: ${e}`, 'err');
+    }
+
+    // Identity token (requires "Return user data in an identity token" toggle in Privy Dashboard)
+    // See: https://docs.privy.io/user-management/users/identity-tokens#enabling-identity-tokens
+    const idTok = identityTokenState?.identityToken;
+    info.identityToken = idTok || null;
+    info.identityTokenShape = shapeOf(idTok);
+    info.identityTokenValid = isValidJwt(idTok);
+    if (idTok) {
+      addLog(`  useIdentityToken() → ${info.identityTokenShape}`, info.identityTokenValid ? 'ok' : 'warn');
+    } else {
+      addLog('  useIdentityToken() → NULL (Identity Tokens may not be enabled in Privy Dashboard)', 'warn');
+      addLog('  → 需要在 Privy Dashboard > User Management > Authentication > Advanced 开启 "Return user data in an identity token"', 'warn');
+    }
+
+    // Privy user object
+    info.userId = user?.id || null;
+    info.userDid = user?.id || null;
+    addLog(`  user.id (DID) = ${info.userId || 'null'}`, info.userId ? 'ok' : 'warn');
+
+    return info;
+  }
+
+  // ── Step 2: POST to backend with OFFICIAL pattern ──────────────
+  async function postToBackend(info) {
+    addLog('📡 Step 2: POST /api/user/privy/verify (official: Authorization Bearer)...', 'dim');
+
+    const accessToken = info.accessToken;
+    const idToken = info.identityToken;
+
+    if (!accessToken && !idToken) {
+      addLog('  ❌ No valid token available — cannot call backend', 'err');
+      return { error: 'no_token', message: 'Both accessToken and identityToken are null/empty' };
+    }
+
+    // Official pattern: send accessToken as Authorization: Bearer
+    const headers = { 'Content-Type': 'application/json' };
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    if (idToken) {
+      headers['privy-id-token'] = idToken;
+    }
+
+    const body = {
+      // Official access token (primary, always available after auth)
+      access_token: accessToken || '',
+      // Identity token (optional, needs to be enabled)
+      id_token: idToken || '',
+      identity_token: idToken || '',
+      // User info from Privy state
+      user: user || null,
+      wallet_address: user?.wallet?.address || null,
+      // Diagnostic flags
+      _diag: true,
+      _diag_access_token_valid: info.accessTokenValid,
+      _diag_identity_token_valid: info.identityTokenValid,
+    };
+
+    addLog(`  Sending: access_token=${shapeOf(accessToken)}, id_token=${shapeOf(idToken)}`, 'dim');
+
+    const startMs = Date.now();
+    const resp = await fetch('/api/user/privy/verify', {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: JSON.stringify(body),
+    });
+    const elapsed = Date.now() - startMs;
+
+    let data = {};
+    try { data = await resp.json(); } catch (_) {}
+
+    addLog(`  Response: HTTP ${resp.status} in ${elapsed}ms`, resp.ok ? 'ok' : 'err');
+    if (!resp.ok) {
+      addLog(`  Error: ${data.message || data.error || 'unknown'}`, 'err');
+    } else {
+      addLog('  ✅ Backend verification SUCCEEDED', 'ok');
+    }
+
+    return { status: resp.status, ok: resp.ok, elapsed, data };
+  }
+
+  // ── Full diagnostic run ─────────────────────────────────────────
+  async function runDiag() {
+    if (!authenticated) {
+      addLog('⚠️ Not authenticated — please login first', 'warn');
+      return;
+    }
+    setRunning(true);
+    setTokenInfo(null);
+    setVerifyResult(null);
+
+    try {
+      const info = await readAllTokens();
+      setTokenInfo(info);
+
+      // Test 1: use accessToken as Authorization Bearer (official approach)
+      if (info.accessTokenValid) {
+        addLog('\n--- Test A: Access Token (Official approach) ---', 'dim');
+        const resultA = await postToBackend(info);
+        setVerifyResult(prev => ({ ...(prev || {}), testA: resultA }));
+      }
+
+      // Test 2: try ONLY access_token in body (no identity token)
+      addLog('\n--- Test B: Access Token only in body (no identity token) ---', 'dim');
+      const resultB = await (async () => {
+        const headers = { 'Content-Type': 'application/json' };
+        if (info.accessToken) headers['Authorization'] = `Bearer ${info.accessToken}`;
+        const resp = await fetch('/api/user/privy/verify', {
+          method: 'POST',
+          credentials: 'include',
+          headers,
+          body: JSON.stringify({ access_token: info.accessToken || '', id_token: '' }),
+        });
+        let data = {};
+        try { data = await resp.json(); } catch (_) {}
+        addLog(`  Test B HTTP ${resp.status}: ${resp.ok ? '✅ OK' : ('❌ ' + (data.message || data.error || ''))}`, resp.ok ? 'ok' : 'err');
+        return { status: resp.status, ok: resp.ok, data };
+      })();
+      setVerifyResult(prev => ({ ...(prev || {}), testB: resultB }));
+
+    } catch (e) {
+      addLog(`💥 runDiag error: ${e}`, 'err');
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  // ── Update status bar ──────────────────────────────────────────
+  useEffect(() => {
+    const bar = document.getElementById('status-bar');
+    if (!bar) return;
+    if (!ready) { bar.textContent = 'Privy SDK: Loading...'; return; }
+    if (authenticated) {
+      bar.textContent = `✅ Authenticated — ${user?.id || 'unknown DID'}`;
+      bar.style.background = '#1a4a1a';
+    } else {
+      bar.textContent = 'Privy SDK: Ready. Not logged in.';
+      bar.style.background = '#333';
+    }
+  }, [ready, authenticated, user]);
+
+  if (!ready) return React.createElement('div', { className: 'box' }, 'Loading Privy SDK...');
+
+  return React.createElement('div', null,
+    // ── Status ──────────────────────────────────────────────────
+    React.createElement('h2', null, '1. Auth Status'),
+    React.createElement('div', { className: 'box' },
+      React.createElement('div', { className: 'label' }, 'ready'),
+      React.createElement('div', { className: 'val ' + (ready ? 'ok' : 'err') }, String(ready)),
+      React.createElement('div', { className: 'label', style: { marginTop: 8 } }, 'authenticated'),
+      React.createElement('div', { className: 'val ' + (authenticated ? 'ok' : 'warn') }, String(authenticated)),
+      authenticated && React.createElement('div', null,
+        React.createElement('div', { className: 'label', style: { marginTop: 8 } }, 'user.id (Privy DID)'),
+        React.createElement('div', { className: 'val ok' }, user?.id || 'null'),
+      ),
+    ),
+
+    // ── Buttons ─────────────────────────────────────────────────
+    React.createElement('h2', null, '2. Actions'),
+    React.createElement('div', { className: 'box' },
+      !authenticated
+        ? React.createElement('button', { onClick: login }, '🔐 Login with Privy (Official)')
+        : React.createElement('div', null,
+            React.createElement('button', { onClick: runDiag, disabled: running }, running ? '⏳ Running...' : '🔍 Run Diagnostic'),
+            React.createElement('button', { onClick: () => privy.logout && privy.logout() }, '🚪 Logout'),
+          ),
+    ),
+
+    // ── Token Info ───────────────────────────────────────────────
+    tokenInfo && React.createElement('div', null,
+      React.createElement('h2', null, '3. Token Values'),
+      React.createElement('div', { className: 'box' },
+        React.createElement('div', { className: 'label' }, 'Access Token (getAccessToken from usePrivy — Official)'),
+        React.createElement('div', { className: 'val ' + (tokenInfo.accessTokenValid ? 'ok' : 'err') },
+          tokenInfo.accessTokenShape
+        ),
+        tokenInfo.accessToken && React.createElement('pre', null, tokenInfo.accessToken.substring(0, 120) + '...'),
+        !tokenInfo.accessTokenValid && React.createElement('div', { className: 'err' },
+          '❌ Access Token is invalid! getAccessToken() returned null or non-JWT.'
+        ),
+
+        React.createElement('hr', { style: { borderColor: '#444', margin: '12px 0' } }),
+
+        React.createElement('div', { className: 'label' }, 'Identity Token (useIdentityToken — optional, requires Dashboard toggle)'),
+        React.createElement('div', { className: 'val ' + (tokenInfo.identityTokenValid ? 'ok' : 'warn') },
+          tokenInfo.identityTokenShape
+        ),
+        !tokenInfo.identityToken && React.createElement('div', { className: 'warn' },
+          '⚠️  Identity Token is NULL. If you were relying on this for auth, that is the root cause.'
+        ),
+        tokenInfo.identityToken && !tokenInfo.identityTokenValid && React.createElement('div', { className: 'err' },
+          '❌ Identity Token is non-null but NOT a valid JWT — this is the "len=11,dots=2" bug!'
+        ),
+      ),
+    ),
+
+    // ── Verify Results ───────────────────────────────────────────
+    verifyResult && React.createElement('div', null,
+      React.createElement('h2', null, '4. Backend Verify Results'),
+
+      verifyResult.testA && React.createElement('div', { className: 'box' },
+        React.createElement('div', { className: 'label' }, 'Test A — Access Token via Authorization: Bearer (OFFICIAL PATTERN)'),
+        React.createElement('div', { className: 'val ' + (verifyResult.testA.ok ? 'ok' : 'err') },
+          `HTTP ${verifyResult.testA.status} — ${verifyResult.testA.ok ? '✅ SUCCESS' : '❌ FAILED'}`
+        ),
+        React.createElement('pre', null, JSON.stringify(verifyResult.testA.data, null, 2)),
+      ),
+
+      verifyResult.testB && React.createElement('div', { className: 'box' },
+        React.createElement('div', { className: 'label' }, 'Test B — Access Token only in body (no identity token)'),
+        React.createElement('div', { className: 'val ' + (verifyResult.testB.ok ? 'ok' : 'err') },
+          `HTTP ${verifyResult.testB.status} — ${verifyResult.testB.ok ? '✅ SUCCESS' : '❌ FAILED'}`
+        ),
+        React.createElement('pre', null, JSON.stringify(verifyResult.testB.data, null, 2)),
+      ),
+    ),
+
+    // ── Log ──────────────────────────────────────────────────────
+    log.length > 0 && React.createElement('div', null,
+      React.createElement('h2', null, '5. Diagnostic Log'),
+      React.createElement('div', { className: 'box' },
+        React.createElement('pre', null,
+          log.map(l => l.msg).join('\n')
+        ),
+      ),
+    ),
+
+    // ── Guide ────────────────────────────────────────────────────
+    React.createElement('h2', null, '6. What to Check'),
+    React.createElement('div', { className: 'box' },
+      React.createElement('ol', null,
+        React.createElement('li', null, '如果 Access Token 有效 (len>200) 但 Test A 或 B 失败 → 后端验证密钥问题'),
+        React.createElement('li', null, '如果 Access Token 是 null/empty → SDK 状态问题，getAccessToken() 在 onSuccess 时还没准备好'),
+        React.createElement('li', null, '如果 Identity Token 是 null → 去 Privy Dashboard > User Management > Authentication > Advanced 开启 "Return user data in an identity token"'),
+        React.createElement('li', null, '如果 Test A/B 都成功 → 问题在主页面 index.html 的代码逻辑，需要改为使用 getAccessToken()'),
+        React.createElement('li', null, '如果 Test A/B 都失败，HTTP 401 → 后端验证密钥与 Privy 签名密钥不匹配'),
+      ),
+    ),
+  );
+}
+
+// ─── Root ─────────────────────────────────────────────────────────
+function Root() {
+  // Get Privy App ID from backend config
+  const [appId, setAppId] = React.useState(null);
+  const [err, setErr] = React.useState(null);
+
+  useEffect(() => {
+    fetch('/api/user/privy/config')
+      .then(r => r.json())
+      .then(d => {
+        const id = d.appId || d.app_id || d.privy_app_id;
+        if (id) setAppId(id);
+        else setErr('No appId in /api/user/privy/config: ' + JSON.stringify(d));
+      })
+      .catch(e => setErr(String(e)));
+  }, []);
+
+  if (err) return React.createElement('div', { className: 'err box' }, 'Config error: ' + err);
+  if (!appId) return React.createElement('div', { className: 'box' }, 'Loading Privy App ID...');
+
+  document.getElementById('status-bar').textContent = `Privy App ID: ${appId} — SDK initializing...`;
+
+  return React.createElement(PrivyProvider, {
+    appId,
+    config: {
+      loginMethods: ['email', 'google', 'wallet'],
+      appearance: { theme: 'dark' },
+    },
+  }, React.createElement(DiagApp));
+}
+
+const rootEl = document.getElementById('app-root');
+ReactDOMClient.createRoot(rootEl).render(React.createElement(Root));
+</script>
+</body>
+</html>

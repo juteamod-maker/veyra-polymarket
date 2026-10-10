@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+{% block body_attrs %} data-requires-pm="1"{% endblock %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('search.title','Search') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('search.title','Search') }}{% endblock %}
+
+{% block content %}
+{# T872 — 企业级全站搜索结果页（PM gamma /public-search 代理 + SSR 首屏 + JS 增强） #}
+<style>
+    .vsr-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 6px 0 36px;
+    }
+
+    .vsr-hero {
+        background: linear-gradient(135deg, rgba(99, 102, 241, .10), rgba(245, 158, 11, .06) 60%, transparent);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .vsr-hero h1 {
+        font-size: 1.45rem;
+        margin: 0;
+        color: var(--text-primary);
+        font-weight: 700;
+        letter-spacing: -.01em;
+    }
+
+    .vsr-hero .vsr-sub {
+        font-size: .85rem;
+        color: var(--text-muted);
+    }
+
+    .vsr-form {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    .vsr-input {
+        flex: 1 1 320px;
+        min-width: 220px;
+        background: var(--bg-card-solid);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        color: var(--text-primary);
+        padding: 10px 14px;
+        font-size: .95rem;
+    }
+
+    .vsr-input:focus {
+        outline: none;
+        border-color: var(--accent, #6366f1);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, .15);
+    }
+
+    .vsr-btn {
+        background: var(--accent, #6366f1);
+        color: #fff;
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 18px;
+        font-size: .92rem;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .vsr-btn[disabled] {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+    .vsr-status-bar {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+        font-size: .85rem;
+        color: var(--text-muted);
+    }
+
+    .vsr-status-bar b {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+
+    .vsr-tabs {
+        display: inline-flex;
+        gap: 6px;
+    }
+
+    .vsr-tab {
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: .78rem;
+        cursor: pointer;
+        background: var(--bg-card-solid);
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+    }
+
+    .vsr-tab.active {
+        background: var(--accent, #6366f1);
+        border-color: var(--accent, #6366f1);
+        color: #fff;
+    }
+
+    .vsr-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+    }
+
+    .vsr-card {
+        display: flex;
+        gap: 12px;
+        padding: 14px;
+        background: var(--bg-card-solid);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        color: var(--text-primary);
+        text-decoration: none;
+        transition: transform .12s, border-color .12s;
+    }
+
+    .vsr-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent, #6366f1);
+    }
+
+    .vsr-card-img {
+        width: 64px;
+        height: 64px;
+        flex: 0 0 64px;
+        border-radius: 10px;
+        object-fit: cover;
+        background: rgba(255, 255, 255, .04);
+        border: 1px solid var(--border);
+    }
+
+    .vsr-card-body {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .vsr-card-title {
+        font-size: .95rem;
+        font-weight: 600;
+        line-height: 1.3;
+        color: var(--text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .vsr-card-meta {
+        font-size: .74rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .vsr-card-tag {
+        font-size: .68rem;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(99, 102, 241, .10);
+        color: var(--accent, #6366f1);
+        border: 1px solid rgba(99, 102, 241, .18);
+    }
+
+    .vsr-pagination {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        justify-content: center;
+        padding: 14px 0;
+        flex-wrap: wrap;
+    }
+
+    .vsr-page-btn {
+        background: var(--bg-card-solid);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 6px 12px;
+        color: var(--text-primary);
+        font-size: .85rem;
+        cursor: pointer;
+    }
+
+    .vsr-page-btn[disabled] {
+        opacity: .4;
+        cursor: not-allowed;
+    }
+
+    .vsr-page-btn.current {
+        background: var(--accent, #6366f1);
+        border-color: var(--accent, #6366f1);
+        color: #fff;
+    }
+
+    .vsr-empty {
+        text-align: center;
+        padding: 40px 16px;
+        color: var(--text-muted);
+        font-size: .9rem;
+    }
+
+    .vsr-loading {
+        text-align: center;
+        padding: 24px;
+        color: var(--text-muted);
+        font-size: .85rem;
+    }
+</style>
+
+<div class="vsr-wrap" id="vsr-root" data-q="{{ search_q | e }}" data-page="{{ search_page }}"
+    data-limit="{{ search_limit }}" data-status="{{ search_status }}"
+    data-ssr='{{ search_ssr_payload | tojson | safe }}'>
+    <div class="vsr-hero">
+        <h1 data-i18n="search.title">{{ i18n_dict.get('search.title','Search') }}</h1>
+        <div class="vsr-sub" data-i18n="search.subtitle">
+            {{ i18n_dict.get('search.subtitle','Search across all Polymarket events: sports, politics, crypto, esports,
+            weather and more.') }}
+        </div>
+        <form class="vsr-form" id="vsr-form" autocomplete="off" onsubmit="return false">
+            <input class="vsr-input" id="vsr-q" type="search" value="{{ search_q | e }}"
+                data-i18n-attr="placeholder:search.input.placeholder"
+                placeholder="{{ i18n_dict.get('search.input.placeholder','Search teams, players, candidates, tokens, weather cities…') }}"
+                maxlength="120" autofocus>
+            <button class="vsr-btn" id="vsr-go" type="submit" data-i18n="search.button.go">{{
+                i18n_dict.get('search.button.go','Search') }}</button>
+        </form>
+        <div class="vsr-status-bar">
+            <span id="vsr-summary"></span>
+            <div class="vsr-tabs" role="tablist">
+                <span class="vsr-tab" data-status="active" data-i18n="search.tab.active">{{
+                    i18n_dict.get('search.tab.active','Active') }}</span>
+                <span class="vsr-tab" data-status="resolved" data-i18n="search.tab.resolved">{{
+                    i18n_dict.get('search.tab.resolved','Resolved') }}</span>
+                <span class="vsr-tab" data-status="all" data-i18n="search.tab.all">{{
+                    i18n_dict.get('search.tab.all','All') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="vsr-results"></div>
+    <div class="vsr-pagination" id="vsr-pagination"></div>
+</div>
+
+<script>
+    // Load search page-specific i18n pack
+    if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+        window.veyraI18n.registerPagePack('search');
+    }
+    (function () {
+        var root = document.getElementById('vsr-root');
+        if (!root) return;
+        var T = function (k, fb) { try { return (window.veyraI18n && window.veyraI18n.t) ? window.veyraI18n.t(k, fb) : fb; } catch (_) { return fb; } };
+
+        function fmtVol(v) {
+            v = Number(v || 0);
+            if (v >= 1e6) return '$' + (v / 1e6).toFixed(2) + 'M';
+            if (v >= 1e3) return '$' + (v / 1e3).toFixed(1) + 'K';
+            if (v > 0) return '$' + v.toFixed(0);
+            return '';
+        }
+        function fmtDate(iso) {
+            if (!iso) return '';
+            try {
+                var d = new Date(iso);
+                if (isNaN(d.getTime())) return '';
+                var now = Date.now();
+                var diff = d.getTime() - now;
+                var days = Math.round(diff / 86400000);
+                if (Math.abs(days) <= 1) {
+                    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+                }
+                return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (e) { return ''; }
+        }
+
+        function renderResults(payload) {
+            var grid = document.getElementById('vsr-results');
+            var pag = document.getElementById('vsr-pagination');
+            var summary = document.getElementById('vsr-summary');
+            var events = (payload && payload.events) || [];
+            var pagination = (payload && payload.pagination) || { totalResults: 0, hasMore: false };
+            var total = pagination.totalResults || events.length || 0;
+            var q = (root.dataset.q || '').trim();
+            var page = parseInt(root.dataset.page || '1', 10);
+            var limit = parseInt(root.dataset.limit || '20', 10);
+            if (!q) {
+                grid.innerHTML = '<div class="vsr-empty">' + T('search.empty.no_query', 'Enter a keyword to search across all markets.') + '</div>';
+                pag.innerHTML = '';
+                summary.textContent = '';
+                return;
+            }
+            if (!events.length) {
+                grid.innerHTML = '<div class="vsr-empty">' + T('search.empty.no_results', 'No results for') + ' "' + q + '".</div>';
+                pag.innerHTML = '';
+                summary.innerHTML = '<b>0</b> ' + T('search.summary.results', 'results');
+                return;
+            }
+            summary.innerHTML = '<b>' + total + '</b> ' + T('search.summary.results', 'results') + ' · ' + T('search.summary.page', 'page') + ' <b>' + page + '</b>';
+            var html = '<div class="vsr-grid">';
+            events.forEach(function (ev) {
+                var slug = ev.slug || '';
+                if (!slug) return;
+                var url = '/event/' + encodeURIComponent(slug);
+                var title = ev.title || slug;
+                var img = ev.image || ev.icon || '';
+                var vol = fmtVol(ev.volume24hr || ev.volume);
+                var endStr = fmtDate(ev.endDate);
+                var tags = (ev.tags || []).slice(0, 3);
+                html += '<a class="vsr-card" href="' + url + '">';
+                if (img) {
+                    html += '<img class="vsr-card-img" src="' + img + '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">';
+                } else {
+                    html += '<div class="vsr-card-img"></div>';
+                }
+                html += '<div class="vsr-card-body">';
+                html += '<div class="vsr-card-title">' + escapeHtml(title) + '</div>';
+                var meta = [];
+                if (vol) meta.push('<span>' + T('search.card.vol24h', '24h') + ' ' + vol + '</span>');
+                if (endStr) meta.push('<span>' + T('search.card.ends', 'Ends') + ' ' + endStr + '</span>');
+                if (ev.market_count) meta.push('<span>' + ev.market_count + ' ' + T('search.card.markets', 'markets') + '</span>');
+                html += '<div class="vsr-card-meta">' + meta.join('') + '</div>';
+                if (tags.length) {
+                    html += '<div class="vsr-card-meta">';
+                    tags.forEach(function (tg) { if (tg) html += '<span class="vsr-card-tag">' + escapeHtml(tg) + '</span>'; });
+                    html += '</div>';
+                }
+                html += '</div></a>';
+            });
+            html += '</div>';
+            grid.innerHTML = html;
+
+            var pages = Math.max(1, Math.ceil(total / limit));
+            var maxPagesShown = 7;
+            var startP = Math.max(1, page - 3);
+            var endP = Math.min(pages, startP + maxPagesShown - 1);
+            startP = Math.max(1, endP - maxPagesShown + 1);
+            var ph = '';
+            ph += '<button class="vsr-page-btn" data-p="' + Math.max(1, page - 1) + '"' + (page <= 1 ? ' disabled' : '') + '>‹ ' + T('search.pagination.prev', 'Prev') + '</button>';
+            for (var p = startP; p <= endP; p++) {
+                ph += '<button class="vsr-page-btn' + (p === page ? ' current' : '') + '" data-p="' + p + '">' + p + '</button>';
+            }
+            ph += '<button class="vsr-page-btn" data-p="' + Math.min(pages, page + 1) + '"' + (!pagination.hasMore && page >= pages ? ' disabled' : '') + '>' + T('search.pagination.next', 'Next') + ' ›</button>';
+            pag.innerHTML = ph;
+            pag.querySelectorAll('.vsr-page-btn').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    if (b.disabled) return;
+                    var np = parseInt(b.dataset.p || '1', 10);
+                    navigate(root.dataset.q || '', np, root.dataset.status || 'active');
+                });
+            });
+        }
+        function escapeHtml(s) {
+            return String(s || '').replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; });
+        }
+        async function fetchAndRender(q, page, status) {
+            if (!q) {
+                root.dataset.q = '';
+                renderResults({ events: [], pagination: { totalResults: 0 } });
+                return;
+            }
+            var grid = document.getElementById('vsr-results');
+            grid.innerHTML = '<div class="vsr-loading">' + T('search.loading', 'Searching…') + '</div>';
+            try {
+                var url = '/api/pm/search?q=' + encodeURIComponent(q) + '&page=' + page + '&limit=' + (parseInt(root.dataset.limit || '20', 10)) + '&status=' + encodeURIComponent(status);
+                var r = await fetch(url, { credentials: 'same-origin' });
+                var d = await r.json();
+                root.dataset.q = q;
+                root.dataset.page = String(page);
+                root.dataset.status = status;
+                renderResults(d);
+            } catch (e) {
+                grid.innerHTML = '<div class="vsr-empty">' + T('search.error', 'Search failed. Please retry.') + '</div>';
+            }
+        }
+        function navigate(q, page, status) {
+            var u = new URL(window.location.href);
+            if (q) u.searchParams.set('q', q); else u.searchParams.delete('q');
+            u.searchParams.set('page', page);
+            u.searchParams.set('status', status);
+            window.history.pushState({ q: q, page: page, status: status }, '', u.toString());
+            fetchAndRender(q, page, status);
+        }
+
+        // Bind form
+        document.getElementById('vsr-form').addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            var v = (document.getElementById('vsr-q').value || '').trim();
+            navigate(v, 1, root.dataset.status || 'active');
+        });
+        document.getElementById('vsr-q').addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') {
+                ev.preventDefault();
+                var v = (ev.target.value || '').trim();
+                navigate(v, 1, root.dataset.status || 'active');
+            }
+        });
+        document.querySelectorAll('.vsr-tab').forEach(function (t) {
+            if (t.dataset.status === root.dataset.status) t.classList.add('active');
+            t.addEventListener('click', function () {
+                document.querySelectorAll('.vsr-tab').forEach(function (x) { x.classList.remove('active'); });
+                t.classList.add('active');
+                navigate(root.dataset.q || '', 1, t.dataset.status);
+            });
+        });
+        window.addEventListener('popstate', function (ev) {
+            var u = new URL(window.location.href);
+            var q = (u.searchParams.get('q') || '').trim();
+            var p = parseInt(u.searchParams.get('page') || '1', 10);
+            var s = u.searchParams.get('status') || 'active';
+            document.getElementById('vsr-q').value = q;
+            root.dataset.q = q;
+            fetchAndRender(q, p, s);
+        });
+
+        // SSR first paint
+        try {
+            var ssrRaw = root.dataset.ssr;
+            var ssr = ssrRaw ? JSON.parse(ssrRaw) : null;
+            if (ssr) renderResults(ssr);
+            else renderResults({ events: [], pagination: { totalResults: 0 } });
+        } catch (e) {
+            renderResults({ events: [], pagination: { totalResults: 0 } });
+        }
+    })();
+</script>
+{% endblock %}

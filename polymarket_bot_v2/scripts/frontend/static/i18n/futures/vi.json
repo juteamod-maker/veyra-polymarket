@@ -1,0 +1,17 @@
+{
+  "futures.title": "Thị trường Futures",
+  "futures.subtitle": "Giao dịch thị trường futures trên Polymarket.",
+  "futures.filter.sport": "Thể thao",
+  "futures.filter.all": "Tất cả",
+  "futures.loading": "Đang tải thị trường futures…",
+  "futures.empty": "Hiện không có thị trường futures nào.",
+  "futures.error": "Tải thất bại. Vui lòng thử lại.",
+  "futures.summary.results": "kết quả",
+  "futures.card.ends": "Kết thúc",
+  "futures.drawer.close": "Đóng",
+  "futures.drawer.loading": "Đang tải chi tiết…",
+  "futures.drawer.empty": "Không có kết quả.",
+  "futures.drawer.error": "Tải chi tiết thất bại.",
+  "futures.drawer.subtitle": "Chi tiết thị trường",
+  "futures.drawer.no_outcomes": "Không có kết quả cho thị trường này."
+}

@@ -1,0 +1,12 @@
+{
+  "fixture.title": "Fixture Detail",
+  "fixture.back": "Back",
+  "fixture.fixtureName": "Fixture",
+  "fixture.startDate": "Start Date",
+  "fixture.empty": "No markets available for this fixture.",
+  "fixture.clv.title": "Closing Line Value",
+  "fixture.clv.empty": "No CLV data available.",
+  "fixture.history.title": "History",
+  "fixture.history.empty": "No trade history.",
+  "fixture.settlement.title": "Settlement"
+}

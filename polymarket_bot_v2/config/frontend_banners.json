@@ -1,0 +1,87 @@
+{
+  "__deleted_system_slots__": [
+    "sportslive_ai"
+  ],
+  "esports_to_sportslive": {
+    "enabled": true,
+    "image_url": "https://veyra.trade/static/img/sportslive.png",
+    "link_url": "/sportslive",
+    "pages": [
+      "/esports-live"
+    ],
+    "placement": "sidebar_image",
+    "subtitle_en": "Live sports betting markets on Polymarket",
+    "subtitle_zh": "体育竞猜市场，实时交易",
+    "title_en": "Sports Live Hub",
+    "title_zh": "体育直播中心"
+  },
+  "esportsoddshub": {
+    "enabled": true,
+    "hint_en": "Compare live CS2, LoL & Dota 2 odds across books.",
+    "hint_zh": "实时对比 CS2、LoL、Dota 2 全球赔率与 VeYra 预测价。",
+    "image_url": "",
+    "label_en": "🎮 Esports Odds Hub",
+    "label_i18n_key": "",
+    "label_zh": "🎮 电竞赔率中心",
+    "link_url": "",
+    "pages": [
+      "/esports-live"
+    ],
+    "placement": "hero_text",
+    "subtitle_en": "实时对比 CS2、LoL、Dota 2 全球赔率与 VeYra 预测价。",
+    "subtitle_i18n_key": "sl-hero-title-1-1",
+    "subtitle_zh": "实时对比 CS2、LoL、Dota 2 全球赔率与 VeYra 预测价。",
+    "title_en": "🎮 电竞赔率中心",
+    "title_i18n_key": "sl-hero-title-1",
+    "title_zh": "🎮 电竞赔率中心"
+  },
+  "smartoddsassistant": {
+    "enabled": true,
+    "hint_en": "Highlight matches with profitable betting signals.",
+    "hint_zh": "快速发现跨平台高价值投注机会。",
+    "image_url": "",
+    "label_en": "Smart Odds Assistant",
+    "label_i18n_key": "",
+    "label_zh": "智能赔率助手",
+    "link_url": "",
+    "pages": [
+      "/sportslive"
+    ],
+    "placement": "hero_text",
+    "subtitle_en": "快速发现跨平台高价值投注机会。",
+    "subtitle_i18n_key": "sl-hero-title-2-1",
+    "subtitle_zh": "快速发现跨平台高价值投注机会。",
+    "title_en": "⚡ 智能赔率助手",
+    "title_i18n_key": "sl-hero-title-2",
+    "title_zh": "⚡ 智能赔率助手"
+  },
+  "sportslive_to_esports": {
+    "enabled": true,
+    "image_url": "https://veyra.trade/static/img/esports-live.png",
+    "link_url": "/esports-live",
+    "pages": [
+      "/sportslive"
+    ],
+    "placement": "sidebar_image",
+    "subtitle_en": "Compare live CS2, LoL & Dota 2 odds",
+    "subtitle_zh": "电竞全球赔率实时对比",
+    "title_en": "Esports Odds Hub",
+    "title_zh": "电竞赔率中心"
+  },
+  "valuelab": {
+    "enabled": true,
+    "image_url": "https://veyra.trade/static/img/sportslive.png",
+    "label_i18n_key": "",
+    "link_url": "https://veyra.trade/sportslive",
+    "pages": [
+      "/valuelab"
+    ],
+    "placement": "sidebar_image",
+    "subtitle_en": "",
+    "subtitle_i18n_key": "",
+    "subtitle_zh": "",
+    "title_en": "valuelab 右侧广告",
+    "title_i18n_key": "",
+    "title_zh": "valuelab 右侧广告"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "futures.title": "Marchés à Terme",
+  "futures.subtitle": "Tradez sur les marchés à terme de Polymarket.",
+  "futures.filter.sport": "Sport",
+  "futures.filter.all": "Tout",
+  "futures.loading": "Chargement des marchés à terme…",
+  "futures.empty": "Aucun marché à terme disponible.",
+  "futures.error": "Échec du chargement des marchés. Réessayez.",
+  "futures.summary.results": "résultats",
+  "futures.card.ends": "Se termine",
+  "futures.drawer.close": "Fermer",
+  "futures.drawer.loading": "Chargement des détails…",
+  "futures.drawer.empty": "Aucun résultat disponible.",
+  "futures.drawer.error": "Échec du chargement des détails.",
+  "futures.drawer.subtitle": "Détails du Marché",
+  "futures.drawer.no_outcomes": "Pas de résultats pour ce marché."
+}

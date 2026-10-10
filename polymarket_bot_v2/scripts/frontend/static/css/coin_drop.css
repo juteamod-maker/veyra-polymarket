@@ -1,0 +1,234 @@
+/* T838 — coin drop incentive overlay (standalone, decoupled) */
+
+.veyra-coin {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    background-image: var(--veyra-coin-bg, url('/static/img/coin.png'));
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 8px rgba(255, 184, 0, 0.55)) drop-shadow(0 0 14px rgba(255, 220, 90, 0.45));
+    z-index: 5;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    animation: veyraCoinFloat 2.4s ease-in-out infinite;
+    transition: transform 0.16s ease;
+}
+
+.veyra-coin:hover {
+    transform: scale(1.08) rotate(-6deg);
+}
+
+.veyra-coin.disabled {
+    cursor: not-allowed;
+    filter: grayscale(1) brightness(0.85) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    animation: none;
+    opacity: 0.78;
+}
+
+.veyra-coin.disabled:hover {
+    transform: none;
+}
+
+.veyra-coin .veyra-coin-badge {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: rgba(15, 23, 42, 0.92);
+    color: #fde68a;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    font-weight: 700;
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+@keyframes veyraCoinFloat {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-7px) rotate(6deg);
+    }
+}
+
+/* Falling coin (animated copy that travels to chest) */
+.veyra-coin-fly {
+    position: fixed;
+    width: 48px;
+    height: 48px;
+    background-image: var(--veyra-coin-bg, url('/static/img/coin.png'));
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: drop-shadow(0 6px 14px rgba(255, 184, 0, 0.7));
+    pointer-events: none;
+    z-index: 9999;
+    will-change: transform, opacity;
+}
+
+@keyframes veyraCoinSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(540deg);
+    }
+}
+
+/* Chest reception bounce */
+.veyra-chest-receive {
+    animation: veyraChestReceive 0.55s ease-out;
+}
+
+@keyframes veyraChestReceive {
+    0% {
+        transform: scale(1) translateY(0);
+    }
+
+    20% {
+        transform: scale(1.08) translateY(-4px);
+    }
+
+    60% {
+        transform: scale(0.96) translateY(2px);
+    }
+
+    100% {
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Toast (banner) */
+.veyra-coin-toast-stack {
+    position: fixed;
+    right: 16px;
+    bottom: 130px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 10010;
+    max-width: min(92vw, 360px);
+    pointer-events: none;
+}
+
+.veyra-coin-toast {
+    pointer-events: auto;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.96));
+    color: #fef3c7;
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    border-radius: 12px;
+    padding: 12px 14px;
+    box-shadow: 0 12px 28px rgba(2, 6, 23, 0.45);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.veyra-coin-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.veyra-coin-toast .vct-title {
+    font-weight: 700;
+    color: #fde68a;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.veyra-coin-toast .vct-title::before {
+    content: '';
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    background-image: var(--veyra-coin-bg, url('/static/img/coin.png'));
+    background-size: contain;
+    background-repeat: no-repeat;
+}
+
+.veyra-coin-toast .vct-progress {
+    margin-top: 6px;
+    font-size: 11px;
+    color: #cbd5f5;
+    opacity: 0.85;
+}
+
+.veyra-coin-toast .vct-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.veyra-coin-toast .vct-btn {
+    background: rgba(251, 191, 36, 0.18);
+    color: #fde68a;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    border-radius: 6px;
+    font-size: 12px;
+    padding: 4px 10px;
+    cursor: pointer;
+}
+
+.veyra-coin-toast .vct-btn:hover {
+    background: rgba(251, 191, 36, 0.28);
+}
+
+@media (max-width: 768px) {
+    .veyra-coin-toast-stack {
+        right: 8px;
+        left: 8px;
+        bottom: 110px;
+        max-width: none;
+    }
+
+    .veyra-coin {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* T840 — coin status panel rendered inside vp.modal */
+.veyra-coin-status-panel {
+    line-height: 1.55;
+    font-size: 13px;
+    color: var(--text-primary, #e5e7eb);
+}
+
+.veyra-coin-status-panel .vct-line {
+    margin: 4px 0;
+}
+
+.veyra-coin-status-panel .vct-line b {
+    color: #fde68a;
+}
+
+.veyra-coin-status-panel .vct-muted {
+    color: var(--text-muted, #94a3b8);
+    font-size: 12px;
+}
+/* T840 — ensure chest sits above seaz three.js canvas (which intercepts pointer events) */
+img[alt="Treasure chest"][data-veyra-chest-bound="1"] {
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+    cursor: pointer !important;
+}

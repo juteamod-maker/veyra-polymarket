@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "scan_interval_seconds": 60,
+  "pool_refresh_interval_seconds": 600,
+  "leaderboard_refresh_interval_seconds": 600,
+  "leaderboard_top_n": 50,
+  "leaderboard_discovery_markets": 20,
+  "hard_max_bet_usdc": 999999,
+  "trade_mode": "taker",
+  "trade_mode_options": [
+    "taker",
+    "maker"
+  ],
+  "trade_mode_locked": true,
+  "follow_multiplier": 1,
+  "min_order_size_buffer_shares": 1,
+  "max_concurrent_follows_per_user": 5,
+  "min_score": 60,
+  "max_price_filter": 0.85,
+  "min_ev_filter": 0.002,
+  "trade_lookback_minutes": 30,
+  "exclude_bots": true,
+  "follow_sell_enabled": true,
+  "data_source": "polymarket_official_api"
+}

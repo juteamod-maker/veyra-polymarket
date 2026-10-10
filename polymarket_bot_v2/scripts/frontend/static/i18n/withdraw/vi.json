@@ -1,0 +1,19 @@
+{
+  "withdraw.success": "Withdrawal submitted successfully.",
+  "withdraw.err.noWalletProvider": "No browser wallet provider available. Please connect MetaMask or another EVM wallet.",
+  "withdraw.err.walletMismatch": "Connected wallet does not match required signer. Please switch your wallet account to ",
+  "withdraw.addressInvalid": "Destination address is invalid.",
+  "withdraw.amountInvalid": "Amount must be greater than 0.",
+  "withdraw.amountTooHigh": "Amount exceeds available pUSD balance.",
+  "withdraw.networkError": "Network error, please retry",
+  "withdraw.available": "Available pUSD",
+  "withdraw.titleSimple": "Send Withdrawal",
+  "withdraw.destPolygon": "Destination Address (Polygon)",
+  "withdraw.amountPusd": "Amount (pUSD)",
+  "withdraw.max": "Max",
+  "withdraw.submitting": "Submitting...",
+  "withdraw.send": "Withdraw",
+  "page.withdraw.title": "Withdraw",
+  "withdraw.warningPolygonOnly": "Only send to Polygon mainnet addresses. Withdrawals are irreversible.",
+  "withdraw.loading": "Loading..."
+}

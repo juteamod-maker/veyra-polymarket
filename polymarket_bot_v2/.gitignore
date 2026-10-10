@@ -1,0 +1,64 @@
+# ===== 敏感文件（绝对不能提交）=====
+.env
+config/backups/
+临时文件/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+*.whl
+.venv/
+venv/
+env/
+.Python
+node_modules/
+admin_v3_spa/node_modules/
+admin_v3_spa/.vite/
+admin_v3_spa/.cache/
+admin_v3_spa/.turbo/
+
+# ===== 数据 & 日志 =====
+data/*.db
+data/*.db.*
+data/backups/
+data/smart_money_cache.json
+logs/*.log
+logs/*.log.*
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ===== 测试覆盖率 =====
+.coverage
+htmlcov/
+.pytest_cache/
+=
+test_results.txt
+config/config_vps.json
+paper_bets.db
+
+# ===== T901 开源前加固：生成物 / 开发快照（不入库）=====
+config/config.json.*
+_prod_sync_*/
+data/oddsapi_snapshots/
+data/pm_tags/
+*.js.map
+
+# ===== T901: 运行时状态（含真实 IP / 加白名单 / 会话事件，绝不入库）=====
+data/ip_blacklist.json
+data/security_events.json
+logs/
+
+# ===== T901: 备份副本（*.bak、*.bak.t839 等）=====
+*.bak*

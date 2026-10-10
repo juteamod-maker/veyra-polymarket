@@ -1,0 +1,69 @@
+# =============================================================================
+# polymarket-dashboard-v2.service — VagusPoly V2 Dashboard systemd 服务单元
+#
+# V2 Dashboard 运行在 port 8080（V1 使用 port 80）。
+# 使用 Uvicorn + FastAPI，与主交易 bot 进程完全隔离。
+#
+# 安装方式（部署脚本自动执行）：
+#   sudo cp polymarket-dashboard-v2.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable polymarket-dashboard-v2
+#   sudo systemctl start polymarket-dashboard-v2
+#
+# 常用命令：
+#   sudo systemctl status polymarket-dashboard-v2
+#   journalctl -u polymarket-dashboard-v2 -f
+# =============================================================================
+
+[Unit]
+Description=VagusPoly V2 Dashboard (FastAPI + Uvicorn, port 8080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/polymarket_bot_v2
+
+# 凭据文件（TOTP_SECRET 等，同主服务）
+EnvironmentFile=-/opt/polymarket_bot_v2/.env
+
+# Phase-2 优化：Gunicorn + UvicornWorker。
+#   - GUNICORN_WORKERS：默认 2（贴合 2-core VPS；可经 .env 覆盖到 3/4）
+#   - PG_POOL_MIN/MAX：每 worker DB 池上限。2 worker × 20 = 40 总连接，
+#     远低于 PG max_connections=120
+#   - WARMER_LOCK_PATH：跨 worker 的 warmer 唯一 leader 选举锁；只有持锁
+#     worker 启动 Polymarket warmer 线程，避免上游被打 N 倍
+#   - PM_HTTP_DEFAULT_TIMEOUT：上游同步路径硬超时下限
+Environment=GUNICORN_WORKERS=3
+Environment=PG_POOL_MIN=2
+Environment=PG_POOL_MAX=20
+Environment=WARMER_LOCK_PATH=/tmp/veyra_dashboard_warmer.lock
+Environment=PM_HTTP_DEFAULT_TIMEOUT=8
+
+ExecStart=/opt/polymarket_bot_v2/.venv/bin/gunicorn scripts.web_dashboard:app \
+    --bind 0.0.0.0:8080 \
+    --workers ${GUNICORN_WORKERS} \
+    --worker-class uvicorn.workers.UvicornWorker \
+    --max-requests 800 \
+    --max-requests-jitter 200 \
+    --timeout 30 \
+    --graceful-timeout 20 \
+    --keep-alive 5 \
+    --access-logfile - \
+    --log-level info
+
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=60
+
+StandardOutput=append:/opt/polymarket_bot_v2/logs/dashboard.log
+StandardError=append:/opt/polymarket_bot_v2/logs/dashboard.log
+
+# Phase-2：从 256M 提升至 1800M，给 2 worker × FastAPI + warmer 线程留足余量。
+# 整机 2G 内存中保留 ~200M 给 PostgreSQL + 系统。
+MemoryMax=1800M
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target

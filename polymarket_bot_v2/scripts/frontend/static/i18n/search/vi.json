@@ -1,0 +1,20 @@
+{
+  "search.title": "Tìm kiếm",
+  "search.subtitle": "Tìm kiếm tất cả sự kiện Polymarket: thể thao, chính trị, crypto, esports và hơn thế.",
+  "search.input.placeholder": "Tìm đội, cầu thủ, ứng viên, token, thành phố…",
+  "search.button.go": "Tìm kiếm",
+  "search.tab.active": "Đang diễn ra",
+  "search.tab.resolved": "Đã giải quyết",
+  "search.tab.all": "Tất cả",
+  "search.loading": "Đang tìm…",
+  "search.empty.no_query": "Nhập từ khóa để bắt đầu tìm kiếm.",
+  "search.empty.no_results": "Không có kết quả. Thử từ khóa khác.",
+  "search.error": "Tìm kiếm thất bại. Vui lòng thử lại.",
+  "search.card.ends": "Kết thúc",
+  "search.card.vol": "Khối lượng",
+  "search.card.markets": "Thị trường",
+  "search.summary.results": "{n} kết quả",
+  "search.summary.page": "Trang {page} / {total}",
+  "search.pagination.prev": "Trước",
+  "search.pagination.next": "Tiếp"
+}

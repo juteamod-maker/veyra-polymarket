@@ -1,0 +1,12 @@
+{
+  "fixture.title": "赛事详情",
+  "fixture.back": "返回",
+  "fixture.fixtureName": "赛事",
+  "fixture.startDate": "开始日期",
+  "fixture.empty": "该赛事暂无可用市场。",
+  "fixture.clv.title": "收盘线价值",
+  "fixture.clv.empty": "暂无CLV数据。",
+  "fixture.history.title": "历史记录",
+  "fixture.history.empty": "暂无交易历史。",
+  "fixture.settlement.title": "结算"
+}

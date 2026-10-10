@@ -1,0 +1,19 @@
+{
+  "name": "polymarket-sdk-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "T907 — bundle the official Polymarket TS SDKs into a single ESM file for browser use.",
+  "scripts": {
+    "build": "esbuild src/entry.ts --bundle --format=esm --target=es2020 --platform=browser --outfile=../polymarket_sdk_bundle.js --minify --sourcemap --define:process.env.NODE_ENV=\\\"production\\\" --define:global=globalThis --alias:node:crypto=./src/shim/node-crypto-shim.js"
+  },
+  "dependencies": {
+    "@polymarket/builder-relayer-client": "latest",
+    "@polymarket/clob-client-v2": "latest",
+    "@polymarket/builder-signing-sdk": "latest",
+    "viem": "latest"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5"
+  }
+}

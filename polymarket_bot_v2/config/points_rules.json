@@ -1,0 +1,19 @@
+{
+  "rules": {
+    "signup": 200,
+    "referral_l1": 300,
+    "referral_l2": 100,
+    "referral_l3": 50,
+    "referral_referred": 300,
+    "onramp_deposit_user": 120,
+    "onramp_deposit_l1": 80,
+    "onramp_deposit_l2": 40,
+    "onramp_deposit_l3": 20
+  },
+  "min_verified_deposit_usdc": 1.0,
+  "coin_drop": {
+    "daily_cap": 10,
+    "points_per_coin": 1,
+    "guest_pending_max": 200
+  }
+}

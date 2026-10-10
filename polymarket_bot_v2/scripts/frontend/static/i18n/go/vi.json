@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "Đã kết nối ví PM",
+  "go.badge.unbound": "Chưa kết nối ví PM",
+  "go.btn.authorize": "Ủy quyền ví",
+  "go.btn.dashboard": "Đến tổng quan",
+  "go.contentLoading": "Đang tải nội dung…",
+  "go.heading": "Hướng dẫn người dùng V e Y r a",
+  "go.loadFailedPrefix": "Tải thất bại:",
+  "go.loading": "Đang chuyển hướng, vui lòng chờ…",
+  "go.title": "Đang chuyển hướng",
+  "go.toc": "Mục lục",
+  "go.toc.empty": "(Không có tiêu đề)"
+}

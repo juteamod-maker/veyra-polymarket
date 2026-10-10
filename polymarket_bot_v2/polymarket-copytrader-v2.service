@@ -1,0 +1,24 @@
+[Unit]
+Description=VeYra.Trade Copytrader V2 Sidecar Daemon (Polymarket Official API)
+Documentation=https://docs.polymarket.com/api-reference/introduction
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/polymarket_bot_v2
+EnvironmentFile=-/opt/polymarket_bot_v2/.env
+ExecStart=/opt/polymarket_bot_v2/.venv/bin/python3 -m src.services.copytrader_v2.daemon
+Restart=on-failure
+RestartSec=15
+TimeoutStartSec=60
+StandardOutput=append:/opt/polymarket_bot_v2/logs/copytrader_v2.stdout.log
+StandardError=append:/opt/polymarket_bot_v2/logs/copytrader_v2.stderr.log
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

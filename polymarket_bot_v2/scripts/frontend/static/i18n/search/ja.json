@@ -1,0 +1,20 @@
+{
+  "search.title": "検索",
+  "search.subtitle": "スポーツ、政治、暗号通貨、eスポーツなど、すべてのPolymarketイベントを検索。",
+  "search.input.placeholder": "チーム、選手、候補者、トークン、都市を検索…",
+  "search.button.go": "検索",
+  "search.tab.active": "進行中",
+  "search.tab.resolved": "決済済み",
+  "search.tab.all": "すべて",
+  "search.loading": "検索中…",
+  "search.empty.no_query": "キーワードを入力して検索してください。",
+  "search.empty.no_results": "結果が見つかりません。別のキーワードをお試しください。",
+  "search.error": "検索に失敗しました。再試行してください。",
+  "search.card.ends": "終了",
+  "search.card.vol": "出来高",
+  "search.card.markets": "マーケット",
+  "search.summary.results": "{n}件の結果",
+  "search.summary.page": "{page} / {total} ページ",
+  "search.pagination.prev": "前へ",
+  "search.pagination.next": "次へ"
+}

@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "ポイント",
+  "leaderboard.col.earned": "獲得",
+  "leaderboard.col.joined": "参加",
+  "leaderboard.col.spent": "消費",
+  "leaderboard.empty": "ランキングにユーザーがいません — 登録や取引で最初のポイントを獲得してください。",
+  "leaderboard.error": "ランキングの読み込みに失敗しました。再試行してください。",
+  "leaderboard.hero.sub": "ポイント残高によるVeYra全ユーザーランキング — 登録、取引、毎日ログイン、紹介などでポイントを獲得。",
+  "leaderboard.hero.title": "ポイントランキング",
+  "leaderboard.joined.dayUnit": "日",
+  "leaderboard.joined.monthUnit": "ヶ月",
+  "leaderboard.joined.today": "今日",
+  "leaderboard.joined.yearUnit": "年",
+  "leaderboard.loading": "ランキングを読み込み中…",
+  "leaderboard.stat.balance": "ランキングポイント",
+  "leaderboard.stat.earned": "総消費",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "ポイントランキング",
+  "leaderboard.toolbar.note": "ライブランキング · 現在のポイント残高上位50名",
+  "leaderboard.toolbar.refresh": "更新"
+}

@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "คะแนน",
+  "leaderboard.col.earned": "ได้รับ",
+  "leaderboard.col.joined": "เข้าร่วม",
+  "leaderboard.col.spent": "ใช้ไป",
+  "leaderboard.empty": "ไม่มีผู้ใช้ในกระดานนำ — รับคะแนนแรกของคุณโดยการลงทะเบียนและซื้อขาย",
+  "leaderboard.error": "โหลดกระดานนำล้มเหลว โปรดลองอีกครั้ง",
+  "leaderboard.hero.sub": "อันดับผู้ใช้ VeYra ทั้งหมดตามยอดคะแนน — รับคะแนนผ่านการลงทะเบียน การซื้อขาย การเข้าสู่ระบบประจำวัน การแนะนำ และอื่นๆ",
+  "leaderboard.hero.title": "กระดานนำคะแนน",
+  "leaderboard.joined.dayUnit": "วัน",
+  "leaderboard.joined.monthUnit": "เดือน",
+  "leaderboard.joined.today": "วันนี้",
+  "leaderboard.joined.yearUnit": "ปี",
+  "leaderboard.loading": "กำลังโหลดกระดานนำ…",
+  "leaderboard.stat.balance": "คะแนนจัดอันดับ",
+  "leaderboard.stat.earned": "ยอดใช้จ่ายรวม",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "กระดานนำคะแนน",
+  "leaderboard.toolbar.note": "อันดับสด · 50 อันดับแรกตามยอดคะแนนปัจจุบัน",
+  "leaderboard.toolbar.refresh": "รีเฟรช"
+}

@@ -1,0 +1,12 @@
+{
+  "fixture.title": "Detalle del Partido",
+  "fixture.back": "Volver",
+  "fixture.fixtureName": "Partido",
+  "fixture.startDate": "Fecha de inicio",
+  "fixture.empty": "No hay mercados disponibles para este partido.",
+  "fixture.clv.title": "Valor de Línea de Cierre",
+  "fixture.clv.empty": "Sin datos CLV disponibles.",
+  "fixture.history.title": "Historial",
+  "fixture.history.empty": "Sin historial de operaciones.",
+  "fixture.settlement.title": "Liquidación"
+}

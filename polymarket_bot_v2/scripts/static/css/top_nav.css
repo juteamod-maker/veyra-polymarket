@@ -1,0 +1,252 @@
+body {
+  color: #e2e8f0;
+  font-family: "Inter", system-ui, sans-serif;
+  margin: 0;
+}
+
+#top-header {
+  height: 64px;
+  background: rgba(13, 15, 22, 0.97);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #2a2d3a;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 180px;
+  user-select: none;
+}
+
+.nav-brand-logo {
+  height: 22px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+
+.nav-brand-text {
+  font-size: 0.96rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #e5e7eb;
+}
+
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px 6px;
+  scrollbar-width: none;
+}
+
+.nav-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.nav-tab {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #9ca3af;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 8px;
+  border-bottom: 3px solid transparent;
+  transition: all 200ms ease-in-out;
+  user-select: none;
+  gap: 6px;
+  letter-spacing: 0.01em;
+}
+
+.nav-tab:hover {
+  color: #d1d5db;
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px) scale(1.03);
+}
+
+.nav-tab.active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.09);
+  border-bottom-color: #3b82f6;
+  transform: none;
+}
+
+.nav-tab svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav-status-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-green {
+  background: #22c55e20;
+  color: #22c55e;
+}
+
+.badge-red {
+  background: #ef444420;
+  color: #ef4444;
+}
+
+.badge-yellow {
+  background: #eab30820;
+  color: #eab308;
+}
+
+.badge-gray {
+  background: #64748b20;
+  color: #94a3b8;
+}
+
+.page-shell {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.page-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 8px;
+}
+
+.page-card {
+  background: #1a1d29;
+  border: 1px solid #2a2d3a;
+  border-radius: 12px;
+  padding: 16px;
+  color: #94a3b8;
+}
+
+@media (max-width: 1100px) {
+  .nav-tab {
+    padding: 6px 7px;
+    font-size: 0.7rem;
+    gap: 5px;
+  }
+
+  .nav-tab svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .nav-brand {
+    min-width: auto;
+  }
+
+  .nav-brand-logo {
+    height: 28px;
+  }
+
+  .nav-brand-text {
+    display: none;
+  }
+
+  .nav-tab .nav-label {
+    display: none;
+  }
+
+  .nav-tab {
+    padding: 8px 9px;
+    flex-shrink: 0;
+  }
+
+  .nav-tab svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .nav-tabs {
+    justify-content: flex-start;
+  }
+}
+
+/* ── 顶部导航专属状态徽章（命名空间 nav-badge-*，避免与页面级 .badge 冲突） ── */
+.nav-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.nav-badge-green {
+  background: #22c55e20;
+  color: #22c55e;
+}
+
+.nav-badge-red {
+  background: #ef444420;
+  color: #ef4444;
+}
+
+.nav-badge-yellow {
+  background: #eab30820;
+  color: #eab308;
+}
+
+.nav-badge-gray {
+  background: #64748b20;
+  color: #94a3b8;
+}
+
+.nav-badge-freeze {
+  background: #7f1d1d;
+  color: #fca5a5;
+  border: 1px solid #dc2626;
+  font-weight: 700;
+  animation: nav-badge-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes nav-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.65; }
+}

@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "PM 지갑 연결됨",
+  "go.badge.unbound": "PM 지갑 미연결",
+  "go.btn.authorize": "지갑 인증",
+  "go.btn.dashboard": "대시보드로 이동",
+  "go.contentLoading": "콘텐츠 로딩 중…",
+  "go.heading": "V e Y r a 사용자 가이드",
+  "go.loadFailedPrefix": "로드 실패:",
+  "go.loading": "리디렉션 중, 잠시 기다려주세요…",
+  "go.title": "리디렉션 중",
+  "go.toc": "목차",
+  "go.toc.empty": "(헤딩 없음)"
+}

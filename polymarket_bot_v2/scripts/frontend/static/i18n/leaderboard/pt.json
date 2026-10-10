@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "Pontos",
+  "leaderboard.col.earned": "Ganhos",
+  "leaderboard.col.joined": "aderiu",
+  "leaderboard.col.spent": "Gastos",
+  "leaderboard.empty": "Sem utilizadores na classificação — ganhe os seus primeiros pontos ao registar-se e operar.",
+  "leaderboard.error": "Falha ao carregar a classificação. Por favor tente novamente.",
+  "leaderboard.hero.sub": "Classificação de todos os utilizadores VeYra por saldo de pontos — ganhe pontos através de registo, operações, login diário, referidos e mais.",
+  "leaderboard.hero.title": "Classificação de pontos",
+  "leaderboard.joined.dayUnit": "d",
+  "leaderboard.joined.monthUnit": "mês(es)",
+  "leaderboard.joined.today": "hoje",
+  "leaderboard.joined.yearUnit": "ano(s)",
+  "leaderboard.loading": "A carregar classificação…",
+  "leaderboard.stat.balance": "Pontos do ranking",
+  "leaderboard.stat.earned": "Gasto total",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "Classificação de pontos",
+  "leaderboard.toolbar.note": "Classificação ao vivo · top 50 por saldo atual de pontos",
+  "leaderboard.toolbar.refresh": "Atualizar"
+}

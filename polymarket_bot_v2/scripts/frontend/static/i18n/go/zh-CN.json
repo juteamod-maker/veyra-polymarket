@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "PM 钱包已绑定",
+  "go.badge.unbound": "PM 钱包未绑定",
+  "go.btn.authorize": "授权钱包",
+  "go.btn.dashboard": "进入仪表盘",
+  "go.contentLoading": "内容加载中…",
+  "go.heading": "V e Y r a 用户指南",
+  "go.loadFailedPrefix": "加载失败：",
+  "go.loading": "跳转中，请稍候…",
+  "go.title": "跳转中",
+  "go.toc": "目录",
+  "go.toc.empty": "（无标题）"
+}

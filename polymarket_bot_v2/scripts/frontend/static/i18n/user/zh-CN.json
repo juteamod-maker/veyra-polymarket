@@ -1,0 +1,22 @@
+{
+  "user.mfa.disabledLabel": "MFA 未启用 · 强烈建议开启以保护您的账户和订单授权",
+  "user.mfa.enabledLabel": "MFA 已启用 · 已激活方式：",
+  "user.mfa.hintNoSecret": "系统不接触您的 OTP / Passkey 私钥；MFA 流程和服务由 Privy 提供。",
+  "user.mfa.manageBtn": "管理 / 禁用 MFA",
+  "user.mfa.openBtn": "启用 MFA（推荐）",
+  "user.mfa.readPolicy": "阅读 V e Y r a 安全政策 →",
+  "user.mfa.title": "账户安全 · 多因素认证 (MFA)",
+  "user.pmWallet.bound": "绑定成功（系统部署的 Gnosis Safe）",
+  "user.pmWallet.fundWallet": "资金钱包 (Safe)",
+  "user.pmWallet.gotoBind": "授权并绑定钱包",
+  "user.pmWallet.lockedHint": "为资金安全，Polymarket 钱包通过 Gnosis Safe Proxy 自动部署并绑定到您的 Privy 登录，无法手动修改。如需更改请联系管理员。",
+  "user.pmWallet.notBoundHtml": "未绑定 Polymarket 资金钱包。出于安全考虑，手动输入钱包已禁用；请通过 Privy 授权，系统将自动派生并部署 Gnosis Safe。",
+  "user.pmWallet.title": "Polymarket 钱包",
+  "user.profile.active": "活跃",
+  "user.profile.authWalletLabel": "授权钱包地址",
+  "user.profile.copy": "复制",
+  "user.profile.displayNameLabel": "显示名称",
+  "user.profile.editTitle": "编辑资料",
+  "user.profile.registeredAt": "注册时间",
+  "user.profile.save": "保存更改"
+}

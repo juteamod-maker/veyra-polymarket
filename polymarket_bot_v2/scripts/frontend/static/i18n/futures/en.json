@@ -1,0 +1,17 @@
+{
+  "futures.title": "Futures Markets",
+  "futures.subtitle": "Trade futures markets on Polymarket — predictions on price movements and outcomes.",
+  "futures.filter.sport": "Sport",
+  "futures.filter.all": "All",
+  "futures.loading": "Loading futures markets…",
+  "futures.empty": "No futures markets are currently available.",
+  "futures.error": "Failed to load futures markets. Please try again.",
+  "futures.summary.results": "results",
+  "futures.card.ends": "Ends",
+  "futures.drawer.close": "Close",
+  "futures.drawer.loading": "Loading market details…",
+  "futures.drawer.empty": "No outcomes available.",
+  "futures.drawer.error": "Failed to load market details.",
+  "futures.drawer.subtitle": "Market Details",
+  "futures.drawer.no_outcomes": "No outcomes for this market."
+}

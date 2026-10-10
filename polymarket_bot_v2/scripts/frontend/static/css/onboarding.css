@@ -1,0 +1,696 @@
+/* ============================================================
+ * T875 — New-user 6-step onboarding modal
+ * Lazy-loaded only when /api/user/onboard-modal returns markup.
+ * Visual language inherits from landing.css (purple/violet) +
+ * app.css tokens. Viewport-centered. FR/KO height stress-tested.
+ * ============================================================ */
+
+#onboarding-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(8, 11, 22, .72);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: obFadeIn .22s ease-out;
+}
+
+@keyframes obFadeIn {
+    from {
+        opacity: 0
+    }
+
+    to {
+        opacity: 1
+    }
+}
+
+@keyframes obSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px)
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0)
+    }
+}
+
+#onboarding-modal * {
+    box-sizing: border-box
+}
+
+.ob-shell {
+    width: 100%;
+    max-width: 680px;
+    max-height: min(92vh, 880px);
+    display: flex;
+    flex-direction: column;
+    border-radius: clamp(18px, 1.6vw, 28px);
+    overflow: hidden;
+    background: linear-gradient(160deg, #1a0f3a 0%, #2a1656 35%, #3a1d76 65%, #4b1f8a 100%);
+    border: 1px solid rgba(139, 92, 246, .28);
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, .55),
+        0 0 0 1px rgba(255, 255, 255, .04) inset,
+        0 0 60px rgba(107, 62, 255, .18) inset;
+    color: #F2F4F7;
+    animation: obSlideIn .28s cubic-bezier(.16, .84, .44, 1);
+}
+
+/* Decorative top glow */
+.ob-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 70% 40% at 50% -10%, rgba(167, 139, 250, .35), transparent 60%);
+    pointer-events: none;
+    opacity: .7;
+}
+
+.ob-shell {
+    position: relative
+}
+
+/* Fixed header */
+.ob-header {
+    position: relative;
+    flex: 0 0 auto;
+    padding: 22px 28px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    z-index: 1;
+}
+
+.ob-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.ob-step-indicator {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    color: rgba(241, 229, 255, .78);
+    text-transform: uppercase;
+}
+
+.ob-skip-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, .18);
+    color: rgba(241, 229, 255, .85);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all .18s ease;
+}
+
+.ob-skip-btn:hover {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .32);
+    color: #fff;
+}
+
+.ob-skip-btn[hidden] {
+    display: none
+}
+
+.ob-progress {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.ob-progress-dot {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, .12);
+    transition: background .25s ease;
+}
+
+.ob-progress-dot.is-active,
+.ob-progress-dot.is-done {
+    background: linear-gradient(90deg, #a78bfa, #6b3eff);
+}
+
+/* Scrollable body */
+.ob-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 24px 28px 22px;
+    position: relative;
+    z-index: 1;
+}
+
+.ob-body::-webkit-scrollbar {
+    width: 8px
+}
+
+.ob-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, .16);
+    border-radius: 4px
+}
+
+.ob-step {
+    display: none;
+    animation: obSlideIn .22s ease-out;
+}
+
+.ob-step.is-active {
+    display: block
+}
+
+.ob-title {
+    font-size: clamp(20px, 2.2vw, 26px);
+    font-weight: 700;
+    line-height: 1.25;
+    margin: 0 0 12px;
+    color: #fff;
+    letter-spacing: -.01em;
+}
+
+.ob-subtitle {
+    font-size: 14px;
+    line-height: 1.55;
+    color: rgba(232, 221, 255, .82);
+    margin: 0 0 18px;
+}
+
+.ob-lead {
+    font-size: 15px;
+    line-height: 1.65;
+    color: rgba(241, 229, 255, .92);
+    margin: 0 0 16px;
+}
+
+/* Generic info card (no nested tables) */
+.ob-card {
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 12px 0;
+}
+
+.ob-card-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c4b5fd;
+    margin: 0 0 6px;
+}
+
+.ob-card-body {
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(241, 229, 255, .92);
+    margin: 0;
+}
+
+/* Step 2: comparison cards (gambling vs veyra) — grid, no <table> */
+.ob-cmp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 14px 0 6px;
+}
+
+.ob-cmp-col {
+    border-radius: 14px;
+    padding: 14px 14px 10px;
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.ob-cmp-col--gambling {
+    background: linear-gradient(180deg, rgba(127, 29, 29, .18), rgba(127, 29, 29, .08));
+    border-color: rgba(248, 113, 113, .22);
+}
+
+.ob-cmp-col--veyra {
+    background: linear-gradient(180deg, rgba(107, 62, 255, .22), rgba(107, 62, 255, .08));
+    border-color: rgba(167, 139, 250, .32);
+}
+
+.ob-cmp-head {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+}
+
+.ob-cmp-col--gambling .ob-cmp-head {
+    color: #fca5a5
+}
+
+.ob-cmp-col--veyra .ob-cmp-head {
+    color: #c4b5fd
+}
+
+.ob-cmp-row {
+    padding: 8px 0;
+    border-top: 1px solid rgba(255, 255, 255, .06);
+}
+
+.ob-cmp-row:first-of-type {
+    border-top: none
+}
+
+.ob-cmp-row-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: rgba(241, 229, 255, .55);
+    margin: 0 0 3px;
+}
+
+.ob-cmp-row-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #f5f3ff;
+    margin: 0;
+}
+
+/* Step 3 / Step 4: numbered or feature list */
+.ob-numlist {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ob-numlist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 12px;
+}
+
+.ob-numlist .ob-num {
+    flex: 0 0 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #6b3eff);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(107, 62, 255, .4);
+}
+
+.ob-numlist .ob-num-body {
+    flex: 1;
+    min-width: 0
+}
+
+.ob-numlist .ob-num-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 3px;
+}
+
+.ob-numlist .ob-num-text {
+    font-size: 13px;
+    line-height: 1.5;
+    color: rgba(232, 221, 255, .82);
+    margin: 0;
+}
+
+.ob-feat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+    margin: 14px 0 6px;
+}
+
+.ob-feat-card {
+    padding: 14px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .08);
+}
+
+.ob-feat-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #c4b5fd;
+    margin: 0 0 6px;
+}
+
+.ob-feat-body {
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(241, 229, 255, .85);
+    margin: 0;
+}
+
+.ob-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 14px 0 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ob-checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 14px;
+    line-height: 1.55;
+    color: rgba(241, 229, 255, .92);
+}
+
+.ob-checklist li::before {
+    content: "✓";
+    flex: 0 0 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #a78bfa, #6b3eff);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+}
+
+/* Step 6: form */
+.ob-form-group {
+    margin: 14px 0 12px
+}
+
+.ob-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 6px;
+}
+
+.ob-input {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, .32);
+    border: 1px solid rgba(255, 255, 255, .16);
+    color: #fff;
+    font-size: 15px;
+    font-family: inherit;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.ob-input::placeholder {
+    color: rgba(241, 229, 255, .42)
+}
+
+.ob-input:focus {
+    outline: none;
+    border-color: #a78bfa;
+    box-shadow: 0 0 0 3px rgba(167, 139, 250, .22);
+}
+
+.ob-input.is-invalid {
+    border-color: #f87171;
+    box-shadow: 0 0 0 3px rgba(248, 113, 113, .18);
+}
+
+.ob-hint {
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(232, 221, 255, .6);
+    margin: 6px 0 0;
+}
+
+.ob-field-error {
+    display: none;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fca5a5;
+    margin: 6px 0 0;
+}
+
+.ob-field-error.is-visible {
+    display: block
+}
+
+.ob-terms {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 12px;
+    cursor: pointer;
+    margin: 14px 0 4px;
+}
+
+.ob-terms input[type="checkbox"] {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    margin-top: 2px;
+    accent-color: #a78bfa;
+    cursor: pointer;
+}
+
+.ob-terms-text {
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(241, 229, 255, .92);
+}
+
+.ob-terms-text a {
+    color: #c4b5fd;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.ob-terms-text a:hover {
+    color: #fff
+}
+
+.ob-recap {
+    background: rgba(0, 0, 0, .18);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 0 0 14px;
+}
+
+.ob-recap-title {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: #c4b5fd;
+    margin: 0 0 8px;
+}
+
+.ob-recap-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ob-recap-list li {
+    font-size: 13px;
+    line-height: 1.55;
+    color: rgba(232, 221, 255, .85);
+    padding-left: 14px;
+    position: relative;
+}
+
+.ob-recap-list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 9px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #a78bfa;
+}
+
+/* Fixed footer */
+.ob-footer {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 28px 22px;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+    background: rgba(0, 0, 0, .18);
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+}
+
+.ob-footer-error {
+    flex: 1 1 100%;
+    display: none;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fca5a5;
+    background: rgba(248, 113, 113, .1);
+    border: 1px solid rgba(248, 113, 113, .32);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin: 0 0 6px;
+}
+
+.ob-footer-error.is-visible {
+    display: block
+}
+
+.ob-back-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, .16);
+    color: rgba(241, 229, 255, .85);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .18s ease;
+}
+
+.ob-back-btn:hover {
+    background: rgba(255, 255, 255, .08);
+    border-color: rgba(255, 255, 255, .32);
+    color: #fff;
+}
+
+.ob-back-btn[hidden] {
+    display: none
+}
+
+.ob-cta {
+    margin-left: auto;
+    background: linear-gradient(135deg, #a78bfa 0%, #6b3eff 100%);
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 22px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
+    box-shadow: 0 6px 20px rgba(107, 62, 255, .42);
+    letter-spacing: .01em;
+}
+
+.ob-cta:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(107, 62, 255, .55);
+}
+
+.ob-cta:active:not(:disabled) {
+    transform: translateY(0)
+}
+
+.ob-cta:disabled {
+    opacity: .6;
+    cursor: not-allowed
+}
+
+/* Block underlying interactions when modal mounted */
+body.onboarding-active {
+    overflow: hidden
+}
+
+body.onboarding-active .main-header,
+body.onboarding-active .main-content,
+body.onboarding-active .sidebar,
+body.onboarding-active .topbar,
+body.onboarding-active .container {
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Mobile + KO height stress: compact header/footer padding,
+   stack comparison columns, allow body to scroll naturally */
+@media (max-width: 560px) {
+    #onboarding-modal {
+        padding: 12px
+    }
+
+    .ob-header {
+        padding: 18px 18px 14px
+    }
+
+    .ob-body {
+        padding: 18px 18px 16px
+    }
+
+    .ob-footer {
+        padding: 14px 18px 18px
+    }
+
+    .ob-title {
+        font-size: 20px
+    }
+
+    .ob-cmp-grid {
+        grid-template-columns: 1fr
+    }
+
+    .ob-feat-grid {
+        grid-template-columns: 1fr
+    }
+
+    .ob-cta {
+        padding: 11px 16px;
+        font-size: 13px
+    }
+
+    .ob-back-btn {
+        padding: 9px 14px;
+        font-size: 13px
+    }
+}
+
+/* Very short viewports — keep CTA visible */
+@media (max-height: 640px) {
+    .ob-shell {
+        max-height: 96vh
+    }
+
+    .ob-header {
+        padding: 16px 24px 12px
+    }
+
+    .ob-body {
+        padding: 18px 24px 16px
+    }
+
+    .ob-footer {
+        padding: 12px 24px 16px
+    }
+}

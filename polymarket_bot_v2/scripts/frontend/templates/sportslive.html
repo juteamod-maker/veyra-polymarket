@@ -1,0 +1,1868 @@
+{% extends "base.html" %}
+
+{# T558 重构 — VeYra 体育赔率
+- 用户面完全去 PM/OddsPapi 化（包装为 VeYra 自有产品）
+- 仅展示我方系统内有详情页(/event/<slug>)的赛事（核心商业前提）
+  - 卡片设计对齐 /discover 视觉家族（克制、高级、信息层级清晰）
+  - SSR 首屏 inline + 60s 服务端缓存 → 毫秒级首屏（T558-F）
+  #}
+
+  {% block title %}V e Y r a - {{ i18n_dict.get('sportslive.title','Sports Odds Hub') }}{% endblock %}
+  {% block breadcrumb %}{{ i18n_dict.get('sportslive.title','Sports Odds Hub') }}{% endblock %}
+
+  {% block content %}
+  <script>document.body.setAttribute('data-requires-pm', '1');</script>
+  {% if ssr_sportslive_json %}
+  <script id="vp-sl-ssr" type="application/json">{{ ssr_sportslive_json | escape_script_json | safe }}</script>
+  {% endif %}
+  {% if ssr_sportslive_sports_json %}
+  <script id="vp-sl-sports-ssr" type="application/json">{{ ssr_sportslive_sports_json | escape_script_json | safe }}</script>
+  {% endif %}
+  <script>window.__SL_SSR_SPORT__ = "{{ ssr_sportslive_sport or 'all' }}";</script>
+  <script>window.__SL_AI_BANNER__ = {{ (sportslive_ai_banner_json or 'null') | escape_script_json | safe }};</script>
+  <!-- T582 / T583 — page kind + page-scoped image banners (cross-link to peer page) -->
+  <script>window.__SL_PAGE_KIND__ = "{{ sportslive_page_kind or 'sports' }}";</script>
+  <script>window.__SL_PAGE_PATH__ = "{{ sportslive_page_path or '/sportslive' }}";</script>
+  <script>window.__SL_PAGE_BANNERS__ = {{ (sportslive_page_banners_json or '[]') | escape_script_json | safe }};</script>
+
+  <style>
+    /* === Hero ============================================== */
+    .sl-hero {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sl-hero h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sl-hero h1 .sl-badge {
+      background: linear-gradient(135deg, var(--accent), #2e44d4);
+      color: #fff;
+      font-size: .62rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 999px;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+
+    .sl-hero p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: .84rem;
+      line-height: 1.55;
+    }
+
+    /* === Sports pill bar ==================================== */
+    .sl-sports-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .sl-sport-pill {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 16px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: .78rem;
+      transition: all .15s;
+    }
+
+    .sl-sport-pill:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .sl-sport-pill.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    /* === Card grid (mirrors /discover .event-grid) =========== */
+    .sl-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 1100px) {
+      .sl-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .sl-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* === Match card (visual family aligned with /discover) === */
+    .sl-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+      position: relative;
+      overflow: hidden;
+      min-height: 228px;
+    }
+
+    .sl-card:hover {
+      border-color: rgba(70, 95, 255, .45);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .28);
+    }
+
+    .sl-card.sl-card-live {
+      border-color: rgba(220, 38, 38, .35);
+    }
+
+    .sl-card.sl-card-live::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, #ef4444, #dc2626);
+      box-shadow: 0 0 12px rgba(239, 68, 68, .55);
+      z-index: 2;
+    }
+
+    /* T575追加（已撤销） — 卡片不再渲染背景图。 */
+    /* T594 — 无内部事件链接的卡片（sl-card-noevent）不应显示可点击样式：
+     不显示手型光标、禁用 hover 抬升与边框高亮，避免误导用户去点击。 */
+    .sl-card.sl-card-noevent {
+      cursor: default;
+    }
+
+    .sl-card.sl-card-noevent:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: var(--border);
+    }
+
+    .sl-card.sl-card-noevent.sl-card-live:hover {
+      border-color: rgba(220, 38, 38, .35);
+    }
+
+    /* meta bar (top) */
+    .sl-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 14px 0 14px;
+      min-height: 24px;
+    }
+
+    .sl-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .sl-tournament {
+      font-size: .7rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sl-status-pill {
+      font-size: .6rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .sl-status-live {
+      background: rgba(239, 68, 68, .15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, .4);
+      animation: slPulse 2s ease-in-out infinite;
+    }
+
+    .sl-status-soon {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    @keyframes slPulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, .0);
+      }
+
+      50% {
+        box-shadow: 0 0 0 4px rgba(239, 68, 68, .18);
+      }
+    }
+
+    .sl-time {
+      font-size: .68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* hero (teams) */
+    .sl-hero-row {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 14px 14px 8px 14px;
+      flex: 1;
+    }
+
+    .sl-team {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .sl-team.sl-team-right {
+      text-align: right;
+      align-items: flex-end;
+    }
+
+    .sl-team-name {
+      font-size: .92rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sl-team-prob {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* T569 — discover-style red/green prob colour: favourite=green, underdog=red */
+    .sl-team-prob.sl-prob-fav {
+      color: #22c55e;
+    }
+
+    .sl-team-prob.sl-prob-dim {
+      color: #ef4444;
+    }
+
+    .sl-team-prob-label {
+      font-size: .6rem;
+      color: var(--text-muted);
+      text-transform: lowercase;
+      letter-spacing: .2px;
+    }
+
+    .sl-vs {
+      font-size: .68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 2px 6px;
+      background: var(--bg-primary);
+      border-radius: 6px;
+      letter-spacing: .6px;
+    }
+
+    /* draw mini-row (only when 1X2) */
+    .sl-draw-row {
+      font-size: .66rem;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 0 14px 6px 14px;
+    }
+
+    .sl-draw-row b {
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* insight bar (key value comparison) */
+    .sl-insight {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1fr;
+      gap: 0;
+      align-items: stretch;
+      margin: 0 12px 8px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      min-height: 54px;
+    }
+
+    .sl-ins-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 6px;
+      gap: 2px;
+    }
+
+    .sl-ins-cell+.sl-ins-cell {
+      border-left: 1px solid var(--border);
+    }
+
+    .sl-ins-label {
+      font-size: .6rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    .sl-ins-value {
+      font-size: .92rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+
+    .sl-ins-cell.sl-ins-center {
+      background: rgba(70, 95, 255, .06);
+    }
+
+    .sl-ins-value.sl-ins-ev {
+      color: #34d399;
+    }
+
+    .sl-ins-value.sl-ins-arb {
+      color: #c084fc;
+    }
+
+    .sl-ins-value.sl-ins-neutral {
+      color: var(--text-secondary);
+      font-size: .78rem;
+      font-weight: 600;
+    }
+
+    /* foot */
+    .sl-foot {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 9px 14px;
+      border-top: 1px solid var(--border);
+      min-height: 36px;
+      font-size: .72rem;
+      color: var(--text-muted);
+    }
+
+    .sl-foot-cta {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), #3651dd);
+      border: 1px solid rgba(70, 95, 255, .65);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .72rem;
+      transition: filter .12s, transform .12s;
+    }
+
+    .sl-card:hover .sl-foot-cta {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    /* state placeholders */
+    .sl-empty,
+    .sl-loading {
+      padding: 60px 18px;
+      text-align: center;
+      color: var(--text-muted);
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      grid-column: 1/-1;
+    }
+
+    .sl-scroll-sentinel {
+      text-align: center;
+      padding: 12px 0 4px;
+      grid-column: 1/-1;
+    }
+
+    .sl-loading-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: rgba(70, 95, 255, .12);
+      border: 1px solid rgba(70, 95, 255, .38);
+      color: #d2dcff;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+
+    .sl-loading-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #8ea3ff;
+      box-shadow: 0 0 8px rgba(142, 163, 255, .6);
+      animation: vpDotPulse 1.2s ease-in-out infinite;
+    }
+
+    /* skeleton card (毫秒级首屏 fallback) */
+    @keyframes slShimmer {
+      0% {
+        background-position: -400px 0;
+      }
+
+      100% {
+        background-position: 400px 0;
+      }
+    }
+
+    @keyframes vpDotPulse {
+
+      0%,
+      100% {
+        opacity: .45;
+        transform: scale(.9);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.15);
+      }
+    }
+
+    .sl-skel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 228px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sl-skel-line {
+      background: linear-gradient(90deg, rgba(255, 255, 255, .04) 0%, rgba(255, 255, 255, .10) 50%, rgba(255, 255, 255, .04) 100%);
+      background-size: 800px 100%;
+      animation: slShimmer 1.4s linear infinite;
+      border-radius: 6px;
+    }
+
+    .sl-skel-meta {
+      height: 10px;
+      width: 60%;
+    }
+
+    .sl-skel-hero {
+      height: 50px;
+    }
+
+    .sl-skel-bar {
+      height: 54px;
+      border-radius: 10px;
+    }
+
+    .sl-skel-foot {
+      height: 14px;
+      width: 50%;
+      margin-top: auto;
+    }
+
+    /* === T560 W4 · T561 W5-B: AI banner (同行右对齐) =================== */
+    /* T561 A: 状态 Tab 与 AI 横幅同行，节省顶部空间 */
+    .sl-toolbar-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .sl-toolbar-row .sl-status-tabs {
+      margin-bottom: 0;
+      flex-shrink: 0;
+    }
+
+    .sl-toolbar-row .sl-ai-banner {
+      margin-bottom: 0;
+      flex: 1 1 320px;
+      min-width: 0;
+    }
+
+    .sl-ai-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(70, 95, 255, .10), rgba(70, 95, 255, .04));
+      border: 1px solid rgba(70, 95, 255, .30);
+      border-radius: 10px;
+      padding: 8px 14px;
+      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+      cursor: pointer;
+      min-height: 40px;
+    }
+
+    .sl-ai-banner:hover {
+      border-color: rgba(70, 95, 255, .55);
+      transform: translateY(-1px);
+    }
+
+    .sl-ai-banner.sl-ai-empty {
+      background: transparent;
+      border-color: var(--border);
+      cursor: default;
+    }
+
+    .sl-ai-banner.sl-ai-empty:hover {
+      transform: none;
+    }
+
+    .sl-ai-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .sl-ai-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent), #2e44d4);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: .66rem;
+      font-weight: 700;
+      letter-spacing: .4px;
+    }
+
+    .sl-ai-text {
+      font-size: .8rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sl-ai-text b {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .sl-ai-cta {
+      font-size: .72rem;
+      color: var(--accent);
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .sl-ai-banner.sl-ai-active .sl-ai-cta::after {
+      content: " \2715";
+      color: var(--text-muted);
+      margin-left: 6px;
+    }
+
+    /* === T560 W4: status tabs (PRD §3.1) ========================= */
+    .sl-status-tabs {
+      display: flex;
+      gap: 2px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 3px;
+      margin-bottom: 12px;
+      width: fit-content;
+      max-width: 100%;
+      overflow-x: auto;
+    }
+
+    .sl-status-tab {
+      background: transparent;
+      border: 0;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 7px 16px;
+      border-radius: 7px;
+      font-size: .78rem;
+      font-weight: 500;
+      transition: all .15s;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sl-status-tab:hover {
+      color: var(--text-primary);
+    }
+
+    .sl-status-tab.active {
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .sl-status-tab .sl-tab-count {
+      font-size: .66rem;
+      opacity: .85;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .12);
+    }
+
+    .sl-status-tab:not(.active) .sl-tab-count {
+      background: rgba(70, 95, 255, .14);
+      color: var(--accent);
+    }
+
+    /* === T560 W4: card compare action =========================== */
+    .sl-foot {
+      gap: 10px;
+    }
+
+    .sl-foot-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sl-compare-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      font-size: .7rem;
+      cursor: pointer;
+      transition: all .12s;
+    }
+
+    .sl-compare-btn:hover {
+      border-color: var(--accent);
+      color: #9bb1ff;
+      background: rgba(70, 95, 255, .08);
+    }
+
+    /* T561 C: 直播按钮与全屏 Modal */
+    .sl-live-btn {
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, .45);
+      border-radius: 6px;
+      color: #fca5a5;
+      padding: 4px 10px;
+      font-size: .7rem;
+      cursor: pointer;
+      transition: all .12s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .sl-live-btn::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #ef4444;
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, .6);
+      animation: slPulse 1.6s ease-in-out infinite;
+    }
+
+    .sl-live-btn:hover {
+      background: rgba(239, 68, 68, .12);
+      color: #fff;
+      border-color: rgba(239, 68, 68, .7);
+    }
+
+    .sl-fsm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .78);
+      backdrop-filter: blur(4px);
+      z-index: 1200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity .18s ease;
+      padding: 24px;
+    }
+
+    .sl-fsm-overlay.show {
+      display: flex;
+      opacity: 1;
+    }
+
+    .sl-fsm-card {
+      background: var(--bg-card-solid, #1a1d2e);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px 28px;
+      width: min(440px, 92vw);
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, .55);
+      transform: scale(.95);
+      transition: transform .2s ease;
+    }
+
+    .sl-fsm-overlay.show .sl-fsm-card {
+      transform: scale(1);
+    }
+
+    .sl-fsm-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 999px;
+      background: rgba(34, 197, 94, .16);
+      color: #22c55e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      font-size: 2rem;
+      font-weight: 700;
+    }
+
+    .sl-fsm-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+
+    .sl-fsm-body {
+      font-size: .86rem;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 18px;
+    }
+
+    .sl-fsm-meta {
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      word-break: break-word;
+    }
+
+    .sl-fsm-cta {
+      display: inline-block;
+      padding: 10px 22px;
+      background: #22c55e;
+      color: #fff;
+      border: 0;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: .84rem;
+      cursor: pointer;
+      transition: filter .12s;
+    }
+
+    .sl-fsm-cta:hover {
+      filter: brightness(1.08);
+    }
+
+    /* === T560 W4: right-side drawer (PRD §4.2) =================== */
+    .sl-drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      backdrop-filter: blur(2px);
+      z-index: 1100;
+      display: none;
+      opacity: 0;
+      transition: opacity .18s ease;
+    }
+
+    .sl-drawer-overlay.show {
+      display: block;
+      opacity: 1;
+    }
+
+    .sl-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(640px, 96vw);
+      background: var(--bg-card-solid, #1a1d2e);
+      border-left: 1px solid var(--border);
+      z-index: 1101;
+      transform: translateX(100%);
+      transition: transform .22s ease;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -12px 0 36px rgba(0, 0, 0, .45);
+    }
+
+    .sl-drawer.show {
+      transform: translateX(0);
+    }
+
+    .sl-drw-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .sl-drw-title {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sl-drw-meta {
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .sl-drw-close {
+      background: transparent;
+      border: 0;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 4px 10px;
+      border-radius: 6px;
+      line-height: 1;
+    }
+
+    .sl-drw-close:hover {
+      background: rgba(255, 255, 255, .05);
+      color: var(--text-primary);
+    }
+
+    .sl-drw-body {
+      padding: 14px 20px 20px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .sl-drw-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .sl-drw-sumcell {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .sl-drw-sumcell .lbl {
+      font-size: .62rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    .sl-drw-sumcell .val {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-top: 3px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sl-drw-tablewrap {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .sl-drw-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .82rem;
+    }
+
+    .sl-drw-table th,
+    .sl-drw-table td {
+      padding: 10px 12px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sl-drw-table th {
+      background: var(--bg-primary);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: .7rem;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sl-drw-table th:first-child,
+    .sl-drw-table td:first-child {
+      text-align: left;
+    }
+
+    .sl-drw-table tbody tr {
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+    }
+
+    .sl-drw-table tbody tr:last-child {
+      border-bottom: 0;
+    }
+
+    .sl-drw-table tbody tr:hover {
+      background: rgba(139, 92, 246, .05);
+    }
+
+    .sl-drw-bk-name {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .sl-drw-table .sl-cell-best {
+      color: #34d399;
+      font-weight: 700;
+      background: rgba(52, 211, 153, .06);
+    }
+
+    .sl-drw-table .sl-cell-worst {
+      color: #f87171;
+    }
+
+    .sl-drw-table .sl-cell-mid {
+      color: var(--text-secondary);
+    }
+
+    .sl-drw-cta {
+      display: block;
+      margin-top: 14px;
+      text-align: center;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: .86rem;
+      font-weight: 600;
+      transition: filter .12s;
+    }
+
+    .sl-drw-cta:hover {
+      filter: brightness(1.1);
+    }
+
+    .sl-drw-empty {
+      padding: 32px 12px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: .8rem;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+
+    /* === T582/T583追加 · 纯图片 cross-page banner，嵌在 sl-hero 右侧 === */
+    .sl-hero {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+
+    .sl-hero-text {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px;
+    }
+
+    .sl-page-banners {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+
+    .sl-page-banner {
+      display: inline-flex;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      border: 0;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    .sl-page-banner:hover {
+      transform: translateY(-1px);
+      opacity: .92;
+    }
+
+    .sl-page-banner img {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 480px;
+    }
+
+    @media (max-width: 720px) {
+      .sl-hero {
+        flex-direction: column;
+      }
+
+      .sl-page-banners {
+        margin-left: 0;
+        justify-content: flex-start;
+      }
+
+      .sl-page-banner img {
+        max-height: 60px;
+        max-width: 480px;
+      }
+    }
+  </style>
+
+  <section class="sl-hero">
+    <div class="sl-hero-text">
+      <h1>
+        {% if sportslive_page_kind == 'esports' %}
+        <span data-i18n="esportslive.title" id="sl-hero-title">{{ i18n_dict.get('esportslive.title','Esports Odds Hub')
+          }}</span>
+        {% else %}
+        <span data-i18n="sportslive.title" id="sl-hero-title">{{ i18n_dict.get('sportslive.title','Sports Odds Hub')
+          }}</span>
+        {% endif %}
+        <span class="sl-badge" data-i18n="sportslive.badge.beta">{{ i18n_dict.get('sportslive.badge.beta','Beta')
+          }}</span>
+      </h1>
+      {% if sportslive_page_kind == 'esports' %}
+      <p data-i18n="esportslive.subtitle" id="sl-hero-subtitle">{{ i18n_dict.get('esportslive.subtitle','Compare global
+        sportsbook odds for CS2, LoL and Dota 2 against VeYra prediction prices in real time.') }}</p>
+      {% else %}
+      <p data-i18n="sportslive.subtitle" id="sl-hero-subtitle">{{ i18n_dict.get('sportslive.subtitle','Compare global
+        sportsbook odds against VeYra prediction prices in real time. Tap a match to open its full event page.') }}</p>
+      {% endif %}
+    </div>
+    <!-- T582/T583追加 — 纯图片 banner，右侧嵌在 hero 内 -->
+    <div class="sl-page-banners" id="sl-page-banners" hidden></div>
+  </section>
+
+  <div class="sl-toolbar-row">
+    <div class="sl-status-tabs" id="sl-status-tabs" role="tablist"></div>
+    <div class="sl-ai-banner sl-ai-empty" id="sl-ai-banner" hidden>
+      <div class="sl-ai-left">
+        <span class="sl-ai-icon">AI</span>
+        <span class="sl-ai-text" id="sl-ai-text"></span>
+      </div>
+      <span class="sl-ai-cta" id="sl-ai-cta" data-i18n="sportslive.ai.filter">{{
+        i18n_dict.get('sportslive.ai.filter','Show only') }}</span>
+    </div>
+  </div>
+  <div class="sl-sports-bar" id="sl-sports-bar"></div>
+
+  <div id="sl-events-area">
+    <div class="sl-grid" id="sl-skel-grid">
+      <div class="sl-skel-card">
+        <div class="sl-skel-line sl-skel-meta"></div>
+        <div class="sl-skel-line sl-skel-hero"></div>
+        <div class="sl-skel-line sl-skel-bar"></div>
+        <div class="sl-skel-line sl-skel-foot"></div>
+      </div>
+      <div class="sl-skel-card">
+        <div class="sl-skel-line sl-skel-meta"></div>
+        <div class="sl-skel-line sl-skel-hero"></div>
+        <div class="sl-skel-line sl-skel-bar"></div>
+        <div class="sl-skel-line sl-skel-foot"></div>
+      </div>
+      <div class="sl-skel-card">
+        <div class="sl-skel-line sl-skel-meta"></div>
+        <div class="sl-skel-line sl-skel-hero"></div>
+        <div class="sl-skel-line sl-skel-bar"></div>
+        <div class="sl-skel-line sl-skel-foot"></div>
+      </div>
+      <div class="sl-skel-card">
+        <div class="sl-skel-line sl-skel-meta"></div>
+        <div class="sl-skel-line sl-skel-hero"></div>
+        <div class="sl-skel-line sl-skel-bar"></div>
+        <div class="sl-skel-line sl-skel-foot"></div>
+      </div>
+      <div class="sl-skel-card">
+        <div class="sl-skel-line sl-skel-meta"></div>
+        <div class="sl-skel-line sl-skel-hero"></div>
+        <div class="sl-skel-line sl-skel-bar"></div>
+        <div class="sl-skel-line sl-skel-foot"></div>
+      </div>
+      <div class="sl-skel-card">
+        <div class="sl-skel-line sl-skel-meta"></div>
+        <div class="sl-skel-line sl-skel-hero"></div>
+        <div class="sl-skel-line sl-skel-bar"></div>
+        <div class="sl-skel-line sl-skel-foot"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      function _t(key, fb) {
+        try { return (window.veyraI18n && window.veyraI18n.t) ? window.veyraI18n.t(key, fb) : fb; }
+        catch (_) { return fb; }
+      }
+      function _curLang() {
+        try {
+          var l = (window.veyraI18n && window.veyraI18n.lang) || localStorage.getItem('veyra_lang') || 'zh-CN';
+          // T595: if user picked any non-zh language (en/fr/ja/ko/th/vi/es/pt),
+          // map to 'en' so card labels (sport names, locale-formatted dates)
+          // degrade to English instead of being stuck on Chinese. Full per-lang
+          // localization arrives in T589 N-language migration.
+          var s = String(l || '').toLowerCase();
+          return (s.indexOf('zh') === 0) ? 'zh-CN' : 'en';
+        } catch (_) { return 'zh-CN'; }
+      }
+      function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+      function fmtPct(p) { if (!p || p <= 0) return '—'; return (p * 100).toFixed(1) + '%'; }
+      function fmtTime(epochSec) {
+        if (!epochSec) return '';
+        try {
+          var d = new Date(Number(epochSec) * 1000);
+          if (isNaN(d.getTime())) return '';
+          return d.toLocaleString(_curLang() === 'en' ? 'en-US' : 'zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        } catch (_) { return ''; }
+      }
+      function readSSR(elId) {
+        try {
+          var el = document.getElementById(elId);
+          if (!el) return null;
+          return JSON.parse(el.textContent || 'null');
+        } catch (_) { return null; }
+      }
+
+      var sportsBar = document.getElementById('sl-sports-bar');
+      var area = document.getElementById('sl-events-area');
+      var aiBanner = document.getElementById('sl-ai-banner');
+      var aiText = document.getElementById('sl-ai-text');
+      var statusTabsEl = document.getElementById('sl-status-tabs');
+
+      /* T582/T583追加 — 纯图片 banner。如果后台未上传 image_url则跳过渲染，
+         不再显示任何边框/文案/描述。 */
+      function renderPageBanners(list) {
+        var host = document.getElementById('sl-page-banners');
+        if (!host) return;
+        host.innerHTML = '';
+        var items = Array.isArray(list) ? list : [];
+        if (!items.length) { host.hidden = true; return; }
+        items.forEach(function (b) {
+          if (!b || b.enabled === false) return;
+          if (!b.image_url) return; // 无图不渲染
+          // T598 — 仅渲染 sidebar_image 的图片 banner；hero_text 走 renderHeroTextBanner
+          var pl = b.placement || 'sidebar_image';
+          if (pl !== 'sidebar_image') return;
+          var a = document.createElement('a');
+          a.className = 'sl-page-banner';
+          a.href = b.link_url || '#';
+          if (b.link_url && /^https?:\/\//i.test(b.link_url)) a.target = '_blank';
+          a.rel = 'noopener';
+          var img = document.createElement('img');
+          img.src = b.image_url; img.alt = '';
+          img.loading = 'lazy';
+          a.appendChild(img);
+          host.appendChild(a);
+        });
+        host.hidden = host.children.length === 0;
+      }
+      /* T599 — hero_text banner：目标架构下优先走 i18n_key。
+         admin 只填 title_i18n_key + title_en + (可选 subtitle_*)；译文由静态
+         JSON / 动态字典 负责。多个同页 hero_text banner 取第一个 enabled。 */
+      function renderHeroTextBanner(list) {
+        try {
+          var items = (Array.isArray(list) ? list : []).filter(function (b) {
+            return b && b.enabled !== false && (b.placement || (b.image_url ? 'sidebar_image' : 'hero_text')) === 'hero_text';
+          });
+          if (!items.length) return;
+          var b = items[0];
+          var t = (window.veyraI18n && window.veyraI18n.t) ? window.veyraI18n.t : function (k, fb) { return fb || k; };
+          var titleKey = (b.title_i18n_key || '').trim();
+          var subKey = (b.subtitle_i18n_key || '').trim();
+          var lang = _curLang();
+          var titleFallback = (b.title_en || (lang === 'zh-CN' ? b.title_zh : '') || '').trim();
+          var subFallback = (b.subtitle_en || (lang === 'zh-CN' ? b.subtitle_zh : '') || '').trim();
+          var title = titleKey ? t(titleKey, titleFallback) : titleFallback;
+          var sub = subKey ? t(subKey, subFallback) : subFallback;
+          var titleEl = document.getElementById('sl-hero-title');
+          var subEl = document.getElementById('sl-hero-subtitle');
+          if (title && titleEl) {
+            if (titleKey) {
+              titleEl.setAttribute('data-i18n', titleKey);
+              if (titleFallback) titleEl.setAttribute('data-i18n-fallback', titleFallback);
+            } else {
+              titleEl.removeAttribute('data-i18n');
+            }
+            titleEl.textContent = title;
+          }
+          if (sub && subEl) {
+            if (subKey) {
+              subEl.setAttribute('data-i18n', subKey);
+              if (subFallback) subEl.setAttribute('data-i18n-fallback', subFallback);
+            } else {
+              subEl.removeAttribute('data-i18n');
+            }
+            subEl.textContent = sub;
+          }
+        } catch (_) { }
+      }
+      try { renderPageBanners(window.__SL_PAGE_BANNERS__ || []); } catch (_) { }
+      try { renderHeroTextBanner(window.__SL_PAGE_BANNERS__ || []); } catch (_) { }
+      try {
+        var _pp = window.__SL_PAGE_PATH__ || '/sportslive';
+        fetch('/api/public/frontend-banner/page' + _pp, { credentials: 'include', cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (d) {
+            if (d && d.ok) {
+              renderPageBanners(d.banners || []);
+              renderHeroTextBanner(d.banners || []);
+            }
+          })
+          .catch(function () { });
+      } catch (_) { }
+
+      /* T575/T575追加（已撤销） — 不再为卡片生成背景图，仅保留 _slColor 供
+         其他表现层（如 abbr 徽章色、hover）如需使用。 */
+      function _slHash(str) { var h = 2166136261 >>> 0; var s = String(str || ''); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; } return h; }
+      function _slColor(str) {
+        var h = _slHash(str) % 360;
+        return 'hsl(' + h + ',55%,38%)';
+      }
+
+      // T564 — 默认 'all' 聚合所有体育。后端 warmer 已预热各 sport，
+      // 'all' 聚合仅读内存缓存，零额外上游 IO。
+      var currentSport = window.__SL_SSR_SPORT__ || 'all';
+
+      /* T560 W4 state: full payload + UI filters */
+      var _allItems = [];           // last loaded items
+      var _filteredItems = [];
+      var _visibleCount = 15;
+      var _slObserver = null;
+      var _loadingMore = false;
+      var _batchSize = 15;
+      var _statusFilter = 'all';    // all | live | upcoming
+      var _opportunityOnly = false; // toggled by AI banner click
+
+      function classifyEv(ev) {
+        var c = ev.consensus || {};
+        var arb = Number(c.arb_margin || 0);
+        var pmYes = (typeof ev.internal_market_yes_prob === 'number') ? ev.internal_market_yes_prob : null;
+        var p1prob = Number(c.p1_implied || 0);
+        var p1max = Number(c.p1_max || 0);
+        var ev1 = (pmYes !== null && p1prob > 0 && p1max > 1.0) ? (pmYes - p1prob) * p1max : 0;
+        return {
+          is_arb: arb >= 0.005,
+          is_pos_ev: ev1 >= 0.02,
+          is_opportunity: (arb >= 0.005) || (ev1 >= 0.02)
+        };
+      }
+
+      function applyFilters(items) {
+        return items.filter(function (ev) {
+          if (_statusFilter === 'live' && !ev.is_live) return false;
+          if (_statusFilter === 'upcoming' && ev.is_live) return false;
+          if (_opportunityOnly && !classifyEv(ev).is_opportunity) return false;
+          return true;
+        });
+      }
+
+      function renderStatusTabs(items) {
+        var counts = { all: items.length, live: 0, upcoming: 0 };
+        items.forEach(function (ev) { ev.is_live ? counts.live++ : counts.upcoming++; });
+        var tabs = [
+          { key: 'all', label: _t('sportslive.tab.all', 'All') },
+          { key: 'live', label: _t('sportslive.tab.live', 'Live') },
+          { key: 'upcoming', label: _t('sportslive.tab.upcoming', 'Upcoming') }
+        ];
+        statusTabsEl.innerHTML = tabs.map(function (t) {
+          var n = counts[t.key] || 0;
+          return '<button type="button" role="tab" class="sl-status-tab' + (t.key === _statusFilter ? ' active' : '') + '" data-sl-status="' + t.key + '">'
+            + esc(t.label)
+            + '<span class="sl-tab-count">' + n + '</span>'
+            + '</button>';
+        }).join('');
+        statusTabsEl.querySelectorAll('.sl-status-tab').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var k = btn.getAttribute('data-sl-status');
+            if (k === _statusFilter) return;
+            _statusFilter = k;
+            rerender();
+          });
+        });
+      }
+
+      function renderAiBanner(items) {
+        // T561 W5-D: 后台关闭后直接隐藏，避免占位
+        var cfg = window.__SL_AI_BANNER__ || null;
+        if (cfg && cfg.enabled === false) {
+          aiBanner.hidden = true; aiBanner.onclick = null; return;
+        }
+        var oppCount = 0, arbCount = 0, evCount = 0;
+        items.forEach(function (ev) {
+          var k = classifyEv(ev);
+          if (k.is_arb) arbCount++;
+          if (k.is_pos_ev) evCount++;
+          if (k.is_opportunity) oppCount++;
+        });
+        var lang = _curLang();
+        // 选 zh / en 文案
+        function pickCfg(field) {
+          if (!cfg) return '';
+          return (lang === 'en' ? (cfg[field + '_en'] || cfg[field + '_zh']) : (cfg[field + '_zh'] || cfg[field + '_en'])) || '';
+        }
+        var cfgSub = pickCfg('subtitle');
+        if (oppCount <= 0) {
+          aiBanner.hidden = false;
+          aiBanner.classList.add('sl-ai-empty');
+          aiBanner.classList.remove('sl-ai-active');
+          var msg = cfgSub || _t('sportslive.ai.scanning', 'AI is scanning the market for high-value opportunities.');
+          aiText.innerHTML = esc(msg);
+          aiBanner.onclick = null;
+          return;
+        }
+        aiBanner.hidden = false;
+        aiBanner.classList.remove('sl-ai-empty');
+        aiBanner.classList.toggle('sl-ai-active', _opportunityOnly);
+        var tmpl = _t('sportslive.ai.found', 'AI found <b>{n}</b> high-value opportunities ({ev} +EV · {arb} arb).');
+        aiText.innerHTML = tmpl
+          .replace('{n}', '<b>' + oppCount + '</b>')
+          .replace('{ev}', evCount)
+          .replace('{arb}', arbCount);
+        aiBanner.onclick = function () {
+          _opportunityOnly = !_opportunityOnly;
+          rerender();
+        };
+      }
+
+      function rerender() {
+        _filteredItems = applyFilters(_allItems);
+        _visibleCount = Math.min(_batchSize, _filteredItems.length || _batchSize);
+        renderEventsList(_filteredItems);
+        renderAiBanner(_allItems);
+        // refresh active tab class
+        statusTabsEl.querySelectorAll('.sl-status-tab').forEach(function (btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-sl-status') === _statusFilter);
+        });
+        aiBanner.classList.toggle('sl-ai-active', _opportunityOnly);
+      }
+
+      /* T568-FU — Hero 标题 / 副标题必须接受管理后台 banner 配置（cfg.title_*, cfg.subtitle_*）。
+         严禁前端硬编码中文/英文，否则违反 V2 全站文案治理规则。空值表示沿用模板默认。 */
+      function applyHeroFromCfg() {
+        try {
+          var cfg = window.__SL_AI_BANNER__ || null;
+          if (!cfg) return;
+          var lang = _curLang();
+          function pick(field) {
+            return (lang === 'en' ? (cfg[field + '_en'] || cfg[field + '_zh']) : (cfg[field + '_zh'] || cfg[field + '_en'])) || '';
+          }
+          var titleEl = document.getElementById('sl-hero-title');
+          var subEl = document.getElementById('sl-hero-subtitle');
+          var t = pick('title');
+          var s = pick('subtitle');
+          if (titleEl && t) { titleEl.textContent = t; titleEl.removeAttribute('data-i18n'); }
+          if (subEl && s) { subEl.textContent = s; subEl.removeAttribute('data-i18n'); }
+        } catch (_) { }
+      }
+
+      /* ── Card render ─────────────────────────────────── */
+      function renderEvents(payload) {
+        var items = (payload && Array.isArray(payload.items)) ? payload.items : [];
+        _allItems = items;
+        renderStatusTabs(items);
+        renderAiBanner(items);
+        _filteredItems = applyFilters(items);
+        _visibleCount = Math.min(_batchSize, _filteredItems.length || _batchSize);
+        renderEventsList(_filteredItems);
+      }
+
+      function renderEventsList(items) {
+        _filteredItems = Array.isArray(items) ? items : [];
+        var visibleItems = _filteredItems.slice(0, Math.max(_visibleCount, _batchSize));
+        if (!items.length) {
+          var msg = _opportunityOnly
+            ? _t('sportslive.empty.noopps', 'No high-value opportunities right now under current filters.')
+            : _t('sportslive.empty.noevents', 'No upcoming matches with full coverage right now. Check back in a few minutes.');
+          area.innerHTML = '<div class="sl-empty">' + esc(msg) + '</div>';
+          if (_slObserver) { try { _slObserver.disconnect(); } catch (_) { } }
+          return;
+        }
+        var html = '<div class="sl-grid">';
+        visibleItems.forEach(function (ev) {
+          var c = ev.consensus || {};
+          var p1 = (ev.p1 && ev.p1.name) ? ev.p1.name : '';
+          var p2 = (ev.p2 && ev.p2.name) ? ev.p2.name : '';
+          var slug = ev.internal_event_slug || '';
+          var url = ev.internal_event_url || (slug ? ('/event/' + slug) : '');
+          var compareIdx = _filteredItems.indexOf(ev);
+          // T577/581-FU — 即使没有匹配到内部事件，也必须出卡（纯赔率对比，无跳转链接）。
+          var hasInternal = !!url;
+
+          // determine favourite for color
+          var p1prob = Number(c.p1_implied || 0);
+          var p2prob = Number(c.p2_implied || 0);
+          var p1fav = p1prob > 0 && p1prob >= p2prob;
+          var p2fav = p2prob > 0 && p2prob > p1prob;
+
+          // status pill
+          var statusHtml = ev.is_live
+            ? '<span class="sl-status-pill sl-status-live">' + esc(_t('sportslive.status.live', 'Live')) + '</span>'
+            : '<span class="sl-status-pill sl-status-soon">' + esc(_t('sportslive.status.upcoming', 'Upcoming')) + '</span>';
+
+          // tournament line
+          var tour = ev.tournament || ev.category || '';
+
+          // insight bar — 三列：最高 1 赔率 / EV或Arb或概率差 / 博彩公司数
+          var maxOdds = Math.max(Number(c.p1_max || 0), Number(c.p2_max || 0));
+          var maxOddsTxt = maxOdds > 1.0 ? maxOdds.toFixed(2) : '—';
+
+          // 计算价值机会（中央列）：
+          var pmYes = (typeof ev.internal_market_yes_prob === 'number') ? ev.internal_market_yes_prob : null;
+          var centerLabel = _t('sportslive.insight.value', 'Value');
+          var centerHtml = '<span class="sl-ins-value sl-ins-neutral">' + esc(_t('sportslive.insight.fair', 'Fair')) + '</span>';
+          var arbMargin = Number(c.arb_margin || 0);
+          if (arbMargin >= 0.005) {
+            centerHtml = '<span class="sl-ins-value sl-ins-arb">' + esc(_t('sportslive.insight.arb', 'Arb')) + ' ' + (arbMargin * 100).toFixed(1) + '%</span>';
+          } else if (pmYes !== null && p1prob > 0 && Number(c.p1_max || 0) > 1.0) {
+            var ev1 = (pmYes - p1prob) * Number(c.p1_max);
+            if (ev1 >= 0.02) {
+              var capped = Math.min(ev1, 0.5);
+              var label = (ev1 >= 0.5) ? '+EV 50%+' : '+EV ' + (capped * 100).toFixed(1) + '%';
+              centerHtml = '<span class="sl-ins-value sl-ins-ev" title="VeYra ' + (pmYes * 100).toFixed(1) + '% vs market ' + (p1prob * 100).toFixed(1) + '% × ' + Number(c.p1_max).toFixed(2) + '">' + esc(label) + '</span>';
+            }
+          }
+
+          var booksCount = Number(c.books_count || ev.bookmaker_total || 0);
+
+          var pmYesInfo = (pmYes !== null) ? '<div class="sl-draw-row" style="text-align:left">' + esc(_t('sportslive.insight.pmYes', 'VeYra forecast')) + ': <b>' + esc(fmtPct(pmYes)) + '</b></div>' : '';
+
+          // T575/T575追加（已撤销）— 卡片不再渲染背景图，去掉 bgStyle 与 .sl-card-bg。
+
+          html += ''
+            + (hasInternal
+              ? ('<a class="sl-card' + (ev.is_live ? ' sl-card-live' : '') + '" href="' + esc(url) + '">')
+              : ('<div class="sl-card sl-card-noevent' + (ev.is_live ? ' sl-card-live' : '') + '">'))
+            + '<div class="sl-meta">'
+            + '<div class="sl-meta-left">'
+            + statusHtml
+            + (tour ? '<span class="sl-tournament">' + esc(tour) + '</span>' : '')
+            + '</div>'
+            + '<span class="sl-time">' + esc(fmtTime(ev.start_time)) + '</span>'
+            + '</div>'
+            + '<div class="sl-hero-row">'
+            + '<div class="sl-team">'
+            + '<span class="sl-team-name" title="' + esc(p1) + '">' + esc(p1) + '</span>'
+            + (p1prob > 0
+              ? '<span class="sl-team-prob ' + (p1fav ? 'sl-prob-fav' : 'sl-prob-dim') + '">' + esc(fmtPct(p1prob)) + '</span>'
+              + '<span class="sl-team-prob-label">' + esc(_t('sportslive.team.implied', 'market')) + '</span>'
+              : '<span class="sl-team-prob sl-prob-dim">—</span>')
+            + '</div>'
+            + '<span class="sl-vs">' + esc(_t('sportslive.label.vs', 'VS')) + '</span>'
+            + '<div class="sl-team sl-team-right">'
+            + '<span class="sl-team-name" title="' + esc(p2) + '">' + esc(p2) + '</span>'
+            + (p2prob > 0
+              ? '<span class="sl-team-prob ' + (p2fav ? 'sl-prob-fav' : 'sl-prob-dim') + '">' + esc(fmtPct(p2prob)) + '</span>'
+              + '<span class="sl-team-prob-label">' + esc(_t('sportslive.team.implied', 'market')) + '</span>'
+              : '<span class="sl-team-prob sl-prob-dim">—</span>')
+            + '</div>'
+            + '</div>'
+            + (c.draw_implied && c.draw_implied > 0
+              ? '<div class="sl-draw-row">' + esc(_t('sportslive.consensus.draw', 'Draw')) + ': <b>' + esc(fmtPct(c.draw_implied)) + '</b></div>'
+              : '')
+            + pmYesInfo
+            + '<div class="sl-insight">'
+            + '<div class="sl-ins-cell"><span class="sl-ins-label">' + esc(_t('sportslive.insight.maxOdds', 'Top odds')) + '</span><span class="sl-ins-value">' + esc(maxOddsTxt) + '</span></div>'
+            + '<div class="sl-ins-cell sl-ins-center"><span class="sl-ins-label">' + esc(centerLabel) + '</span>' + centerHtml + '</div>'
+            + '<div class="sl-ins-cell"><span class="sl-ins-label">' + esc(_t('sportslive.insight.books', 'Books')) + '</span><span class="sl-ins-value">' + booksCount + '</span></div>'
+            + '</div>'
+            + '<div class="sl-foot">'
+            + '<div class="sl-foot-actions">'
+            + (ev.is_live ? '<button type="button" class="sl-live-btn" data-sl-live="' + esc(slug) + '">' + esc(_t('sportslive.foot.watchLive', 'Watch live')) + '</button>' : '')
+            + (booksCount > 0 ? '<button type="button" class="sl-compare-btn" data-sl-compare-index="' + compareIdx + '">' + esc(_t('sportslive.foot.compare', 'Compare odds')) + '</button>' : '')
+            + (hasInternal ? ('<span class="sl-foot-cta">' + esc(_t('sportslive.foot.cta', 'View match →')) + '</span>') : '')
+            + '</div>'
+            + '</div>'
+            + (hasInternal ? '</a>' : '</div>');
+        });
+        html += '</div>';
+        if (_filteredItems.length > visibleItems.length || _loadingMore) {
+          html += '<div class="sl-scroll-sentinel" id="sl-scroll-sentinel">'
+            + '<span class="sl-loading-pill" role="status" aria-live="polite">'
+            + '<span class="sl-loading-dot"></span>'
+            + '<span>' + esc(_t('sportslive.loadingMore', '正在载入更多内容…')) + '</span>'
+            + '</span>'
+            + '</div>';
+        }
+        area.innerHTML = html;
+        setupSportsliveObserver();
+      }
+
+      function setupSportsliveObserver() {
+        if (_slObserver) {
+          try { _slObserver.disconnect(); } catch (_) { }
+        }
+        var sentinel = document.getElementById('sl-scroll-sentinel');
+        if (!sentinel) return;
+        _slObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (!en.isIntersecting) return;
+            if (_loadingMore) return;
+            if (_visibleCount >= _filteredItems.length) return;
+            _loadingMore = true;
+            setTimeout(function () {
+              _visibleCount = Math.min(_visibleCount + _batchSize, _filteredItems.length);
+              _loadingMore = false;
+              renderEventsList(_filteredItems);
+            }, 120);
+          });
+        }, { rootMargin: '900px 0px' });
+        _slObserver.observe(sentinel);
+      }
+
+      /* ── Sports bar render ──────────────────────────── */
+      function renderSports(items) {
+        if (!items || !items.length) { sportsBar.innerHTML = ''; return; }
+        var lang = _curLang();
+        // T870 — 全 9 语种 i18n 化 sport pill 标签：先查 sportslive.sport.<key>，
+        // 再回退 label_<lang>，最后 label_en。"All" 也走 i18n。
+        var pills = [{ key: 'all' }].concat(items);
+        sportsBar.innerHTML = pills.map(function (s) {
+          var lbl;
+          if (s.key === 'all') {
+            lbl = _t('sportslive.sport.all', 'All');
+          } else {
+            lbl = _t('sportslive.sport.' + s.key, s.label_en || s.key);
+          }
+          return '<button type="button" class="sl-sport-pill' + (s.key === currentSport ? ' active' : '') + '" data-sport="' + esc(s.key) + '" data-i18n="sportslive.sport.' + esc(s.key) + '">' + esc(lbl) + '</button>';
+        }).join('');
+        sportsBar.querySelectorAll('.sl-sport-pill').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var sp = btn.getAttribute('data-sport');
+            if (sp === currentSport) return;
+            // T561 G: 为每个类别记录独立 URL，支持浏览器后退
+            try { history.pushState({ sport: sp }, '', '?p=' + encodeURIComponent(sp)); } catch (_) { }
+            syncActivePill(sp);
+            loadEvents(sp);
+          });
+        });
+      }
+      function syncActivePill(sp) {
+        sportsBar.querySelectorAll('.sl-sport-pill').forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-sport') === sp);
+        });
+      }
+
+      /* ── T560 W4: comparison drawer (PRD §4.2) ──────── */
+      var drawerOverlay, drawerEl;
+      function ensureDrawer() {
+        if (drawerEl) return;
+        drawerOverlay = document.createElement('div');
+        drawerOverlay.className = 'sl-drawer-overlay';
+        drawerOverlay.addEventListener('click', closeDrawer);
+        drawerEl = document.createElement('aside');
+        drawerEl.className = 'sl-drawer';
+        drawerEl.setAttribute('role', 'dialog');
+        drawerEl.setAttribute('aria-modal', 'true');
+        document.body.appendChild(drawerOverlay);
+        document.body.appendChild(drawerEl);
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+      }
+      function closeDrawer() {
+        if (!drawerEl) return;
+        drawerEl.classList.remove('show');
+        drawerOverlay.classList.remove('show');
+      }
+      function renderDrawer(ev) {
+        ensureDrawer();
+        var c = ev.consensus || {};
+        var p1 = (ev.p1 && ev.p1.name) || '';
+        var p2 = (ev.p2 && ev.p2.name) || '';
+        var slug = (ev.internal_event_slug || '').trim();
+        var url = (ev.internal_event_url || '').trim() || (slug ? ('/event/' + slug) : '/discover');
+        var hasDraw = c.draw_implied && c.draw_implied > 0;
+        var rows = Array.isArray(c.top_bookmakers) ? c.top_bookmakers : [];
+
+        // best/worst per column
+        var maxP1 = 0, maxP2 = 0, maxDraw = 0, minP1 = Infinity, minP2 = Infinity;
+        rows.forEach(function (r) {
+          if (r.p1 > maxP1) maxP1 = r.p1;
+          if (r.p2 > maxP2) maxP2 = r.p2;
+          if (hasDraw && r.draw > maxDraw) maxDraw = r.draw;
+          if (r.p1 > 0 && r.p1 < minP1) minP1 = r.p1;
+          if (r.p2 > 0 && r.p2 < minP2) minP2 = r.p2;
+        });
+
+        function cellCls(val, best, worst) {
+          if (val <= 0) return '';
+          if (val === best) return 'sl-cell-best';
+          if (val === worst) return 'sl-cell-worst';
+          return 'sl-cell-mid';
+        }
+        function fmtO(v) { return v > 1.0 ? v.toFixed(2) : '—'; }
+
+        var bodyRows = '';
+        if (rows.length === 0) {
+          bodyRows = '<tr><td colspan="' + (hasDraw ? 4 : 3) + '" style="text-align:center;color:var(--text-muted);padding:18px;">' + esc(_t('sportslive.drawer.noBooks', 'No bookmaker quotes yet.')) + '</td></tr>';
+        } else {
+          bodyRows = rows.map(function (r) {
+            return '<tr>'
+              + '<td><span class="sl-drw-bk-name">' + esc(r.slug || '') + '</span></td>'
+              + '<td class="' + cellCls(r.p1, maxP1, minP1) + '">' + esc(fmtO(r.p1)) + '</td>'
+              + (hasDraw ? '<td class="' + cellCls(r.draw, maxDraw, 0) + '">' + esc(fmtO(r.draw)) + '</td>' : '')
+              + '<td class="' + cellCls(r.p2, maxP2, minP2) + '">' + esc(fmtO(r.p2)) + '</td>'
+              + '</tr>';
+          }).join('');
+        }
+
+        var arbVal = Number(c.arb_margin || 0);
+        var arbCell = arbVal >= 0.005
+          ? '<span style="color:#c084fc">' + (arbVal * 100).toFixed(2) + '%</span>'
+          : '<span style="color:var(--text-muted)">—</span>';
+        var pmYes = (typeof ev.internal_market_yes_prob === 'number') ? ev.internal_market_yes_prob : null;
+        var pmCell = (pmYes !== null) ? esc(fmtPct(pmYes)) : '—';
+        var maxOdds = Math.max(maxP1, maxP2);
+
+        drawerEl.innerHTML = ''
+          + '<div class="sl-drw-head">'
+          + '<div>'
+          + '<div class="sl-drw-title">'
+          + '<span>' + esc(p1) + '</span>'
+          + '<span style="color:var(--text-muted);font-weight:500;">' + esc(_t('sportslive.label.vs', 'VS')) + '</span>'
+          + '<span>' + esc(p2) + '</span>'
+          + '</div>'
+          + '<div class="sl-drw-meta">' + esc(ev.tournament || ev.category || '') + ' · ' + esc(fmtTime(ev.start_time)) + '</div>'
+          + '</div>'
+          + '<button type="button" class="sl-drw-close" aria-label="Close">×</button>'
+          + '</div>'
+          + '<div class="sl-drw-body">'
+          + '<div class="sl-drw-summary">'
+          + '<div class="sl-drw-sumcell"><div class="lbl">' + esc(_t('sportslive.insight.maxOdds', 'Top odds')) + '</div><div class="val">' + esc(maxOdds > 1.0 ? maxOdds.toFixed(2) : '—') + '</div></div>'
+          + '<div class="sl-drw-sumcell"><div class="lbl">' + esc(_t('sportslive.insight.arb', 'Arb')) + '</div><div class="val">' + arbCell + '</div></div>'
+          + '<div class="sl-drw-sumcell"><div class="lbl">' + esc(_t('sportslive.insight.pmYes', 'VeYra forecast')) + '</div><div class="val">' + pmCell + '</div></div>'
+          + '</div>'
+          + '<div class="sl-drw-tablewrap">'
+          + '<table class="sl-drw-table"><thead><tr>'
+          + '<th>' + esc(_t('sportslive.books.bookmaker', 'Bookmaker')) + '</th>'
+          + '<th>' + esc(_t('sportslive.drawer.col.home', '1')) + '</th>'
+          + (hasDraw ? '<th>' + esc(_t('sportslive.books.col.draw', 'X')) + '</th>' : '')
+          + '<th>' + esc(_t('sportslive.drawer.col.away', '2')) + '</th>'
+          + '</tr></thead><tbody>' + bodyRows + '</tbody></table>'
+          + '</div>'
+          + '<a class="sl-drw-cta" href="' + esc(url) + '">' + esc(_t('sportslive.drawer.cta', 'Open match on VeYra →')) + '</a>'
+          + '</div>';
+        drawerEl.querySelector('.sl-drw-close').addEventListener('click', closeDrawer);
+        drawerOverlay.classList.add('show');
+        drawerEl.classList.add('show');
+      }
+
+      /* delegated click for compare buttons */
+      area.addEventListener('click', function (e) {
+        var liveBtn = e.target.closest && e.target.closest('[data-sl-live]');
+        if (liveBtn) {
+          e.preventDefault(); e.stopPropagation();
+          var slugL = liveBtn.getAttribute('data-sl-live');
+          var evL = _allItems.find(function (x) { return (x.internal_event_slug || '') === slugL; });
+          if (evL) showLiveModal(evL);
+          return;
+        }
+        var btn = e.target.closest && e.target.closest('[data-sl-compare-index]');
+        if (!btn) return;
+        e.preventDefault(); e.stopPropagation();
+        var idx = parseInt(btn.getAttribute('data-sl-compare-index') || '-1', 10);
+        var ev = (idx >= 0 && idx < _filteredItems.length) ? _filteredItems[idx] : null;
+        if (ev) renderDrawer(ev);
+      });
+
+      /* T561 C: 全屏 Modal — TailAdmin success 样式告知“直播暂未开放” */
+      var fsmEl = null;
+      function ensureFsm() {
+        if (fsmEl) return;
+        fsmEl = document.createElement('div');
+        fsmEl.className = 'sl-fsm-overlay';
+        fsmEl.setAttribute('role', 'dialog');
+        fsmEl.setAttribute('aria-modal', 'true');
+        document.body.appendChild(fsmEl);
+        fsmEl.addEventListener('click', function (e) { if (e.target === fsmEl) closeFsm(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && fsmEl && fsmEl.classList.contains('show')) closeFsm(); });
+      }
+      function closeFsm() { if (fsmEl) fsmEl.classList.remove('show'); }
+      function showLiveModal(ev) {
+        ensureFsm();
+        fsmEl.innerHTML = ''
+          + '<div class="sl-fsm-card">'
+          + '<div class="sl-fsm-icon">✓</div>'
+          + '<div class="sl-fsm-title">' + esc(_t('sportslive.live.title', 'Live stream coming soon')) + '</div>'
+          + '<div class="sl-fsm-body">' + esc(_t('sportslive.live.body', 'VeYra in-page live stream is rolling out shortly. For now you can place your position on the match page — we’ll keep you posted as soon as the broadcast goes online.')) + '</div>'
+          + '<div style="display:flex;justify-content:center;">'
+          + '<button type="button" class="sl-fsm-cta" data-sl-fsm-close>' + esc(_t('sportslive.live.dismiss', 'Got it')) + '</button>'
+          + '</div>'
+          + '</div>';
+        fsmEl.querySelector('[data-sl-fsm-close]').addEventListener('click', closeFsm);
+        fsmEl.classList.add('show');
+      }
+
+      /* ── Network ────────────────────────────────────── */
+      var REASON_MAP = {
+        'rapidapi_key_missing': 'sportslive.empty.nokey',
+        'unsupported_sport': 'sportslive.empty.nosports',
+        'upstream_unavailable': 'sportslive.error.upstream',
+        'timeout': 'sportslive.error.timeout',
+        'network_error': 'sportslive.error.network',
+        'bad_response': 'sportslive.error.badResp',
+        'ssr_failed': 'sportslive.error.upstream'
+      };
+
+      async function loadEvents(sport) {
+        currentSport = sport;
+        var pageKind = (window.__SL_PAGE_KIND__ || 'sports');
+        var reqLimit = (sport === 'all') ? 2000 : 200;
+        var qs = '?sport=' + encodeURIComponent(sport)
+          + '&limit=' + encodeURIComponent(String(reqLimit))
+          + '&window_hours=168'
+          + '&page_kind=' + encodeURIComponent(pageKind);
+        // 渲染骨架屏占位
+        area.innerHTML = '<div class="sl-grid">'
+          + '<div class="sl-skel-card"><div class="sl-skel-line sl-skel-meta"></div><div class="sl-skel-line sl-skel-hero"></div><div class="sl-skel-line sl-skel-bar"></div></div>'
+          + '<div class="sl-skel-card"><div class="sl-skel-line sl-skel-meta"></div><div class="sl-skel-line sl-skel-hero"></div><div class="sl-skel-line sl-skel-bar"></div></div>'
+          + '<div class="sl-skel-card"><div class="sl-skel-line sl-skel-meta"></div><div class="sl-skel-line sl-skel-hero"></div><div class="sl-skel-line sl-skel-bar"></div></div>'
+          + '</div>';
+        try {
+          var r = await fetch('/api/sportslive/events' + qs, { credentials: 'include' });
+          var d = await r.json().catch(function () { return {}; });
+          if (d && d.error) {
+            var key = REASON_MAP[d.error] || 'sportslive.error.upstream';
+            var fb = _t(key, _t('sportslive.error.upstream', 'Sportsbook upstream is temporarily unavailable.'));
+            area.innerHTML = '<div class="sl-empty">' + esc(fb) + '</div>';
+            return;
+          }
+          renderEvents(d || {});
+          // T561 W5-A: 后端返回 warming 表示冷启动，已后台预热中，1.5s 后再拉一次
+          if (d && d.warming && sport === currentSport) {
+            setTimeout(function () {
+              if (sport !== currentSport) return;
+              fetch('/api/sportslive/events' + qs, { credentials: 'include' })
+                .then(function (rr) { return rr.json(); })
+                .then(function (dd) { if (dd && Array.isArray(dd.items) && sport === currentSport) renderEvents(dd); })
+                .catch(function () { });
+            }, 1500);
+          }
+        } catch (e) {
+          area.innerHTML = '<div class="sl-empty">' + esc(_t('sportslive.error.netEvents', 'Network error loading matches.')) + '</div>';
+        }
+      }
+
+      async function loadSportsList() {
+        // SSR 已注入则同步使用，避免一次额外 RTT
+        var ssrSports = readSSR('vp-sl-sports-ssr');
+        if (Array.isArray(ssrSports) && ssrSports.length) {
+          renderSports(ssrSports);
+          return;
+        }
+        try {
+          var r = await fetch('/api/sportslive/sports', { credentials: 'include' });
+          var d = await r.json().catch(function () { return {}; });
+          var items = (d && Array.isArray(d.items)) ? d.items : [];
+          renderSports(items);
+          if (d && d.rapidapi === false) {
+            area.innerHTML = '<div class="sl-empty">' + esc(_t('sportslive.empty.nokey', 'Odds provider is not configured. Ask an admin to enable the data source.')) + '</div>';
+          }
+        } catch (_) { /* silent */ }
+      }
+
+      // ── 启动顺序：SSR 先画卡，再补 sports bar；语言切换时整页重画 ─────
+      var ssrPayload = readSSR('vp-sl-ssr');
+      if (ssrPayload && Array.isArray(ssrPayload.items)) {
+        renderEvents(ssrPayload);
+      } else {
+        loadEvents(currentSport);
+      }
+      loadSportsList();
+      applyHeroFromCfg();
+
+      document.addEventListener('i18n:changed', function () {
+        loadEvents(currentSport);
+        loadSportsList();
+        applyHeroFromCfg();
+      });
+
+      // T561 G: 浏览器前进 / 后退 — 同步 sport 状态与 URL
+      window.addEventListener('popstate', function (ev) {
+        var sp = 'all';
+        try {
+          var qp = new URLSearchParams(window.location.search);
+          sp = (qp.get('p') || qp.get('sport') || 'all').toLowerCase();
+        } catch (_) { }
+        if (sp && sp !== currentSport) {
+          syncActivePill(sp);
+          loadEvents(sp);
+        }
+      });
+    })();
+  </script>
+  <script>
+    if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+      window.veyraI18n.registerPagePack('sportslive');
+    }
+  </script>
+  {% endblock %}

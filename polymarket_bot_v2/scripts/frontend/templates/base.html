@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="{{ lang or 'zh-CN' }}" data-lang="{{ lang or 'zh-CN' }}"
+  data-frontend-runtime="{{ frontend_runtime or 'htmx' }}" data-asset-version="{{ asset_version | default('0') }}"
+  class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}V e Y r a{% endblock %}</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <script>
+    (function () {
+      try {
+        var ssrLang = {{ (lang or 'zh-CN') | tojson
+      }};
+    var supported = ['zh-CN', 'en', 'fr', 'ja', 'ko', 'th', 'vi', 'es', 'pt'];
+    var ls = null;
+    try { ls = localStorage.getItem('veyra_lang'); } catch (_) { }
+    var finalLang = (ls && supported.indexOf(ls) !== -1) ? ls : ssrLang;
+    window.__INIT_LANG__ = finalLang;
+    document.documentElement.setAttribute('lang', finalLang);
+    document.documentElement.setAttribute('data-lang', finalLang);
+    if (ls && ls !== ssrLang) {
+      document.cookie = 'veyra_lang=' + finalLang + '; path=/; max-age=31536000; SameSite=Lax';
+    }} catch (_e) { }}) ();
+    window.__I18N_PRELOAD__ = {{ i18n_preload_json | escape_script_json | safe }};
+
+    (function () {
+      var ME_TTL_MS = 30000;
+      var ME_LOCAL_TTL_MS = 300000;
+      var KEY = 'veyra_me_cache_v1';
+      var LKEY = 'veyra_me_cache_local_v1';
+      function readCache() {
+        try {
+          var raw = sessionStorage.getItem(KEY);
+          if (raw) {
+            var p = JSON.parse(raw);
+            if (p && typeof p.ts === 'number' && Date.now() - p.ts <= ME_TTL_MS) return p.data || null;
+          }
+        } catch (_) { }
+        try {
+          var raw2 = localStorage.getItem(LKEY);
+          if (raw2) {
+            var q = JSON.parse(raw2);
+            if (q && typeof q.ts === 'number' && Date.now() - q.ts <= ME_LOCAL_TTL_MS) return q.data || null;
+          }
+        } catch (_) { }
+        return null;
+      }
+      function writeCache(data) {
+        var stamp = JSON.stringify({ ts: Date.now(), data: data });
+        try { sessionStorage.setItem(KEY, stamp); } catch (_) { }
+        try {
+          if (data && data.authenticated !== false) {
+            localStorage.setItem(LKEY, stamp);
+          } else {
+            localStorage.removeItem(LKEY);
+          }
+        } catch (_) { }
+      }
+      function clearCache() {
+        try { sessionStorage.removeItem(KEY); } catch (_) { }
+        try { localStorage.removeItem(LKEY); } catch (_) { }
+      }
+      window.veyraClearMeCache = clearCache;
+      function fetchMeFromApi() {
+        var bust = Date.now();
+        var sep = '/api/user/me'.indexOf('?') === -1 ? '?' : '&';
+        return fetch('/api/user/me' + sep + '_=' + bust, {
+          credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        }).then(function (r) {
+          return r.ok ? r.json() : null;
+        }).catch(function () { return null; });
+      }
+      function backgroundRefresh() {
+        if (window.__VEYRA_ME_BG__) return;
+        window.__VEYRA_ME_BG__ = true;
+        try {
+          fetchMeFromApi()
+            .then(function (data) {
+              if (data && data.authenticated !== false) {
+                window.__VEYRA_ME_DATA__ = data;
+                writeCache(data);
+                try { window.dispatchEvent(new CustomEvent('veyra:me-updated', { detail: data })); } catch (_) { }
+              } else {
+                window.__VEYRA_ME_DATA__ = null;
+                clearCache();
+              }
+            })
+            .catch(function () { })
+            .finally(function () { window.__VEYRA_ME_BG__ = false; });
+        } catch (_) { window.__VEYRA_ME_BG__ = false; }
+      }
+      window.veyraGetMe = function (opts) {
+        opts = opts || {};
+        var force = !!opts.force;
+        if (!force) {
+          if (window.__VEYRA_ME_DATA__ && window.__VEYRA_ME_DATA__.authenticated !== false) {
+            backgroundRefresh();
+            return Promise.resolve(window.__VEYRA_ME_DATA__);
+          }
+          var cached = readCache();
+          if (cached && cached.authenticated !== false) {
+            window.__VEYRA_ME_DATA__ = cached;
+            backgroundRefresh();
+            return Promise.resolve(cached);
+          }
+          if (window.__VEYRA_ME_PROMISE__) return window.__VEYRA_ME_PROMISE__;
+        }
+        window.__VEYRA_ME_PROMISE__ = fetchMeFromApi()
+          .then(function (data) {
+            if (data && data.authenticated !== false) {
+              window.__VEYRA_ME_DATA__ = data;
+              writeCache(data);
+            } else {
+              window.__VEYRA_ME_DATA__ = null;
+              clearCache();
+            }
+            return data;
+          })
+          .finally(function () { window.__VEYRA_ME_PROMISE__ = null; });
+        return window.__VEYRA_ME_PROMISE__;
+      };
+      try {
+        var primed = readCache();
+        if (primed && primed.authenticated !== false) {
+          window.__VEYRA_ME_DATA__ = primed;
+          backgroundRefresh();
+        } else {
+          window.__VEYRA_ME_PROMISE__ = fetchMeFromApi()
+            .then(function (data) {
+              if (data && data.authenticated !== false) {
+                window.__VEYRA_ME_DATA__ = data;
+                writeCache(data);
+              } else {
+                window.__VEYRA_ME_DATA__ = null;
+                clearCache();
+              }
+              return data;
+            })
+            .finally(function () { window.__VEYRA_ME_PROMISE__ = null; });
+        }
+      } catch (_) { }
+      window.veyraDeferNonCritical = function (fn) {
+        if (typeof fn !== 'function') return;
+        if ('requestIdleCallback' in window) {
+          window.requestIdleCallback(function () { fn(); }, { timeout: 1200 });
+        } else {
+          setTimeout(fn, 180);
+        }
+      };
+    })();
+  </script>
+  <link rel="preload" href="/v2/static/css/app.css?v={{ asset_version | default('0') }}" as="style">
+  <link rel="stylesheet" href="/v2/static/css/app.css?v={{ asset_version | default('0') }}">
+  <link rel="stylesheet" href="/v2/static/css/vp_ui.css?v={{ asset_version | default('0') }}">
+  <link rel="stylesheet" href="/v2/static/css/coin_drop.css?v={{ asset_version | default('0') }}">
+  <script defer src="/v2/static/js/vp_ui.js?v={{ asset_version | default('0') }}"></script>
+  <script defer src="/v2/static/js/coin_drop.js?v={{ asset_version | default('0') }}"></script>
+  <script defer src="/v2/static/js/realtime-price.js?v={{ asset_version | default('0') }}"></script>
+  <style>
+    .header-marquee {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 280px;
+      height: 36px;
+      overflow: hidden;
+      background: rgba(29, 41, 57, 0.08);
+      border-radius: 8px;
+      margin: 0 12px;
+      cursor: pointer;
+
+      box-shadow:
+        0 0 0 1px rgba(29, 41, 57, 0.15),
+        0 4px 12px rgba(2, 6, 23, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    }
+
+    .header-marquee:hover {
+      box-shadow:
+        0 0 0 1px rgba(29, 41, 57, 0.22),
+        0 6px 18px rgba(2, 6, 23, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    }
+
+    .header-marquee-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      padding: 0 16px;
+      white-space: nowrap;
+      will-change: transform;
+      animation: hmq-scroll 60s linear infinite;
+    }
+
+    .header-marquee:hover .header-marquee-track {
+      animation-play-state: paused;
+    }
+
+    .marquee-hadouken-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: -30px;
+      pointer-events: none;
+    }
+
+    .marquee-hadouken {
+      height: 70px;
+      margin-top: 28px;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+    }
+
+    @media (max-width: 768px) {
+      .marquee-hadouken-container {
+        display: none;
+      }
+    }
+
+    .hmq-item {
+      font-size: .78rem;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .hmq-item b {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .hmq-badge {
+      font-size: .65rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .hmq-badge.fresh {
+      background: rgba(34, 197, 94, .18);
+      color: #22c55e;
+    }
+
+    .hmq-badge.big {
+      background: rgba(245, 158, 11, .18);
+      color: #f59e0b;
+    }
+
+    .hmq-badge.yes {
+      background: rgba(34, 197, 94, .15);
+      color: #22c55e;
+    }
+
+    .hmq-badge.no {
+      background: rgba(239, 68, 68, .15);
+      color: #ef4444;
+    }
+
+    .hmq-empty {
+      font-size: .78rem;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 36px;
+      width: 100%;
+    }
+
+    @keyframes hmq-scroll {
+      0% {
+        transform: translateX(0);
+      }
+
+      100% {
+        transform: translateX(-50%);
+      }
+    }
+
+    @media (max-width: 960px) {
+      .header-marquee {
+        display: none;
+      }
+    }
+
+    .notif-wrap {
+      position: relative;
+    }
+
+    .notif-dropdown {
+      position: absolute;
+      top: 52px;
+      right: 0;
+      width: 360px;
+      max-height: 480px;
+      overflow-y: auto;
+      background: var(--bg-card-solid, var(--bg-card));
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, .5);
+      z-index: 9999;
+      display: none;
+    }
+
+    .notif-dropdown.show {
+      display: block;
+    }
+
+    .notif-dd-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: .86rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .notif-dd-head .clear-btn {
+      background: transparent;
+      border: 0;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: .74rem;
+    }
+
+    .notif-item {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .04);
+      display: flex;
+      gap: 10px;
+    }
+
+    .notif-item.unread {
+      background: rgba(139, 92, 246, .04);
+      border-left: 3px solid var(--accent);
+      padding-left: 11px;
+    }
+
+    .notif-item-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      flex-shrink: 0;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .notif-item-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notif-item-title {
+      font-size: .82rem;
+      color: var(--text-primary);
+      font-weight: 600;
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .notif-item-meta {
+      font-size: .72rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .notif-empty {
+      padding: 30px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: .84rem;
+    }
+
+    .notif-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 8px;
+      height: 8px;
+      background: #ef4444;
+      border-radius: 50%;
+      display: none;
+      box-shadow: 0 0 0 2px var(--bg-body);
+    }
+
+    .notif-dot.on {
+      display: block;
+    }
+
+    .header-circle-btn.lang-flag-btn {
+      font-size: 1.1rem;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .header-circle-btn.lang-flag-btn .flag-emoji {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    body.onboarding-active .main-header,
+    body.onboarding-active .main-content,
+    body.onboarding-active .sidebar,
+    body.onboarding-active .sidebar-overlay {
+      pointer-events: none;
+      user-select: none;
+    }
+
+    body.onboarding-active #onboarding-host {
+      pointer-events: auto;
+    }
+  </style>
+  <script defer src="/v2/static/js/i18n.js?v={{ asset_version | default('0') }}"></script>
+  <script defer src="/v2/static/js/runtime_loader.js?v={{ asset_version | default('0') }}"></script>
+  <script defer src="/v2/static/js/vendor/lucide.min.js?v={{ asset_version | default('0') }}"></script>
+  <script defer src="/v2/static/js/pm_guard.js?v={{ asset_version | default('0') }}"></script>
+  <script defer src="/v2/static/js/runtime/privy_signing_runtime.js?v={{ asset_version | default('0') }}"></script>
+  <script defer src="/v2/static/js/runtime/polymarket_session.js?v={{ asset_version | default('0') }}"></script>
+  {% block head %}{% endblock %}
+</head>
+<body{% block body_attrs %}{% endblock %}>
+
+  <div id="vp-sidebar-overlay" class="sidebar-overlay"></div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <a href="/v2" class="sidebar-logo">
+        <img class="logo-full" src="/static/Veyra.png" alt="V e Y r a" onerror="this.style.display='none'">
+        <img class="logo-collapsed" src="/static/VagusPloy.png" alt="V" onerror="this.style.display='none'">
+      </a>
+    </div>
+
+    <nav class="sidebar-nav" id="sidebar-nav">
+      {% set _last_section = '' %}
+      {% for _it in nav_menu_items %}
+      {% if _it.section_label and _it.section_label != _last_section %}
+      <div class="nav-section-label" style="margin-top:8px" {% if _it.i18n_key
+        %}data-i18n="nav.section.{{ _it.section_label }}" {% else %}data-i18n="nav.section.management" {% endif %}>{{
+        _it.section_label }}</div>
+      {% set _last_section = _it.section_label %}
+      {% endif %}
+      {% set _page_slug = _it.path.lstrip('/').split('/')[0] or 'home' %}
+      {% set _label = (_it.label_zh if lang == 'zh-CN' and _it.label_zh else (_it.label_en if _it.label_en else
+      _it.label)) %}
+      <a href="{{ _it.path }}" class="nav-item" data-page="{{ _page_slug }}">
+        <i data-lucide="{{ _it.icon or 'circle' }}" class="nav-icon"></i>
+        <span class="nav-label" {% if _it.i18n_key %}data-i18n="{{ _it.i18n_key }}" {% endif %} {% if _it.label_en
+          %}data-i18n-fallback="{{ _it.label_en }}" {% endif %}>{{ _label }}</span>
+      </a>
+      {% endfor %}
+    </nav>
+
+    <a href="https://veyra.trade/preview" class="sidebar-promo-card" id="sidebar-promo-link" aria-label="VeYra preview">
+      <img src="/static/VeyraPLUNDER.png" alt="VeYra" id="sidebar-promo-img" loading="lazy" />
+    </a>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-status">
+        <div class="sidebar-status-texts" style="width:100%">
+          <div id="sidebar-status-banner" class="sidebar-status-banner hidden"></div>
+          <div id="sidebar-status-pills" class="sidebar-status-pills"></div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <header class="main-header">
+    <div class="header-left">
+      <button class="header-icon-btn sidebar-toggle-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" />
+          <line x1="9" y1="3" x2="9" y2="21" />
+        </svg>
+      </button>
+      <button class="header-icon-btn mobile-menu-btn">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6" />
+          <line x1="4" y1="12" x2="20" y2="12" />
+          <line x1="4" y1="18" x2="20" y2="18" />
+        </svg>
+      </button>
+      <div class="header-search">
+        <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input type="text" class="search-input" id="header-search-input"
+          data-i18n-attr="placeholder:header.search.market"
+          placeholder="{{ i18n_dict.get('header.search.market','Search markets or features...') }}">
+        <div class="hsr-dropdown">
+          <template>
+            <div class="hsr-status"></div>
+          </template>
+          <template>
+            <div class="hsr-status"></div>
+          </template>
+          <template>
+            <div class="hsr-status"></div>
+          </template>
+          <template>
+            <a class="hsr-item">
+              <img class="hsr-img" loading="lazy" onerror="this.style.visibility='hidden'">
+              <div class="hsr-meta">
+                <div class="hsr-title"></div>
+                <div class="hsr-stats">
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </a>
+          </template>
+        </div>
+      </div>
+      <div id="vp-header-marquee-wrap" class="header-marquee">
+        <div id="vp-marquee-empty" class="hmq-empty" style="display:none"></div>
+        <div id="vp-header-marquee"></div>
+        <template>
+          <div class="hmq-empty"></div>
+        </template>
+        <template>
+          <div class="header-marquee-track">
+            <template>
+              <span class="hmq-item">
+                <span class="hmq-badge"></span>
+                <span></span>
+                <b></b>
+                <span class="hmq-badge"></span>
+                <span></span>
+              </span>
+            </template>
+          </div>
+        </template>
+      </div>
+      <div class="marquee-hadouken-container">
+        <img src="/static/Veyragirlfight.png" alt="Veyragirlfight" class="marquee-hadouken" loading="lazy"
+          decoding="async">
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="vp-lang-switcher" class="lang-switcher" style="position:relative">
+        <button id="vp-lang-flag-btn" class="header-circle-btn lang-flag-btn" data-i18n-attr="title:header.lang.tooltip"
+          title="{{ i18n_dict.get('header.lang.tooltip','Switch language') }}">
+          {# T597 — 服务端首屏国旗按当前 lang 取对应旗帜，避免非中英 lang 下默认显示中国国旗 #}
+          {% set _flag_map =
+          {'zh-CN':'🇨🇳','en':'🇺🇸','fr':'🇫🇷','ja':'🇯🇵','ko':'🇰🇷','th':'🇹🇭','vi':'🇻🇳','es':'🇪🇸','pt':'🇵🇹'}
+          %}
+          <span class="flag-emoji">{{ _flag_map.get(lang, '🇨🇳' if (lang or '').startswith('zh') else '🌐') }}</span>
+        </button>
+        <div id="vp-lang-dropdown" class="v-dropdown-menu"
+          style="min-width:160px;background:var(--bg-card-solid);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.35);right:0;left:auto">
+          <template>
+            <template>
+              <button class="v-dropdown-item">
+                <span style="display:inline-block;width:24px;font-size:1.05rem"></span>
+                <span></span>
+              </button>
+            </template>
+          </template>
+        </div>
+      </div>
+
+      <a href="/v2/deposit" class="header-circle-btn" data-i18n-attr="title:header.deposit.title"
+        title="{{ i18n_dict.get('header.deposit.title','Deposit Funds') }}"
+        style="display:inline-flex;align-items:center;justify-content:center;color:var(--text-primary);text-decoration:none">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+          class="lucide lucide-bitcoin">
+          <path
+            d="M11.767 19.089c4.924.868 6.14-6.025 1.216-6.894m-1.216 6.894L5.86 18.047m5.908 1.042-.347 1.97m1.563-8.864c4.924.869 6.14-6.025 1.215-6.893m-1.215 6.893-3.94-.694m5.155-6.2L8.29 4.26m5.908 1.042.348-1.97M7.48 20.364l3.126-17.727" />
+        </svg>
+      </a>
+
+      <div id="vp-notif-wrap" class="notif-wrap">
+        <button id="vp-notif-bell-btn" class="header-circle-btn" data-i18n-attr="title:header.notif.title"
+          title="{{ i18n_dict.get('header.notif.title','Trade Notifications') }}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd"
+              d="M5.91 5.41A7.46 7.46 0 0 1 12 2c3.16 0 5.85 1.97 6.93 4.75l1.55 7.06c.13.6.07 1.22-.18 1.78a3.1 3.1 0 0 1-1.2 1.33c-.53.33-1.14.5-1.77.5H6.67c-.63 0-1.24-.17-1.77-.5a3.1 3.1 0 0 1-1.2-1.33 3.08 3.08 0 0 1-.18-1.78l1.56-7.06a7.49 7.49 0 0 1 .82-1.34Zm4.64 14.33a1.5 1.5 0 0 0 2.9 0H10.55Z" />
+          </svg>
+          <span id="vp-notif-dot" class="notif-dot"></span>
+        </button>
+        <div id="vp-notif-dropdown" class="notif-dropdown">
+          <div class="notif-dd-head">
+            <span>
+              <span data-i18n="header.notif.title">{{ i18n_dict.get('header.notif.title','Trade Notifications')
+                }}</span>
+              <span id="vp-notif-unread-count"
+                style="color:#ef4444;font-size:.74rem;margin-left:6px;display:none"></span>
+            </span>
+            <button id="vp-notif-clear-btn" class="clear-btn" data-i18n="header.notif.markAll" style="display:none">{{
+              i18n_dict.get('header.notif.markAll','Mark all read') }}</button>
+          </div>
+          <div id="vp-notif-empty" class="notif-empty"></div>
+          <div id="vp-notif-list"></div>
+          <template>
+            <div class="notif-empty"></div>
+          </template>
+          <template>
+            <div class="notif-item">
+              <div class="notif-item-icon"></div>
+              <div class="notif-item-body">
+                <div class="notif-item-title"></div>
+                <div class="notif-item-meta">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div id="vp-user-dropdown" class="user-dropdown">
+        <button id="vp-user-avatar-btn" class="user-avatar-btn">
+          <span id="header-user-avatar"
+            style="width:32px;height:32px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--accent)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </span>
+          <span id="header-user" class="user-name">{{ i18n_dict.get('header.user.fallback','User') }}</span>
+          <svg class="user-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        <div id="vp-user-dropdown-menu" class="v-dropdown-menu"
+          style="min-width:260px;background:var(--bg-card-solid);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.35)">
+          <!-- T467: replace duplicated avatar+name with two-column balance / today P&L card -->
+          <div class="v-dropdown-user-header"
+            style="background:rgba(99,102,241,0.08);border-bottom:1px solid var(--border);display:flex;gap:12px;padding:12px 14px;align-items:stretch">
+            <div style="flex:1 1 0;min-width:0">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px" data-i18n="header.user.balance">{{
+                i18n_dict.get('header.user.balance','Balance') }}</div>
+              <div id="dropdown-user-balance"
+                style="font-size:1.05rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                --</div>
+            </div>
+            <div style="width:1px;background:var(--border);align-self:stretch"></div>
+            <div style="flex:1 1 0;min-width:0;text-align:right">
+              <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px" data-i18n="header.user.todayPnl">{{
+                i18n_dict.get('header.user.todayPnl','Today P&L') }}</div>
+              <div id="dropdown-user-today-pnl"
+                style="font-size:1.05rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                --</div>
+            </div>
+          </div>
+          <a href="/v2/user" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span data-i18n="header.user.profile">{{ i18n_dict.get('header.user.profile','Profile') }}</span>
+          </a>
+          <a href="/v2" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            <span data-i18n="header.user.dashboard">{{ i18n_dict.get('header.user.dashboard','Dashboard') }}</span>
+          </a>
+          <a href="/v2/deposit" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
+            <span data-i18n="header.user.deposit">{{ i18n_dict.get('header.user.deposit','Top Up') }}</span>
+          </a>
+          <a href="/v2/withdraw" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M3 21h18" />
+            </svg>
+            <span data-i18n="header.user.withdraw">{{ i18n_dict.get('header.user.withdraw','Withdraw') }}</span>
+          </a>
+          <a href="/v2/config" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span data-i18n="header.user.config">{{ i18n_dict.get('header.user.config','Account Center') }}</span>
+          </a>
+          <a href="/v2/refer" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 12 20 22 4 22 4 12" />
+              <rect x="2" y="7" width="20" height="5" />
+              <path d="M12 22V7" />
+              <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z" />
+              <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+            </svg>
+            <span data-i18n="header.user.refer">{{ i18n_dict.get('header.user.refer','Refer a Friend') }}</span>
+          </a>
+          <a href="/leaderboard" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 21h8" />
+              <path d="M12 17v4" />
+              <path d="M7 4h10" />
+              <path d="M17 4v4a5 5 0 0 1-10 0V4" />
+              <path d="M5 8h2" />
+              <path d="M17 8h2" />
+            </svg>
+            <span data-i18n="header.user.leaderboard">{{ i18n_dict.get('header.user.leaderboard','Leaderboard')
+              }}</span>
+          </a>
+          <!-- T609 — 在「推荐好友」之后增加「帮助中心」入口，链接到 /go 帮助手册。 -->
+          <a href="/v2/go" class="v-dropdown-item">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span data-i18n="header.user.help" data-i18n-fallback="Help Center">{{
+              i18n_dict.get('header.user.help','Help Center') }}</span>
+          </a>
+          <div style="height:1px;background:var(--border);margin:6px 0"></div>
+          <button class="v-dropdown-item danger" onclick="doLogout()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            <span data-i18n="header.user.logout">{{ i18n_dict.get('header.user.logout','Sign Out') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <div id="topbar-refresh-host" class="hidden" hx-get="/api/user/topbar-fragment" hx-trigger="refresh-topbar from:body"
+    hx-swap="none"></div>
+
+  {% if needs_onboarding %}
+  <div id="onboarding-host" hx-get="/api/user/onboard-modal" hx-trigger="load delay:300ms" hx-swap="innerHTML"></div>
+  {% endif %}
+
+  <script src="/v2/static/js/app.js?v={{ asset_version | default('0') }}&cb=20260503onboard3"></script>
+
+  <script>
+    function headerSearch() {
+      return {
+        query: '', results: [], loading: false, open: false, _seq: 0,
+        fmt(v) {
+          v = Number(v || 0);
+          if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+          if (v >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+          return v.toFixed(0);
+        },
+        async run() {
+          const q = (this.query || '').trim();
+          if (q.length < 2) {
+            this.results = [];
+            this.loading = false;
+            this.open = true;
+            return;
+          }
+          const seq = ++this._seq;
+          this.loading = true;
+          this.open = true;
+          try {
+            const url = '/api/pm/search?q=' + encodeURIComponent(q) + '&page=1&limit=8&status=active';
+            const r = await fetch(url, { credentials: 'same-origin' });
+            const d = await r.json();
+            if (seq !== this._seq) return;
+            const items = Array.isArray(d.events) ? d.events : [];
+            this.results = items.slice(0, 6);
+          } catch (e) {
+            if (seq === this._seq) this.results = [];
+          } finally {
+            if (seq === this._seq) this.loading = false;
+          }
+        },
+        gotoResultsPage() {
+          const q = (this.query || '').trim();
+          if (!q) return;
+          window.location.href = '/search?q=' + encodeURIComponent(q);
+        },
+      };
+    }
+  </script>
+
+  <script>
+    (async function loadUserInfo() {
+      var __vp_authMenuHTML = (function () {
+        try {
+          var m = document.getElementById('vp-user-dropdown-menu');
+          return m ? m.innerHTML : null;
+        } catch (_) { return null; }
+      })();
+      function maskAddr(addr) {
+        if (!addr || addr === '__admin__') return '';
+        return addr.slice(0, 6) + '...' + addr.slice(-4);
+      }
+      function setAvatar(avatarUrl) {
+        if (!avatarUrl) return;
+        var src = avatarUrl.startsWith('<svg') ? 'data:image/svg+xml,' + encodeURIComponent(avatarUrl) : avatarUrl;
+        var imgTag = '<img src="' + src + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="avatar">';
+        var hw = document.getElementById('header-user-avatar');
+        if (hw) hw.innerHTML = imgTag;
+        var dw = document.getElementById('dropdown-avatar-wrap');
+        if (dw) dw.innerHTML = imgTag;
+      }
+      function paint(data) {
+        if (!data || data.authenticated === false) {
+          try {
+            var i18n0 = window.veyraI18n;
+            var T0 = function (k, fb) { return i18n0 ? i18n0.t(k, fb) : fb; };
+            var el0 = document.getElementById('header-user');
+            if (el0) el0.textContent = T0('header.user.signin', 'Sign in');
+            try {
+              var btn0 = document.getElementById('vp-user-avatar-btn');
+              if (btn0 && btn0.dataset && btn0.dataset.guestBound && window.__veyraGuestClickHandler) {
+                btn0.removeEventListener('click', window.__veyraGuestClickHandler, true);
+                delete btn0.dataset.guestBound;
+              }
+            } catch (_) { }
+            var menu = document.getElementById('vp-user-dropdown-menu');
+            if (menu && !menu.dataset.guestRendered) {
+              var nxt = encodeURIComponent(window.location.pathname + window.location.search);
+              menu.dataset.guestRendered = '1';
+              menu.innerHTML =
+                '<div class="v-dropdown-user-header" style="background:rgba(99,102,241,0.08);border-bottom:1px solid var(--border);padding:14px;text-align:center">'
+                + '<div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:4px">'
+                + T0('landing.guest.welcome', 'Welcome to Veyra.Trade')
+                + '</div>'
+                + '<div style="font-size:11.5px;color:var(--text-muted);line-height:1.4">'
+                + T0('landing.guest.subline', 'Sign in to unlock live signals, copytrading and value markets.')
+                + '</div>'
+                + '</div>'
+                + '<a href="/Index?next=' + nxt + '" class="v-dropdown-item" style="font-weight:600">'
+                + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>'
+                + '</svg>'
+                + '<span>' + T0('landing.guest.signin', 'Sign In') + '</span>'
+                + '</a>'
+                + '<a href="/Index?next=' + nxt + '&mode=signup" class="v-dropdown-item">'
+                + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                + '<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/>'
+                + '</svg>'
+                + '<span>' + T0('landing.guest.signup', 'Create Account') + '</span>'
+                + '</a>'
+                + '<div style="height:1px;background:var(--border);margin:6px 0"></div>'
+                + '<a href="/v2/go" class="v-dropdown-item">'
+                + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+                + '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'
+                + '</svg>'
+                + '<span>' + T0('landing.guest.help', 'Help Center') + '</span>'
+                + '</a>';
+            }
+          } catch (_) { }
+          return;
+        }
+        var i18n = window.veyraI18n;
+        var T = function (k, fb) { return i18n ? i18n.t(k, fb) : fb; };
+        var isAdmin = data.is_admin || data.role === 'admin' || data.role === 'super_admin';
+        var fallbackName = isAdmin ? T('header.user.admin', 'Admin') : (maskAddr(data.wallet_address) || T('header.user.user', 'User'));
+        var displayName = data.display_name || fallbackName;
+        var el = document.getElementById('header-user');
+        if (el) el.textContent = displayName;
+        try {
+          var btn1 = document.getElementById('vp-user-avatar-btn');
+          if (btn1 && btn1.dataset.guestBound && window.__veyraGuestClickHandler) {
+            btn1.removeEventListener('click', window.__veyraGuestClickHandler, true);
+            delete btn1.dataset.guestBound;
+          }
+          var menuAuth = document.getElementById('vp-user-dropdown-menu');
+          if (menuAuth && menuAuth.dataset && menuAuth.dataset.guestRendered) {
+            if (__vp_authMenuHTML != null) {
+              menuAuth.innerHTML = __vp_authMenuHTML;
+            }
+            delete menuAuth.dataset.guestRendered;
+          }
+        } catch (_) { }
+        if (data.avatar_url) setAvatar(data.avatar_url);
+      }
+      if (window.__VEYRA_ME_DATA__) paint(window.__VEYRA_ME_DATA__);
+      try {
+        window.addEventListener('veyra:me-updated', function (ev) { paint(ev && ev.detail); });
+      } catch (_) { }
+      try {
+        var data = await (window.veyraGetMe ? window.veyraGetMe() : Promise.resolve(null));
+        paint(data);
+        if (!data || data.authenticated === false) {
+          for (var i = 0; i < 3; i += 1) {
+            await new Promise(function (resolve) { setTimeout(resolve, i === 0 ? 400 : 900); });
+            var retry = await (window.veyraGetMe ? window.veyraGetMe({ force: true }) : Promise.resolve(null));
+            if (retry && retry.authenticated !== false) {
+              paint(retry);
+              break;
+            }
+          }
+        }
+      } catch (_) { }
+
+      try {
+        var reconcileAuth = async function () {
+          var btn = document.getElementById('vp-user-avatar-btn');
+          if (!btn || !btn.dataset.guestBound) return;
+          var latest = await (window.veyraGetMe ? window.veyraGetMe({ force: true }) : Promise.resolve(null));
+          if (latest && latest.authenticated !== false) paint(latest);
+        };
+        window.addEventListener('focus', function () { reconcileAuth(); });
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) reconcileAuth();
+        });
+      } catch (_) { }
+    })();
+
+    (function hydrateDropdownBalance() {
+      var fmtUsd = function (v) {
+        var n = Number(v);
+        if (!isFinite(n)) return '--';
+        var sign = n < 0 ? '-' : '';
+        var abs = Math.abs(n);
+        var fixed = abs >= 100 ? abs.toFixed(0) : abs.toFixed(2);
+        return sign + '$' + fixed;
+      };
+      var fmtPnl = function (v) {
+        var n = Number(v);
+        if (!isFinite(n)) return '--';
+        var sign = n > 0 ? '+' : (n < 0 ? '-' : '');
+        var abs = Math.abs(n);
+        var fixed = abs >= 100 ? abs.toFixed(0) : abs.toFixed(2);
+        return sign + '$' + fixed;
+      };
+      var run = async function () {
+        try {
+          var __me = await (window.veyraGetMe ? window.veyraGetMe() : Promise.resolve(null));
+          if (!__me || !__me.authenticated) return;
+        } catch (_) { return; }
+        var balEl = document.getElementById('dropdown-user-balance');
+        var pnlEl = document.getElementById('dropdown-user-today-pnl');
+        if (!balEl && !pnlEl) return;
+        if (balEl) {
+          try {
+            var br = await fetch('/api/pm/deposit-info', { credentials: 'include', cache: 'no-store' });
+            if (br.ok) {
+              var bd = await br.json();
+              if (bd && bd.status !== 'unbound') {
+                var bal = (bd && (bd.tradable_balance != null
+                  ? bd.tradable_balance
+                  : (bd.pusd_balance != null ? bd.pusd_balance : bd.usdc_e_balance)));
+                balEl.textContent = fmtUsd(bal);
+              }
+            }
+          } catch (_) { /* keep -- */ }
+        }
+        if (pnlEl) {
+          try {
+            var pr = await fetch('/api/user/pm/metrics', { credentials: 'include', cache: 'no-store' });
+            if (pr.ok) {
+              var pd = await pr.json();
+              var v = pd && pd.today_pnl;
+              pnlEl.textContent = fmtPnl(v);
+              if (Number(v) > 0) pnlEl.style.color = '#10b981';
+              else if (Number(v) < 0) pnlEl.style.color = '#ef4444';
+            }
+          } catch (_) { /* keep -- */ }
+        }
+      };
+      var fired = false;
+      var trigger = function () { if (fired) return; fired = true; run(); };
+      var btn = document.getElementById('vp-user-avatar-btn');
+      if (btn) btn.addEventListener('mouseenter', trigger, { once: true });
+      if (btn) btn.addEventListener('click', trigger, { once: true });
+      if (window.veyraDeferNonCritical) window.veyraDeferNonCritical(trigger);
+      else setTimeout(trigger, 1500);
+    })();
+
+    (function hydrateMenu() {
+      var MENU_KEY = 'veyra_menu_cache_v1';
+      var MENU_TTL_MS = 30000; // 30s
+      function readMenu() {
+        try {
+          var raw = localStorage.getItem(MENU_KEY);
+          if (!raw) return null;
+          var p = JSON.parse(raw);
+          if (!p || typeof p.ts !== 'number') return null;
+          if (Date.now() - p.ts > MENU_TTL_MS) return null;
+          return p.items || null;
+        } catch (_) { return null; }
+      }
+      function writeMenu(items) {
+        try { localStorage.setItem(MENU_KEY, JSON.stringify({ ts: Date.now(), items: items })); } catch (_) { }
+      }
+      function paintMenu(items) {
+        var nav = document.getElementById('sidebar-nav');
+        if (!nav || !items || !items.length) return;
+        function svg(name) {
+          var n = String(name || 'circle').trim() || 'circle';
+          return '<i data-lucide="' + esc(n) + '" class="nav-icon"></i>';
+        }
+        function esc(s) { return String(s || '').replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+        var I18N_PATH_KEYS = { '/v2': 'nav.dashboard', '/v2/': 'nav.dashboard', '/discover': 'nav.discover', '/WeatherMap': 'nav.weatherMap', '/WeatherEventMap': 'nav.weatherMap', '/weather': 'nav.weatherMap', '/Copytrader': 'nav.copytraders', '/copytrader': 'nav.copytraders', '/Copytraders': 'nav.copytraders', '/copytraders': 'nav.copytraders', '/v2/trades': 'nav.trades', '/trades': 'nav.trades', '/sportslive': 'nav.sportsLive', '/v2/sportslive': 'nav.sportsLive', '/valuelab': 'nav.valueLab', '/v2/valuelab': 'nav.valueLab' };
+        function _curLang() {
+          try {
+            var l = (window.veyraI18n && window.veyraI18n.lang) || localStorage.getItem('veyra_lang') || 'zh-CN';
+            var s = String(l || '').toLowerCase();
+            if (s.indexOf('zh') === 0) return 'zh-CN';
+            return 'en';
+          } catch (_) { return 'en'; }
+        }
+        var html = '';
+        var lastSection = '';
+        items.forEach(function (it) {
+          if (it.section_label && it.section_label !== lastSection) {
+            html += '<div class="nav-section-label" style="margin-top:8px" data-i18n="nav.section.management">' + esc(it.section_label) + '</div>';
+            lastSection = it.section_label;
+          }
+          var page = (it.path || '').replace(/^\//, '').replace(/[\/?].*/, '') || 'home';
+          var lang = _curLang();
+          var i18nKey = (it.i18n_key && String(it.i18n_key).trim())
+            || I18N_PATH_KEYS[it.path] || '';
+          var fallbackEn = String(it.label_en || '').trim();
+          var fallbackZh = String(it.label_zh || '').trim();
+          var rawLabel = (lang === 'en' ? fallbackEn : (fallbackZh || fallbackEn))
+            || it.label || '';
+          var attrs = '';
+          if (i18nKey) {
+            attrs = ' data-i18n="' + i18nKey + '"';
+            if (fallbackEn) attrs += ' data-i18n-fallback="' + esc(fallbackEn) + '"';
+          }
+          var hrefPath = String(it.path || '');
+          if (hrefPath === '/admin' || hrefPath === '/admin/' || hrefPath === '/v2/admin' || hrefPath === '/v2/admin/') {
+            return;
+          }
+          html += '<a href="' + esc(hrefPath) + '" class="nav-item" data-page="' + esc(page) + '">' + svg(it.icon) + '<span class="nav-label"' + attrs + '>' + esc(rawLabel) + '</span></a>';
+        });
+        nav.innerHTML = html;
+        if (window.veyraI18nApply) {
+          window.veyraI18nApply(nav);
+        } else {
+          setTimeout(function () { if (window.veyraI18nApply) window.veyraI18nApply(nav); }, 80);
+          setTimeout(function () { if (window.veyraI18nApply) window.veyraI18nApply(nav); }, 500);
+        }
+        (function _renderLucideIcons() {
+          if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            try { window.lucide.createIcons(); } catch (_) { }
+            return;
+          }
+          var tries = 0;
+          var iv = setInterval(function () {
+            if (window.lucide && typeof window.lucide.createIcons === 'function') {
+              clearInterval(iv);
+              try { window.lucide.createIcons(); } catch (_) { }
+            } else if (++tries > 40) {
+              clearInterval(iv);
+            }
+          }, 80);
+        })();
+      }
+      var cached = readMenu(); // still read for TTL check / language-change repaints
+      var run = async function () {
+        try {
+          var __me2 = await (window.veyraGetMe ? window.veyraGetMe() : Promise.resolve(null));
+          if (!__me2 || !__me2.authenticated) return;
+        } catch (_) { return; }
+        try {
+          var r = await fetch('/api/menu/list', { credentials: 'include' });
+          if (!r.ok) return;
+          var d = await r.json().catch(function () { return {}; });
+          var items = (d && Array.isArray(d.items)) ? d.items : [];
+          if (!items.length) return;
+          writeMenu(items);
+          paintMenu(items);
+          document.addEventListener('i18n:changed', function () {
+            var latest = readMenu() || items;
+            paintMenu(latest);
+          });
+          window.addEventListener('veyra:menu-changed', async function () {
+            try { localStorage.removeItem('veyra_menu_cache_v1'); } catch (_) { }
+            try {
+              var rr = await fetch('/api/menu/list?_=' + Date.now(), { credentials: 'include', cache: 'no-store' });
+              if (!rr.ok) return;
+              var dd = await rr.json().catch(function () { return {}; });
+              var nitems = (dd && Array.isArray(dd.items)) ? dd.items : [];
+              if (!nitems.length) return;
+              writeMenu(nitems);
+              paintMenu(nitems);
+            } catch (_) { }
+            try { if (window.veyraI18nReload) window.veyraI18nReload(); } catch (_) { }
+          });
+          ['veyra:ecosystem-changed', 'veyra:frontend-banner-changed', 'veyra:homepage-changed', 'veyra:builders-changed', 'veyra:help-changed'].forEach(function (ev) {
+            window.addEventListener(ev, function () {
+              try { if (window.veyraI18nReload) window.veyraI18nReload(); } catch (_) { }
+            });
+          });
+        } catch (_) { }
+      };
+      if (window.veyraDeferNonCritical) window.veyraDeferNonCritical(run);
+      else setTimeout(run, 0);
+    })();
+
+    async function doLogout() {
+      try { await fetch('/api/user/logout', { method: 'POST', credentials: 'include', cache: 'no-store' }); } catch (_) { }
+      try { sessionStorage.clear(); } catch (_) { }
+      try { localStorage.removeItem('veyra_me_cache_v1'); } catch (_) { }
+      try { localStorage.removeItem('veyra_me_cache_local_v1'); } catch (_) { }
+      try { localStorage.removeItem('veyra_menu_cache_v1'); } catch (_) { }
+      try { localStorage.removeItem('privy:embedded_wallet_info'); } catch (_) { }
+      window.location.replace('/Index?logged_out=1');
+    }
+
+    function appHeader() {
+      return {
+        sidebarOpen: true, sidebarMobile: false,
+        notifOpen: false,
+        requiresPm: false,
+        _pmBooted: false,
+        marqueeItems: [], marqueeLoaded: false,
+        notifications: [], notifLoaded: false,
+        unreadCount: 0,
+        lastReadTs: 0,
+        _marqueeTimer: null, _notifTimer: null, _pmProbeTimer: null,
+        get marqueeRender() { return this.marqueeItems.concat(this.marqueeItems); },
+        marqueeAge(ts) { return Math.max(0, Math.floor(Date.now() / 1000 - Number(ts || 0))); },
+        marqueeRel(ts) {
+          var a = this.marqueeAge(ts);
+          var T = (k, fb) => (this.$store && this.$store.i18n) ? this.$store.i18n.t(k, fb) : fb;
+          if (a < 60) return a + ' ' + T('time.secAgo', 's ago');
+          if (a < 3600) return Math.floor(a / 60) + ' ' + T('time.minAgo', 'm ago');
+          if (a < 86400) return Math.floor(a / 3600) + ' ' + T('time.hourAgo', 'h ago');
+          return Math.floor(a / 86400) + ' ' + T('time.dayAgo', 'd ago');
+        },
+        _readRequiresPmFlag() {
+          return !!(document.body && document.body.getAttribute('data-requires-pm') === '1');
+        },
+        _bootPmPolling() {
+          if (this._pmBooted) return;
+          this._pmBooted = true;
+          var self = this;
+          var boot = function () {
+            self.fetchMarquee();
+            self.fetchNotifications();
+            self._marqueeTimer = setInterval(function () { self.fetchMarquee(); }, 10000);
+            self._notifTimer = setInterval(function () { self.fetchNotifications(); }, 15000);
+          };
+          if (window.veyraDeferNonCritical) window.veyraDeferNonCritical(boot);
+          else boot();
+        },
+        async initHeader() {
+          try { this.lastReadTs = parseInt(localStorage.getItem('vp_notif_last_read') || '0') || 0; } catch (_) { }
+          try {
+            var cached = localStorage.getItem('vp_marquee_cache');
+            if (cached) {
+              var arr = JSON.parse(cached);
+              if (Array.isArray(arr) && arr.length) this.marqueeItems = arr;
+            }
+          } catch (_) { }
+
+          this.requiresPm = this._readRequiresPmFlag();
+          if (this.requiresPm) {
+            this.marqueeLoaded = false;
+            this.notifLoaded = false;
+            this._bootPmPolling();
+            return;
+          }
+
+          this.marqueeLoaded = true;
+          this.notifLoaded = true;
+
+          var self = this;
+          if (!this._pmProbeTimer) {
+            this._pmProbeTimer = setInterval(function () {
+              if (self._pmBooted) {
+                clearInterval(self._pmProbeTimer);
+                self._pmProbeTimer = null;
+                return;
+              }
+              if (self._readRequiresPmFlag()) {
+                self.requiresPm = true;
+                self.marqueeLoaded = false;
+                self.notifLoaded = false;
+                self._bootPmPolling();
+                clearInterval(self._pmProbeTimer);
+                self._pmProbeTimer = null;
+              }
+            }, 400);
+          }
+        },
+        async fetchMarquee() {
+          if (!this.requiresPm) { this.marqueeLoaded = true; return; }
+          try {
+            var r = await fetch('/api/pm/marquee?limit=20', { credentials: 'include', cache: 'no-store' });
+            if (!r.ok) { this.marqueeLoaded = true; return; }
+            var d = await r.json().catch(() => ({}));
+            if (Array.isArray(d.trades) && d.trades.length) {
+              this.marqueeItems = d.trades;
+              try { localStorage.setItem('vp_marquee_cache', JSON.stringify(d.trades.slice(0, 20))); } catch (_) { }
+            }
+            this.marqueeLoaded = true;
+          } catch (_) { this.marqueeLoaded = true; }
+        },
+        async fetchNotifications() {
+          if (!this.requiresPm) { this.notifLoaded = true; return; }
+          try {
+            var r = await fetch('/api/pm/notifications?limit=20', { credentials: 'include', cache: 'no-store' });
+            if (!r.ok) { this.notifLoaded = true; return; }
+            var d = await r.json().catch(() => ({}));
+            if (Array.isArray(d.notifications)) {
+              this.notifications = d.notifications;
+              this.recomputeUnread();
+            }
+            this.notifLoaded = true;
+          } catch (_) { this.notifLoaded = true; }
+        },
+        isUnread(n) { return Number(n.timestamp || 0) > Number(this.lastReadTs || 0); },
+        recomputeUnread() {
+          this.unreadCount = this.notifications.filter(n => this.isUnread(n)).length;
+        },
+        toggleNotif() {
+          this.notifOpen = !this.notifOpen;
+          if (this.notifOpen) { this.fetchNotifications(); }
+        },
+        markAllRead() {
+          if (this.notifications.length === 0) { this.unreadCount = 0; return; }
+          var maxTs = Math.max.apply(null, this.notifications.map(n => Number(n.timestamp || 0)));
+          this.lastReadTs = maxTs;
+          try { localStorage.setItem('vp_notif_last_read', String(maxTs)); } catch (_) { }
+          this.unreadCount = 0;
+        },
+        openNotif(n) { return; }
+      };
+    }
+  </script>
+  <script>
+    (function prefetchPublicDatasets() {
+      if (!(document.body && document.body.getAttribute('data-requires-pm') === '1')) {
+        return;
+      }
+      var path = (window.location && window.location.pathname) ? window.location.pathname : '';
+
+      function buildPrefetchUrls() {
+        if (path === '/discover' || path === '/v2/discover') {
+          return [
+            '/api/pm/categories',
+            '/api/pm/events?limit=18&tab=all',
+            '/api/pm/events?limit=18&tab=hot',
+          ];
+        }
+        if (path === '/Copytrader' || path === '/v2/Copytrader') {
+          return [
+            '/api/v2/copytrader/categories',
+            '/api/v2/copytrader/health',
+          ];
+        }
+        if (path.indexOf('/event/') === 0 || path.indexOf('/v2/event/') === 0) {
+          return [
+            '/api/pm/categories',
+          ];
+        }
+        return [];
+      }
+
+      function keyFor(url) {
+        return 'v2_prefetch_payload:' + url;
+      }
+
+      window.__vpPrefetch = window.__vpPrefetch || {};
+
+      function fetchAndCacheJson(url) {
+        var p = fetch(url, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          keepalive: true,
+          headers: { 'X-Prefetch': '1' },
+        }).then(function (r) {
+          if (!r.ok) return null;
+          return r.json().catch(function () { return null; });
+        }).then(function (data) {
+          if (!data) return null;
+          try {
+            sessionStorage.setItem(keyFor(url), JSON.stringify({ ts: Date.now(), data: data }));
+          } catch (_) { }
+          return data;
+        }).catch(function () { return null; });
+        window.__vpPrefetch[url] = p;
+        return p;
+      }
+
+      function run() {
+        try {
+          var urls = buildPrefetchUrls();
+          if (!urls.length) return;
+
+          urls.forEach(function (u) {
+            fetchAndCacheJson(u);
+          });
+        } catch (_) { }
+      }
+
+      run();
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+
+  <!-- T494: EU-style cookie consent toast (TailAdmin pattern). Shown once until user picks an action. -->
+  <div id="vpCookieToast" style="display:none;position:fixed;left:50%;bottom:4px;transform:translateX(-50%);z-index:100000;
+           max-width:760px;width:calc(100% - 32px);background:#101524;color:#e5e9f3;
+           border:1px solid #1f2740;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);
+           padding:18px 20px;display:none;font-family:inherit;" role="dialog" aria-live="polite"
+    aria-label="Cookie consent">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <div
+        style="flex:0 0 36px;height:36px;border-radius:10px;background:#1c2742;display:flex;align-items:center;justify-content:center;color:#7aa6ff;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="9" cy="10" r="1.2" fill="currentColor" />
+          <circle cx="15" cy="14" r="1.2" fill="currentColor" />
+          <circle cx="9.5" cy="15.5" r="1" fill="currentColor" />
+          <circle cx="14.5" cy="9.5" r="1" fill="currentColor" />
+        </svg>
+      </div>
+      <div style="flex:1 1 320px;min-width:240px;">
+        <div style="font-weight:600;font-size:.95rem;margin-bottom:4px;" data-i18n="cookie.title"
+          data-i18n-fallback="Cookie Settings">Cookie Settings</div>
+        <div style="font-size:.84rem;color:#9aa3b8;line-height:1.45;" data-i18n="cookie.text"
+          data-i18n-fallback="We use cookies to enhance your experience. By continuing you agree to our cookie policy.">
+          We use cookies to enhance your experience. By continuing you agree to our cookie policy.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button id="vpCookieDeny" type="button"
+          style="padding:8px 14px;border-radius:8px;border:1px solid #2b3756;background:transparent;color:#cbd2e3;font-size:.82rem;cursor:pointer;"
+          data-i18n="cookie.deny" data-i18n-fallback="Deny All">Deny All</button>
+        <button id="vpCookieOver18" type="button"
+          style="padding:8px 14px;border-radius:8px;border:1px solid #b91c1c;background:#dc2626;color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;"
+          data-i18n="cookie.over18" data-i18n-fallback="I am over 18">I am over 18</button>
+        <button id="vpCookieAccept" type="button"
+          style="padding:8px 14px;border-radius:8px;border:1px solid #2563eb;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;"
+          data-i18n="cookie.accept" data-i18n-fallback="Accept All">Accept All</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function vpCookieConsent() {
+      var KEY = 'veyra_cookie_consent_v1';
+      try {
+        if (localStorage.getItem(KEY)) return;
+      } catch (_) { return; }
+      function show() {
+        var el = document.getElementById('vpCookieToast');
+        if (!el) return;
+        el.style.display = 'block';
+        function close(action) {
+          try { localStorage.setItem(KEY, action + ':' + Date.now()); } catch (_) { }
+          el.style.display = 'none';
+        }
+        var deny = document.getElementById('vpCookieDeny');
+        var over18 = document.getElementById('vpCookieOver18');
+        var accept = document.getElementById('vpCookieAccept');
+        if (deny) deny.addEventListener('click', function () {
+          try { localStorage.setItem(KEY, 'deny:' + Date.now()); } catch (_) { }
+          window.location.href = 'https://www.google.com/';
+        });
+        if (over18) over18.addEventListener('click', function () { close('over18'); });
+        if (accept) accept.addEventListener('click', function () { close('accept'); });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', show);
+      } else {
+        show();
+      }
+    })();
+  </script>
+  <script>
+    (function () {
+      var link = document.getElementById('sidebar-promo-link');
+      var img = document.getElementById('sidebar-promo-img');
+      if (!link || !img) return;
+      fetch('/api/public/sidebar-promo', { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d) return;
+          if (d.link_url) link.href = d.link_url;
+          if (d.image_url) img.src = d.image_url;
+        })
+        .catch(function () { });
+    })();
+  </script>
+  </body>
+
+</html>

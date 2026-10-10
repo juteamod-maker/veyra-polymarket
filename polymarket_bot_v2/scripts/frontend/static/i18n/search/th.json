@@ -1,0 +1,20 @@
+{
+  "search.title": "ค้นหา",
+  "search.subtitle": "ค้นหาเหตุการณ์ Polymarket ทั้งหมด: กีฬา การเมือง คริปโต อีสปอร์ต และอื่นๆ",
+  "search.input.placeholder": "ค้นหาทีม นักกีฬา ผู้สมัคร โทเคน เมือง…",
+  "search.button.go": "ค้นหา",
+  "search.tab.active": "กำลังดำเนิน",
+  "search.tab.resolved": "ตัดสินแล้ว",
+  "search.tab.all": "ทั้งหมด",
+  "search.loading": "กำลังค้นหา…",
+  "search.empty.no_query": "กรอกคำค้นหาเพื่อเริ่มต้น",
+  "search.empty.no_results": "ไม่พบผล ลองคำค้นอื่น",
+  "search.error": "ค้นหาล้มเหลว กรุณาลองอีกครั้ง",
+  "search.card.ends": "สิ้นสุด",
+  "search.card.vol": "ปริมาณ",
+  "search.card.markets": "ตลาด",
+  "search.summary.results": "{n} ผลลัพธ์",
+  "search.summary.page": "หน้า {page} จาก {total}",
+  "search.pagination.prev": "ก่อนหน้า",
+  "search.pagination.next": "ถัดไป"
+}

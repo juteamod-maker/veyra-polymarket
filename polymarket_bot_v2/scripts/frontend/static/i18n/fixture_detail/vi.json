@@ -1,0 +1,12 @@
+{
+  "fixture.title": "Chi tiết trận đấu",
+  "fixture.back": "Quay lại",
+  "fixture.fixtureName": "Trận đấu",
+  "fixture.startDate": "Ngày bắt đầu",
+  "fixture.empty": "Không có thị trường cho trận đấu này.",
+  "fixture.clv.title": "Giá trị CLV",
+  "fixture.clv.empty": "Không có dữ liệu CLV.",
+  "fixture.history.title": "Lịch sử",
+  "fixture.history.empty": "Không có lịch sử giao dịch.",
+  "fixture.settlement.title": "Thanh toán"
+}

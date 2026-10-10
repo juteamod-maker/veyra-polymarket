@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block body_attrs %} data-requires-pm="1" data-coin-drop-enabled="1"{% endblock %}
+{% block title %}V e Y r a — Preview{% endblock %}
+{% block breadcrumb %}Preview{% endblock %}
+
+{% block head %}
+{# T847 — perf: predeclare seaz module + warm Polymarket upstream sockets #}
+{% if seaz_entry_js %}
+<link rel="modulepreload" href="{{ seaz_entry_js }}">
+{% endif %}
+{% if seaz_entry_css %}
+<link rel="preload" as="style" href="{{ seaz_entry_css }}">
+{% endif %}
+<link rel="preconnect" href="https://gamma-api.polymarket.com" crossorigin>
+<link rel="preconnect" href="https://clob.polymarket.com" crossorigin>
+<link rel="dns-prefetch" href="https://gamma-api.polymarket.com">
+<link rel="dns-prefetch" href="https://clob.polymarket.com">
+<meta http-equiv="X-DNS-Prefetch-Control" content="on">
+{% endblock %}
+
+{% block content %}
+<style>
+  .main-content {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: calc(100vh - var(--header-height));
+    min-height: calc(100vh - var(--header-height));
+  }
+
+  .pv-seaz-shell {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+    background: #6fd3f4;
+  }
+
+  .pv-seaz-root {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    background: #6fd3f4;
+  }
+
+  .pv-seaz-error {
+    padding: 20px;
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 768px) {
+    .main-content {
+      height: calc(100vh - var(--header-height));
+      min-height: calc(100vh - var(--header-height));
+    }
+  }
+</style>
+
+<div class="pv-seaz-shell">
+  <div id="root" class="pv-seaz-root"></div>
+  {% if not seaz_entry_js %}
+  <div class="pv-seaz-error">SEAZ bundle is not available on this node yet.</div>
+  {% endif %}
+</div>
+{% if seaz_entry_css %}
+<link rel="stylesheet" href="{{ seaz_entry_css }}">
+{% endif %}
+{% if seaz_entry_js %}
+<script type="module" src="{{ seaz_entry_js }}"></script>
+{% endif %}
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('preview');
+  }
+
+  /* T919 (in-scene scale, NOT canvas/viewport scale).
+     Viewport / camera / canvas size / viewBox are NOT changed. The SEAZ bundle
+     (R3F) was hand-patched to expose its THREE.Scene instance as
+     `window.__seazScene` from the Scene constructor (single Scene per page).
+     Here we apply `scene.scale.setScalar(TARGET)` once after the scene is
+     ready. Equal scaling on the scene root shrinks ship + islands + water +
+     all colliders together, so raycaster picking, drag/click handlers,
+     keyboard ship movement and any future zoom continue to work in the same
+     world space. Mobile is skipped intentionally (small viewport already
+     fits, and on-screen d-pad expects full hit area). */
+  (function () {
+    var TARGET = 0.78;
+    var MAX_TRIES = 200;
+    var INTERVAL_MS = 50;
+
+    var isMobile = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+      || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      || window.innerWidth <= 768;
+    if (isMobile) return;
+
+    var applied = false;
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries += 1;
+      var scene = window.__seazScene;
+      if (scene && scene.scale && typeof scene.scale.setScalar === 'function') {
+        if (Math.abs(scene.scale.x - TARGET) > 1e-4) {
+          scene.scale.setScalar(TARGET);
+        }
+        if (!applied) {
+          applied = true;
+          // Keep checking for ~3s in case the bundle replaces the scene root,
+          // then stop.
+          setTimeout(function () { clearInterval(iv); }, 3000);
+        }
+      }
+      if (tries >= MAX_TRIES) clearInterval(iv);
+    }, INTERVAL_MS);
+  })();
+
+  /* T902 v3: Mobile ship d-pad.
+     SEAZ bundle listens on window for keydown/keyup. We dispatch directly to
+     window. Safe because this file does NOT register any keydown/keyup listener
+     of its own anywhere — so dispatched events cannot recurse.
+   */
+  (function () {
+    var root = document.getElementById('root');
+    if (!root) return;
+
+    var isMobile = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+      || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      || window.innerWidth <= 768;
+    if (!isMobile) return;
+
+    var KEY_MAP = {
+      up: { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+      down: { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+      left: { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
+      right: { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 }
+    };
+
+    function findCanvas() {
+      return root.querySelector('canvas');
+    }
+
+    function sendKey(direction, isDown) {
+      var spec = KEY_MAP[direction];
+      if (!spec) return;
+      try {
+        var evt = new KeyboardEvent(isDown ? 'keydown' : 'keyup', {
+          key: spec.key,
+          code: spec.code,
+          keyCode: spec.keyCode,
+          which: spec.keyCode,
+          bubbles: true,
+          cancelable: true
+        });
+        // SEAZ bundle attaches its keydown/keyup on window; deliver there.
+        window.dispatchEvent(evt);
+      } catch (_e) { /* ignore */ }
+    }
+
+    function makeBtn(label, dir) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('aria-label', 'arrow-' + dir);
+      b.style.cssText = [
+        'all:unset',
+        'display:flex',
+        'align-items:center',
+        'justify-content:center',
+        'width:58px',
+        'height:58px',
+        'border-radius:14px',
+        'background:rgba(8,15,32,0.78)',
+        'border:1px solid rgba(96,165,250,0.55)',
+        'color:#dbeafe',
+        'font-weight:800',
+        'font-size:22px',
+        'line-height:1',
+        'box-shadow:0 6px 20px rgba(2,6,23,0.55), inset 0 0 0 1px rgba(96,165,250,0.12)',
+        'backdrop-filter:blur(6px)',
+        '-webkit-backdrop-filter:blur(6px)',
+        'touch-action:none',
+        '-webkit-user-select:none',
+        'user-select:none',
+        'cursor:pointer',
+        'transition:transform .08s ease, background .12s ease'
+      ].join(';');
+
+      var pressed = false;
+      function press(e) {
+        if (e && e.cancelable) e.preventDefault();
+        if (pressed) return;
+        pressed = true;
+        b.style.background = 'rgba(96,165,250,0.55)';
+        b.style.color = '#ffffff';
+        b.style.transform = 'scale(0.94)';
+        sendKey(dir, true);
+        try { b.setPointerCapture && e && e.pointerId != null && b.setPointerCapture(e.pointerId); } catch (_e) { }
+      }
+      function release(e) {
+        if (e && e.cancelable) e.preventDefault();
+        if (!pressed) return;
+        pressed = false;
+        b.style.background = 'rgba(8,15,32,0.78)';
+        b.style.color = '#dbeafe';
+        b.style.transform = 'none';
+        sendKey(dir, false);
+      }
+
+      b.addEventListener('pointerdown', press, { passive: false });
+      b.addEventListener('pointerup', release, { passive: false });
+      b.addEventListener('pointercancel', release, { passive: false });
+      b.addEventListener('lostpointercapture', release, { passive: false });
+      return b;
+    }
+
+    function buildPad() {
+      var pad = document.createElement('div');
+      pad.id = 'veyra-mobile-ship-controls';
+      pad.style.cssText = [
+        'position:fixed',
+        'left:max(14px, env(safe-area-inset-left))',
+        'bottom:max(22px, env(safe-area-inset-bottom))',
+        'z-index:120',
+        'display:grid',
+        'grid-template-columns:repeat(3, 58px)',
+        'grid-template-rows:repeat(3, 58px)',
+        'gap:6px',
+        'pointer-events:none'
+      ].join(';');
+
+      var spacer = function () {
+        var s = document.createElement('div');
+        s.style.pointerEvents = 'none';
+        return s;
+      };
+      var btnUp = makeBtn('▲', 'up');
+      var btnDown = makeBtn('▼', 'down');
+      var btnLeft = makeBtn('◀', 'left');
+      var btnRight = makeBtn('▶', 'right');
+      [btnUp, btnDown, btnLeft, btnRight].forEach(function (b) { b.style.pointerEvents = 'auto'; });
+
+      pad.appendChild(spacer());
+      pad.appendChild(btnUp);
+      pad.appendChild(spacer());
+      pad.appendChild(btnLeft);
+      pad.appendChild(spacer());
+      pad.appendChild(btnRight);
+      pad.appendChild(spacer());
+      pad.appendChild(btnDown);
+      pad.appendChild(spacer());
+      return pad;
+    }
+
+    var pad = buildPad();
+    pad.style.display = 'none';
+    document.body.appendChild(pad);
+
+    var attempts = 0;
+    var iv = setInterval(function () {
+      attempts += 1;
+      if (findCanvas()) {
+        pad.style.display = 'grid';
+        clearInterval(iv);
+      } else if (attempts > 80) {
+        clearInterval(iv);
+      }
+    }, 150);
+  })();
+</script>
+{% endblock %}

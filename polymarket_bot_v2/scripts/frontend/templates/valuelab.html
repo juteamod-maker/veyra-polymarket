@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block body_attrs %} data-requires-pm="1"{% endblock %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('valuelab.title','Crypto & Economy Value Lab') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('valuelab.title','Crypto & Economy Value Lab') }}{% endblock %}
+
+{% block content %}
+<style>
+  .vl-wrap { display:flex; flex-direction:column; gap:14px; }
+  .vl-hero {
+    background:linear-gradient(135deg, rgba(245,158,11,.12), rgba(16,185,129,.08), rgba(59,130,246,.08));
+    border:1px solid var(--border);
+    border-radius:14px;
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .vl-hero-text { flex:1; min-width:0; padding: 10px; }
+  .vl-hero h1 { margin:0; font-size:1.28rem; color:var(--text-primary); }
+  .vl-hero p { margin:6px 0 0; color:var(--text-muted); font-size:.84rem; }
+  .vl-page-banners {
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    justify-content:flex-end;
+    margin-left:auto;
+  }
+  .vl-page-banner {
+    display:inline-flex;
+    padding:0;
+    margin:0;
+    background:transparent;
+    border:0;
+    border-radius:8px;
+    text-decoration:none;
+    transition:transform .15s ease, opacity .15s ease;
+  }
+  .vl-page-banner:hover { transform:translateY(-1px); opacity:.92; }
+  .vl-page-banner img { display:block; width:auto; height:auto; max-width:480px; }
+  .vl-toolbar {
+    display:grid;
+    grid-template-columns: 1fr auto auto;
+    gap:10px;
+    align-items:center;
+  }
+  .vl-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+  .vl-tab {
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-secondary);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:.78rem;
+    cursor:pointer;
+  }
+  .vl-tab.active { background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.45); color:#ffd8a6; }
+  .vl-search,
+  .vl-sort {
+    border:1px solid var(--border);
+    background:var(--bg-card);
+    color:var(--text-primary);
+    border-radius:10px;
+    padding:8px 10px;
+    font-size:.78rem;
+  }
+  .vl-health {
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:8px 10px;
+    color:var(--text-muted);
+    font-size:.75rem;
+    background:rgba(255,255,255,.01);
+  }
+  .vl-health b { color:var(--text-primary); }
+  .vl-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  @media (max-width: 1100px) { .vl-grid { grid-template-columns:repeat(2,1fr);} }
+  @media (max-width: 760px) {
+    .vl-hero { flex-direction:column; }
+    .vl-page-banners { margin-left:0; justify-content:flex-start; }
+    .vl-page-banner img { max-height:62px; max-width:100%; }
+    .vl-toolbar { grid-template-columns:1fr; }
+    .vl-grid { grid-template-columns:1fr; }
+  }
+  .vl-card {
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--bg-card);
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    min-height:156px;
+    transition:all .16s ease;
+    text-decoration:none;
+    color:inherit;
+  }
+  .vl-card:hover { transform:translateY(-1px); border-color:rgba(245,158,11,.45); box-shadow:0 6px 18px rgba(0,0,0,.22); }
+  .vl-card-head { display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  .vl-card h3 { margin:0; font-size:.92rem; line-height:1.35; color:var(--text-primary); }
+  .vl-card-sub { margin-top:3px; font-size:.72rem; color:var(--text-muted); line-height:1.35; }
+  .vl-rec { border-radius:999px; padding:2px 8px; font-size:.68rem; border:1px solid transparent; white-space:nowrap; }
+  .vl-rec-strong { background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.45); color:#ffd8a6; }
+  .vl-rec-watch { background:rgba(16,185,129,.14); border-color:rgba(16,185,129,.4); color:#9ef7d2; }
+  .vl-rec-observe { background:rgba(59,130,246,.14); border-color:rgba(59,130,246,.4); color:#bfdbfe; }
+  .vl-rec-avoid { background:rgba(239,68,68,.14); border-color:rgba(239,68,68,.4); color:#fecaca; }
+  .vl-metrics { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .vl-metrics span { display:block; color:var(--text-muted); font-size:.65rem; }
+  .vl-metrics b { display:block; color:var(--text-primary); margin-top:2px; font-size:.93rem; }
+  .vl-metrics .is-pos { color:#34d399; }
+  .vl-metrics .is-neg { color:#f87171; }
+  .vl-empty { border:1px dashed var(--border); border-radius:12px; padding:48px 14px; text-align:center; color:var(--text-muted); grid-column:1/-1; }
+  .vl-loading { border:1px dashed var(--border); border-radius:12px; padding:28px 12px; text-align:center; color:var(--text-muted); grid-column:1/-1; }
+  .vl-skeleton-card {
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--bg-card);
+    padding:12px;
+    min-height:156px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .vl-sk-line {
+    border-radius:8px;
+    background:linear-gradient(90deg, rgba(148,163,184,.12) 0%, rgba(148,163,184,.26) 50%, rgba(148,163,184,.12) 100%);
+    background-size:260% 100%;
+    animation:vlShimmer 1.25s ease-in-out infinite;
+  }
+  .vl-sk-head { height:15px; width:72%; }
+  .vl-sk-badge { height:18px; width:84px; }
+  .vl-sk-metric { height:12px; width:100%; }
+  .vl-sk-cta { height:12px; width:42%; align-self:flex-end; margin-top:auto; }
+  .vl-grid.loading { opacity:.92; }
+  .vl-grid.ready { animation:vlFadeIn .22s ease-out; }
+  .vl-scroll-sentinel { text-align:center; padding:12px 0 4px; grid-column:1/-1; }
+  .vl-loading-pill {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 14px;
+    border-radius:999px;
+    background:rgba(70,95,255,.12);
+    border:1px solid rgba(70,95,255,.38);
+    color:#d2dcff;
+    font-size:.78rem;
+    font-weight:600;
+  }
+  .vl-loading-dot {
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:#8ea3ff;
+    box-shadow:0 0 8px rgba(142,163,255,.6);
+    animation:vpDotPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes vpDotPulse { 0%,100% { opacity:.45; transform:scale(.9); } 50% { opacity:1; transform:scale(1.15); } }
+  @keyframes vlShimmer { 0% { background-position: 0% 0; } 100% { background-position: 100% 0; } }
+  @keyframes vlFadeIn { from { opacity:.15; transform:translateY(1px); } to { opacity:1; transform:none; } }
+</style>
+
+<div class="vl-wrap" id="vl-app">
+  <section class="vl-hero">
+    <div class="vl-hero-text">
+      <h1 data-i18n="valuelab.title">{{ i18n_dict.get('valuelab.title','Crypto & Economy Value Lab') }}</h1>
+      <p data-i18n="valuelab.subtitle">{{ i18n_dict.get('valuelab.subtitle','Transparent six-step valuation workflow for crypto and macro prediction events.') }}</p>
+    </div>
+    <div class="vl-page-banners" id="vl-page-banners" hidden></div>
+  </section>
+
+  <section class="vl-toolbar">
+    <div class="vl-tabs" id="vl-tabs">
+      <button class="vl-tab active" data-tab="crypto" data-i18n="valuelab.tab.crypto">{{ i18n_dict.get('valuelab.tab.crypto','Crypto') }}</button>
+      <button class="vl-tab" data-tab="earnings" data-i18n="valuelab.tab.earnings">{{ i18n_dict.get('valuelab.tab.earnings','Earnings') }}</button>
+      <button class="vl-tab" data-tab="economy" data-i18n="valuelab.tab.economy">{{ i18n_dict.get('valuelab.tab.economy','Economy') }}</button>
+      <button class="vl-tab" data-tab="finance" data-i18n="valuelab.tab.finance">{{ i18n_dict.get('valuelab.tab.finance','Finance') }}</button>
+    </div>
+    <input class="vl-search" id="vl-search" type="search" placeholder="{{ i18n_dict.get('valuelab.search.placeholder','Search event title or slug…') }}" data-i18n-placeholder="valuelab.search.placeholder" />
+    <select class="vl-sort" id="vl-sort">
+      <option value="score" data-i18n="valuelab.sort.score">{{ i18n_dict.get('valuelab.sort.score','Sort by Score') }}</option>
+      <option value="ev" data-i18n="valuelab.sort.ev">{{ i18n_dict.get('valuelab.sort.ev','Sort by +EV') }}</option>
+      <option value="updated_at" data-i18n="valuelab.sort.updated">{{ i18n_dict.get('valuelab.sort.updated','Sort by Update Time') }}</option>
+    </select>
+  </section>
+
+  <div class="vl-health" id="vl-health">{{ i18n_dict.get('valuelab.health.loading','Data health loading…') }}</div>
+
+  <section class="vl-grid loading" id="vl-list-slot">
+    {% for _ in range(9) %}
+    <article class="vl-skeleton-card" aria-hidden="true">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+        <div class="vl-sk-line vl-sk-head"></div>
+        <div class="vl-sk-line vl-sk-badge"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="vl-sk-line vl-sk-metric"></div>
+        <div class="vl-sk-line vl-sk-metric"></div>
+        <div class="vl-sk-line vl-sk-metric"></div>
+      </div>
+      <div class="vl-sk-line vl-sk-cta"></div>
+    </article>
+    {% endfor %}
+  </section>
+</div>
+
+<script id="vl-ssr-json" type="application/json">{{ (ssr_valuelab_json or '') | escape_script_json | safe }}</script>
+<script>window.__VL_PAGE_BANNERS__ = {{ (valuelab_page_banners_json or '[]') | escape_script_json | safe }};</script>
+<script>window.__VL_PAGE_PATH__ = "{{ valuelab_page_path or '/valuelab' }}";</script>
+<script id="vl-labels" type="application/json">
+{
+  "healthPrefix": "{{ i18n_dict.get('valuelab.health.prefix','Data freshness') }}",
+  "healthLag": "{{ i18n_dict.get('valuelab.health.lag','max lag') }}",
+  "loading": "{{ i18n_dict.get('valuelab.loading','Loading Value Lab events…') }}",
+  "loadingMore": "{{ i18n_dict.get('valuelab.loadingMore','正在载入更多内容…') }}",
+  "allLoaded": "{{ i18n_dict.get('valuelab.allLoaded','已显示全部内容') }}",
+  "noMatch": "{{ i18n_dict.get('valuelab.empty.no_match','No events match current filters.') }}"
+}
+</script>
+<script>
+  (function () {
+    function renderPageBanners(list) {
+      var host = document.getElementById('vl-page-banners');
+      if (!host) return;
+      host.innerHTML = '';
+      var items = Array.isArray(list) ? list : [];
+      if (!items.length) { host.hidden = true; return; }
+      items.forEach(function (b) {
+        if (!b || b.enabled === false) return;
+        if (!b.image_url) return;
+        var pl = b.placement || 'sidebar_image';
+        if (pl !== 'sidebar_image') return;
+        var a = document.createElement('a');
+        a.className = 'vl-page-banner';
+        a.href = b.link_url || '#';
+        if (b.link_url && /^https?:\/\//i.test(b.link_url)) a.target = '_blank';
+        a.rel = 'noopener';
+        var img = document.createElement('img');
+        img.src = b.image_url;
+        img.alt = '';
+        img.loading = 'lazy';
+        a.appendChild(img);
+        host.appendChild(a);
+      });
+      host.hidden = host.children.length === 0;
+    }
+
+    try { renderPageBanners(window.__VL_PAGE_BANNERS__ || []); } catch (_) {}
+    try {
+      var p = window.__VL_PAGE_PATH__ || '/valuelab';
+      fetch('/api/public/frontend-banner/page' + p, { credentials: 'include', cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (d && d.ok) renderPageBanners(d.banners || []);
+        })
+        .catch(function () {});
+    } catch (_) {}
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,22 @@
+{
+  "user.mfa.disabledLabel": "MFA désactivé · Fortement recommandé pour protéger votre compte",
+  "user.mfa.enabledLabel": "MFA activé · Méthodes actives :",
+  "user.mfa.hintNoSecret": "Ce système ne touche jamais vos clés privées OTP / Passkey ; le flux MFA est fourni par Privy.",
+  "user.mfa.manageBtn": "Gérer / désactiver MFA",
+  "user.mfa.openBtn": "Activer MFA (recommandé)",
+  "user.mfa.readPolicy": "Lire la politique de sécurité V e Y r a →",
+  "user.mfa.title": "Sécurité du compte · Authentification multi-facteurs (MFA)",
+  "user.pmWallet.bound": "Lié avec succès (Gnosis Safe déployé par le système)",
+  "user.pmWallet.fundWallet": "Portefeuille de fonds (Safe)",
+  "user.pmWallet.gotoBind": "Autoriser et lier le portefeuille",
+  "user.pmWallet.lockedHint": "Pour la sécurité des fonds, le portefeuille Polymarket est déployé via Gnosis Safe Proxy et lié à votre connexion Privy. Il ne peut pas être modifié manuellement.",
+  "user.pmWallet.notBoundHtml": "Aucun portefeuille de fonds Polymarket lié. Pour des raisons de sécurité, la saisie manuelle du portefeuille a été désactivée ; vous devez autoriser via Privy.",
+  "user.pmWallet.title": "Portefeuille Polymarket",
+  "user.profile.active": "Actif",
+  "user.profile.authWalletLabel": "Adresse du portefeuille d'authentification",
+  "user.profile.copy": "Copier",
+  "user.profile.displayNameLabel": "Nom d'affichage",
+  "user.profile.editTitle": "Modifier le profil",
+  "user.profile.registeredAt": "Inscrit le",
+  "user.profile.save": "Enregistrer les modifications"
+}

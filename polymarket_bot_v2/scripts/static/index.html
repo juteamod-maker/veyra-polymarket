@@ -1,0 +1,2031 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VeYra.trade</title>
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="modulepreload" href="/v2/static/js/vendor/mfa_runtime_bundle.mjs" as="script" crossorigin="anonymous">
+  <style>
+    :root {
+      --bg: #0f1115;
+      --tile-bg: #0a0b0e;
+      --card-bg: #0d1017;
+      --cta-accent: #2ee68b;
+      --cta-accent-2: #16c172;
+      --muted: #6b7280;
+      --yes: #22c55e;
+      --no: #ef4444;
+      --card-w: 260px;
+      --card-h: 120px;
+      --card-gap: 4px;
+      --tile-pad: 10px;
+      --font: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .logo-full {
+      height: 30px;
+      border-radius: 8px;
+      flex-shrink: 0;
+    }
+
+    #viewport {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    #canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      will-change: transform;
+    }
+
+    .tile {
+      position: absolute;
+      width: 100vw;
+      height: 100vh;
+      background: var(--tile-bg);
+      pointer-events: auto;
+      overflow: hidden;
+      backface-visibility: hidden;
+      will-change: transform;
+    }
+
+    .tile-grid {
+      width: max-content;
+      height: max-content;
+      display: grid;
+      grid-template-columns: repeat(7, var(--card-w));
+      grid-template-rows: repeat(7, var(--card-h));
+      gap: var(--card-gap);
+      padding: var(--tile-pad);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    @media (max-width:900px) {
+      :root {
+        --card-w: 220px;
+        --card-h: 108px;
+      }
+
+      .tile-grid {
+        grid-template-columns: repeat(5, var(--card-w));
+        grid-template-rows: repeat(5, var(--card-h));
+      }
+    }
+
+    .card {
+      width: var(--card-w);
+      height: var(--card-h);
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #9aa0a6;
+      font-size: 12px;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: all 0.18s ease;
+      cursor: col-resize;
+      position: relative;
+      opacity: 0.82;
+    }
+
+    .card:hover {
+      background: #111520;
+      border-color: rgba(255, 184, 107, 0.2);
+      z-index: 2;
+      opacity: 0.9;
+    }
+
+    .card-inner {
+      padding: 9px 9px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      height: 100%;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #c9cfd8;
+      line-height: 1.35;
+      display: -webkit-box;
+      line-clamp: 2;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .card-btns {
+      display: flex;
+      gap: 4px;
+    }
+
+    .card-btn {
+      flex: 1;
+      padding: 4px 0;
+      border: 0;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .card-btn-yes {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+    }
+
+    .card-btn-no {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+    }
+
+    .card-bar {
+      height: 4px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+      display: flex;
+    }
+
+    .card-bar-yes {
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+    }
+
+    .card-bar-no {
+      background: linear-gradient(90deg, #ef4444, #dc2626);
+    }
+
+    .card-label {
+      font-size: 10px;
+      color: #6b7280;
+      text-align: center;
+      padding: 2px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cta-stage {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .cta-overlay {
+      position: relative;
+      width: 100%;
+      min-height: 360px;
+      padding: 26px 24px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #1f2937 0%, #1D2939 50%, #101828 100%);
+      border-radius: 18px;
+      pointer-events: auto;
+      border: 1px solid rgba(46, 230, 139, 0.26);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.55), 0 40px 80px rgba(0, 0, 0, 0.72), inset 0 0 40px rgba(46, 230, 139, 0.06);
+    }
+
+    .cta-side-link {
+      position: absolute;
+      left: calc(100% - 1px);
+      top: 50%;
+      transform: translateY(-52%);
+      width: 200px;
+      height: auto;
+      pointer-events: auto;
+      z-index: 102;
+      display: block;
+      line-height: 0;
+      transition: transform 0.25s cubic-bezier(.2, .9, .3, 1.2), filter 0.25s ease;
+      text-decoration: none;
+    }
+
+    .cta-side-link:hover {
+      transform: translateY(-54%) translateX(2px) scale(1.02);
+    }
+
+    .cta-side-link img {
+      width: 190px;
+      height: auto;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    @media (max-width: 1100px) {
+      .cta-side-link {
+        left: calc(100% - 1px);
+        width: 190px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .cta-side-link {
+        display: none;
+      }
+    }
+
+    .cta-head {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .cta-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .cta-title {
+      color: #fff;
+      font-weight: 800;
+      font-size: 30px;
+      text-align: center;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+      white-space: nowrap;
+    }
+
+    .cta-desc {
+      color: #8ba09a;
+      font-size: 13.5px;
+      max-width: 480px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .lang-footer {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      margin-bottom: 16px;
+    }
+
+    .lang-btn {
+      background: rgba(46, 230, 139, 0.10);
+      color: #9bf6ca;
+      border: 1px solid rgba(46, 230, 139, 0.24);
+      border-radius: 8px;
+      width: auto;
+      min-width: 44px;
+      height: 30px;
+      padding: 0 8px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.16s ease;
+      line-height: 1;
+    }
+
+    .lang-btn:hover,
+    .lang-btn.active {
+      background: rgba(46, 230, 139, 0.22);
+      color: #d8ffec;
+    }
+
+    .btn {
+      width: 100%;
+      background: linear-gradient(90deg, var(--cta-accent), var(--cta-accent-2));
+      color: #032115;
+      border: none;
+      padding: 11px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.35px;
+      transition: all 0.15s;
+      box-shadow: 0 8px 20px rgba(46, 230, 139, 0.22);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      margin-top: 8px;
+      width: 100%;
+      background: rgba(46, 230, 139, 0.08);
+      color: #b8f8d8;
+      border: 1px solid rgba(46, 230, 139, 0.30);
+      padding: 10px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.2px;
+      transition: all 0.15s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(46, 230, 139, 0.16);
+    }
+
+    .btn-secondary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .msg {
+      margin-top: 4px;
+      font-size: 12.5px;
+      border-radius: 8px;
+      padding: 8px 12px;
+      display: none;
+      width: 100%;
+      font-family: "Courier New", monospace;
+      letter-spacing: 0.2px;
+      position: relative;
+    }
+
+    .msg::after {
+      content: '▋';
+      display: inline-block;
+      animation: blink-cursor 1s step-end infinite;
+      margin-left: 1px;
+      opacity: 0.8;
+    }
+
+    @keyframes blink-cursor {
+
+      0%,
+      100% {
+        opacity: 0.8;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    .msg.show {
+      display: block;
+    }
+
+    .msg.info {
+      background: rgba(30, 170, 104, 0.16);
+      color: #95f5c8;
+    }
+
+    .msg.ok {
+      background: rgba(34, 197, 94, 0.20);
+      color: #b4ffd8;
+    }
+
+    .msg.err {
+      background: rgba(239, 68, 68, 0.18);
+      color: #fecaca;
+    }
+
+    .tips {
+      margin-top: 0;
+      color: #7f938e;
+      font-size: 11px;
+      line-height: 1.35;
+      text-align: center;
+      width: 100%;
+      padding-top: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: center;
+      gap: 10px 16px;
+      overflow: hidden;
+    }
+
+    .cta-trust {
+      pointer-events: auto;
+      margin-top: 2px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(46, 230, 139, 0.18);
+    }
+
+    .trust-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: clamp(10px, 1.2vw, 12px);
+      color: #c9d7d2;
+      margin: 0;
+      line-height: 1.2;
+      min-width: 0;
+      justify-content: flex-start;
+      white-space: nowrap;
+    }
+
+    .trust-row span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .trust-row i {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    .trust-icon-emerald {
+      color: #34d399;
+    }
+
+    .trust-icon-amber {
+      color: #f59e0b;
+    }
+
+    .trust-icon-sky {
+      color: #38bdf8;
+    }
+
+    .trust-icon-violet {
+      color: #a78bfa;
+    }
+
+    @media (max-width:700px) {
+      .cta-stage {
+        width: min(95%, 640px);
+      }
+
+      .cta-overlay {
+        width: 100%;
+        min-height: 400px;
+        padding: 18px 16px;
+      }
+
+      .cta-head {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .cta-title {
+        font-size: 24px;
+        white-space: normal;
+      }
+
+      .tips {
+        grid-template-columns: 1fr;
+      }
+
+      .logo-full {
+        height: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="viewport">
+    <div id="canvas"></div>
+  </div>
+
+  <div class="cta-stage" id="cta-stage">
+    <div class="cta-overlay" id="cta-overlay">
+      <a href="https://veyra.trade" class="cta-side-link" id="cta-side-link" aria-label="Guest Preview">
+        <img src="/static/Veyragirl.png" alt="Guest Preview" decoding="async" loading="eager">
+      </a>
+      <div class="cta-head">
+        <div class="cta-brand">
+          <img class="logo-full" src="/static/Veyra.png" alt="V e Y r a" decoding="async" fetchpriority="high">
+          <div class="cta-title" id="cta-title"></div>
+        </div>
+      </div>
+      <div class="cta-desc" id="cta-desc"></div>
+      <div id="app" style="width:min(460px,100%)"></div>
+      <div class="lang-footer" id="lang-footer">
+        <button type="button" class="lang-btn" data-lang="en" title="English" aria-label="English">🇺🇸</button>
+        <button type="button" class="lang-btn" data-lang="zh-CN" title="中文" aria-label="中文">🇨🇳</button>
+        <button type="button" class="lang-btn" data-lang="fr" title="Français" aria-label="Français">🇫🇷</button>
+        <button type="button" class="lang-btn" data-lang="ja" title="日本語" aria-label="日本語">🇯🇵</button>
+        <button type="button" class="lang-btn" data-lang="ko" title="한국어" aria-label="한국어">🇰🇷</button>
+        <button type="button" class="lang-btn" data-lang="th" title="ไทย" aria-label="ไทย">🇹🇭</button>
+        <button type="button" class="lang-btn" data-lang="vi" title="Tiếng Việt" aria-label="Tiếng Việt">🇻🇳</button>
+        <button type="button" class="lang-btn" data-lang="es" title="Español" aria-label="Español">🇪🇸</button>
+        <button type="button" class="lang-btn" data-lang="pt" title="Português" aria-label="Português">🇵🇹</button>
+      </div>
+      <div class="tips cta-trust" id="cta-tips"></div>
+    </div>
+  </div>
+
+  <script src="/v2/static/js/vendor/lucide.min.js"></script>
+  <script>
+    (function () {
+      const I18N = {
+        en: {},
+        'zh-CN': {},
+        fr: {},
+        ja: {},
+        ko: {},
+        th: {},
+        vi: {},
+        es: {},
+        pt: {},
+      };
+
+      function normalizeLang(raw) {
+        const s = String(raw || '').toLowerCase();
+        if (s.startsWith('zh')) return 'zh-CN';
+        if (s.startsWith('fr')) return 'fr';
+        if (s.startsWith('ja')) return 'ja';
+        if (s.startsWith('ko')) return 'ko';
+        if (s.startsWith('th')) return 'th';
+        if (s.startsWith('vi')) return 'vi';
+        if (s.startsWith('es')) return 'es';
+        if (s.startsWith('pt')) return 'pt';
+        return 'en';
+      }
+
+      const storedLang = normalizeLang(localStorage.getItem('veyra_lang') || localStorage.getItem('vp_lang') || navigator.language || 'en');
+      const dynamicI18nLoaded = new Set();
+      const i18nState = {
+        dict: I18N,
+        lang: storedLang,
+        t(key) {
+          const pack = this.dict[this.lang] || this.dict.en;
+          const fallback = this.dict.en || {};
+          return pack[key] ?? fallback[key] ?? '';
+        },
+        async ensureLangPack(lang) {
+          const normalized = normalizeLang(lang || this.lang);
+          if (dynamicI18nLoaded.has(normalized)) return;
+          try {
+            const resp = await fetch('/v2/static/i18n/' + encodeURIComponent(normalized) + '.json', { cache: 'no-store' });
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data && typeof data === 'object') {
+              this.dict[normalized] = Object.assign({}, this.dict[normalized] || {}, data);
+              dynamicI18nLoaded.add(normalized);
+            }
+          } catch (_) { }
+        },
+        setLang(nextLang) {
+          this.lang = normalizeLang(nextLang);
+          localStorage.setItem('veyra_lang', this.lang);
+          localStorage.setItem('vp_lang', this.lang);
+          try { document.cookie = 'veyra_lang=' + this.lang + '; path=/; max-age=31536000; SameSite=Lax'; } catch (_) { }
+          window.dispatchEvent(new CustomEvent('index-lang-change', { detail: { lang: this.lang } }));
+        },
+      };
+      try {
+        localStorage.setItem('veyra_lang', i18nState.lang);
+        localStorage.setItem('vp_lang', i18nState.lang);
+        document.cookie = 'veyra_lang=' + i18nState.lang + '; path=/; max-age=31536000; SameSite=Lax';
+      } catch (_) { }
+      window.__indexI18n = i18nState;
+
+      function applyStaticI18n() {
+        const titleEl = document.getElementById('cta-title');
+        const descEl = document.getElementById('cta-desc');
+        const tipsEl = document.getElementById('cta-tips');
+        if (titleEl) titleEl.textContent = i18nState.t('cta_title');
+        if (descEl) descEl.textContent = i18nState.t('cta_desc');
+        if (tipsEl) {
+          tipsEl.innerHTML = '';
+          var rows = [
+            { icon: 'shield-check', cls: 'trust-icon-emerald', key: 'trust_point_1' },
+            { icon: 'vault', cls: 'trust-icon-amber', key: 'trust_point_2' },
+            { icon: 'zap', cls: 'trust-icon-sky', key: 'trust_point_3' },
+            { icon: 'brain', cls: 'trust-icon-violet', key: 'trust_point_4' }
+          ];
+          rows.forEach(function (item) {
+            var row = document.createElement('div');
+            row.className = 'trust-row';
+            row.innerHTML = '<i data-lucide="' + item.icon + '" class="' + item.cls + '"></i><span>' + i18nState.t(item.key) + '</span>';
+            tipsEl.appendChild(row);
+          });
+          if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons({
+              attrs: {
+                'stroke-width': 2
+              }
+            });
+          }
+        }
+        document.documentElement.lang = i18nState.lang;
+        document.querySelectorAll('.lang-btn').forEach((btn) => {
+          btn.classList.toggle('active', btn.getAttribute('data-lang') === i18nState.lang);
+        });
+      }
+
+      document.querySelectorAll('.lang-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          i18nState.setLang(btn.getAttribute('data-lang') || 'en');
+          applyStaticI18n();
+        });
+      });
+      applyStaticI18n();
+
+      const viewport = document.getElementById('viewport');
+      const canvas = document.getElementById('canvas');
+
+      let vw = window.innerWidth;
+      let vh = window.innerHeight;
+      const tiles = [];
+      let homepageCards = [];
+      let synthTitles = [];
+
+      function gridCols() { return (vw <= 900) ? 5 : 7; }
+      function gridRows() { return gridCols(); }
+      function cssPx(name, fallback) {
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        const n = parseFloat(v);
+        return Number.isFinite(n) ? n : fallback;
+      }
+
+      function synthCard(gx, gy, r, c) {
+        const hash = Math.abs((gx * 7919 + gy * 6271 + r * 1031 + c * 397) & 0x7fffffff);
+        const fallback = i18nState.t('synth_titles');
+        const titles = synthTitles.length
+          ? synthTitles
+          : (Array.isArray(fallback) ? fallback : []);
+        const title = titles[hash % titles.length] || '';
+        const yesP = Math.round((0.05 + (hash % 900) / 1000) * 1000) / 1000;
+        const noP = Math.round((1 - yesP) * 1000) / 1000;
+        return { title, yes_price: yesP, no_price: noP, volume_24h: null, liquidity: null, days_left: null };
+      }
+
+      function fmtPct(p) {
+        if (p === null || p === undefined) return '';
+        return (p * 100).toFixed(1) + '%';
+      }
+
+      function fmtVol(v) {
+        if (!v || v <= 0) return '';
+        if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+        if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
+        return '$' + v.toFixed(0);
+      }
+
+      function getCardHTML(gx, gy, r, c) {
+        const cols = (vw <= 900) ? 5 : 7;
+        const idx = r * cols + c;
+        let card;
+        if (gx === 0 && gy === 0 && idx < homepageCards.length) {
+          card = homepageCards[idx];
+        } else {
+          card = synthCard(gx, gy, r, c);
+        }
+
+        const title = (card.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const yesP = card.yes_price;
+        const noP = card.no_price;
+        const hasPrice = (yesP !== null && yesP !== undefined);
+        const yesPct = hasPrice ? fmtPct(yesP) : '';
+        const noPct = hasPrice ? fmtPct(noP) : '';
+        const yesBar = hasPrice ? Math.round(yesP * 100) : 50;
+        const noBar = 100 - yesBar;
+        const vol = card.volume_24h ? fmtVol(card.volume_24h) : '';
+        const footer = vol
+          ? vol + ' ' + i18nState.t('footer_24h')
+          : (card.days_left !== null && card.days_left !== undefined ? card.days_left + i18nState.t('footer_days') : '');
+
+        return `<div class="card"><div class="card-inner">` +
+          `<div class="card-title">${title}</div>` +
+          `<div class="card-btns">` +
+          `<div class="card-btn card-btn-yes">${i18nState.t('card_yes')} ${yesPct}</div>` +
+          `<div class="card-btn card-btn-no">${i18nState.t('card_no')} ${noPct}</div>` +
+          `</div>` +
+          `<div class="card-bar"><div class="card-bar-yes" style="width:${yesBar}%"></div><div class="card-bar-no" style="width:${noBar}%"></div></div>` +
+          (footer ? `<div class="card-label">${footer}</div>` : '') +
+          `</div></div>`;
+      }
+
+      async function loadHomepageCards() {
+        try {
+          const r = await fetch('/api/public/homepage/cards', { credentials: 'include' });
+          const d = await r.json().catch(() => ({}));
+          if (r.ok && d && d.ok && Array.isArray(d.cards)) {
+            homepageCards = d.cards
+              .filter((x) => x && x.enabled !== false)
+              .sort((a, b) => Number(a.sort_order || 100) - Number(b.sort_order || 100))
+              .map((x) => ({
+                title: String((x.title_i18n_key ? i18nState.t(x.title_i18n_key) : '') || x.title_i18n_key || x.title || '').trim(),
+                yes_price: x.yes_price != null ? Number(x.yes_price) : null,
+                no_price: x.no_price != null ? Number(x.no_price) : null,
+                volume_24h: x.volume_24h != null ? Number(x.volume_24h) : null,
+                liquidity: x.liquidity != null ? Number(x.liquidity) : null,
+                days_left: x.days_left != null ? Number(x.days_left) : null,
+              }));
+          }
+        } catch (_) { }
+      }
+
+      async function loadSynthTitles() {
+        try {
+          const lang = encodeURIComponent(i18nState.lang || 'en');
+          const r = await fetch(`/api/public/homepage/synth-titles?lang=${lang}&limit=24`, {
+            credentials: 'include',
+            cache: 'no-store',
+          });
+          const d = await r.json().catch(() => ({}));
+          if (r.ok && d && d.ok && Array.isArray(d.titles)) {
+            synthTitles = d.titles
+              .map((x) => String(x || '').trim())
+              .filter((x) => !!x);
+            return;
+          }
+        } catch (_) { }
+        synthTitles = [];
+      }
+
+      function tileInnerHTML(gx, gy) {
+        const cols = gridCols();
+        const rows = gridRows();
+        let html = `<div class="tile-grid" data-gx="${gx}" data-gy="${gy}">`;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            html += getCardHTML(gx, gy, r, c);
+          }
+        }
+        html += `</div>`;
+        return html;
+      }
+
+      function createTiles() {
+        canvas.innerHTML = '';
+        tiles.length = 0;
+        for (let gy = -1; gy <= 1; gy++) {
+          for (let gx = -1; gx <= 1; gx++) {
+            const el = document.createElement('div');
+            el.className = 'tile';
+            el.dataset.gx = gx;
+            el.dataset.gy = gy;
+            el.innerHTML = tileInnerHTML(gx, gy);
+            canvas.appendChild(el);
+            tiles.push({ el, gx, gy });
+          }
+        }
+        positionTilesImmediate();
+      }
+
+      function tileW() {
+        const cols = gridCols();
+        const w = cssPx('--card-w', 260);
+        const gap = cssPx('--card-gap', 4);
+        const pad = cssPx('--tile-pad', 10);
+        return cols * w + (cols - 1) * gap + pad * 2;
+      }
+      function tileH() {
+        const rows = gridRows();
+        const h = cssPx('--card-h', 120);
+        const gap = cssPx('--card-gap', 4);
+        const pad = cssPx('--tile-pad', 10);
+        return rows * h + (rows - 1) * gap + pad * 2;
+      }
+
+      function positionTilesImmediate() {
+        tiles.forEach(t => {
+          const x = (t.gx + 1) * tileW();
+          const y = (t.gy + 1) * tileH();
+          t.el.style.width = Math.round(tileW()) + 'px';
+          t.el.style.height = Math.round(tileH()) + 'px';
+          t.el.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
+        });
+      }
+
+      let isDragging = false;
+      let startX = 0, startY = 0;
+      let offsetX = 0, offsetY = 0;
+      let velX = 0, velY = 0;
+      let lastPointerTime = 0, lastPointerX = 0, lastPointerY = 0;
+
+      let canvasOffsetX = 0, canvasOffsetY = 0;
+      let rafId = null;
+
+      function animate() {
+        if (!isDragging) {
+          velX *= 0.95;
+          velY *= 0.95;
+          if (Math.abs(velX) < 0.02) velX = 0;
+          if (Math.abs(velY) < 0.02) velY = 0;
+          offsetX += velX;
+          offsetY += velY;
+        }
+        wrapIfNeeded();
+        const baseX = -tileW();
+        const baseY = -tileH();
+        canvasOffsetX = Math.round(baseX + offsetX);
+        canvasOffsetY = Math.round(baseY + offsetY);
+        canvas.style.transform = `translate3d(${canvasOffsetX}px, ${canvasOffsetY}px, 0)`;
+        rafId = requestAnimationFrame(animate);
+      }
+
+      function wrapIfNeeded() {
+        const w = tileW();
+        const h = tileH();
+        let didWrap = false;
+
+        while (offsetX > w / 2) { tiles.forEach(t => t.gx -= 1); offsetX -= w; didWrap = true; }
+        while (offsetX < -w / 2) { tiles.forEach(t => t.gx += 1); offsetX += w; didWrap = true; }
+        while (offsetY > h / 2) { tiles.forEach(t => t.gy -= 1); offsetY -= h; didWrap = true; }
+        while (offsetY < -h / 2) { tiles.forEach(t => t.gy += 1); offsetY += h; didWrap = true; }
+
+        if (didWrap) {
+          tiles.forEach(t => {
+            t.gx = ((t.gx % 3) + 3) % 3 - 1;
+            t.gy = ((t.gy % 3) + 3) % 3 - 1;
+          });
+          positionTilesImmediate();
+        }
+        return didWrap;
+      }
+
+      function pointerDown(cx, cy) {
+        isDragging = true;
+        startX = cx - offsetX;
+        startY = cy - offsetY;
+        velX = velY = 0;
+        lastPointerTime = performance.now();
+        lastPointerX = cx; lastPointerY = cy;
+      }
+
+      function pointerMove(cx, cy) {
+        if (!isDragging) return;
+        const now = performance.now();
+        const dt = Math.max(1, now - lastPointerTime);
+        const dx = cx - lastPointerX;
+        const dy = cy - lastPointerY;
+        velX = dx * (16.67 / dt);
+        velY = dy * (16.67 / dt);
+        lastPointerTime = now;
+        lastPointerX = cx; lastPointerY = cy;
+        offsetX = cx - startX;
+        offsetY = cy - startY;
+        if (Math.abs(offsetX) > tileW() || Math.abs(offsetY) > tileH()) {
+          wrapIfNeeded();
+        }
+      }
+
+      function pointerUp() { isDragging = false; }
+
+      function bindEvents() {
+        viewport.addEventListener('mousedown', e => { e.preventDefault(); pointerDown(e.clientX, e.clientY); });
+        window.addEventListener('mousemove', e => pointerMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', pointerUp);
+
+        viewport.addEventListener('touchstart', e => {
+          const t = e.touches[0];
+          pointerDown(t.clientX, t.clientY);
+        }, { passive: false });
+        viewport.addEventListener('touchmove', e => {
+          const t = e.touches[0];
+          pointerMove(t.clientX, t.clientY);
+        }, { passive: false });
+        viewport.addEventListener('touchend', pointerUp);
+      }
+
+      window.addEventListener('resize', () => {
+        vw = window.innerWidth;
+        vh = window.innerHeight;
+        createTiles();
+      });
+
+      window.addEventListener('index-lang-change', async () => {
+        await i18nState.ensureLangPack('en');
+        await i18nState.ensureLangPack(i18nState.lang);
+        applyStaticI18n();
+        await loadHomepageCards();
+        await loadSynthTitles();
+        createTiles();
+      });
+
+      async function init() {
+        await i18nState.ensureLangPack('en');
+        await i18nState.ensureLangPack(i18nState.lang);
+        applyStaticI18n();
+        await loadHomepageCards();
+        await loadSynthTitles();
+        createTiles();
+        bindEvents();
+        rafId = requestAnimationFrame(animate);
+      }
+
+      init();
+    })();
+  </script>
+
+  <script>
+    (function ensureBrowserBufferPolyfill() {
+      if (typeof globalThis === 'undefined' || globalThis.Buffer) {
+        return;
+      }
+
+      class BufferPolyfill extends Uint8Array {
+        static from(input, encoding) {
+          if (input instanceof ArrayBuffer) {
+            return new BufferPolyfill(input);
+          }
+          if (ArrayBuffer.isView(input)) {
+            return new BufferPolyfill(input.buffer.slice(input.byteOffset, input.byteOffset + input.byteLength));
+          }
+          if (Array.isArray(input)) {
+            return new BufferPolyfill(Uint8Array.from(input));
+          }
+          if (typeof input === 'number') {
+            return new BufferPolyfill(input);
+          }
+          if (typeof input === 'string') {
+            var enc = String(encoding || 'utf8').toLowerCase();
+            if (enc === 'hex') {
+              var hex = input.startsWith('0x') ? input.slice(2) : input;
+              if (hex.length % 2 !== 0) {
+                hex = '0' + hex;
+              }
+              var out = new Uint8Array(hex.length / 2);
+              for (var i = 0; i < out.length; i += 1) {
+                out[i] = parseInt(hex.substr(i * 2, 2), 16) || 0;
+              }
+              return new BufferPolyfill(out);
+            }
+            if (enc === 'base64') {
+              var b64 = input.replace(/\s+/g, '');
+              var raw = atob(b64);
+              var bytes = new Uint8Array(raw.length);
+              for (var j = 0; j < raw.length; j += 1) {
+                bytes[j] = raw.charCodeAt(j);
+              }
+              return new BufferPolyfill(bytes);
+            }
+            var utf8 = new TextEncoder().encode(input);
+            return new BufferPolyfill(utf8);
+          }
+          return new BufferPolyfill(0);
+        }
+
+        static allocUnsafe(size) {
+          return new BufferPolyfill(size >>> 0);
+        }
+
+        static isBuffer(value) {
+          return value instanceof BufferPolyfill;
+        }
+
+        static concat(chunks, totalLength) {
+          var list = Array.isArray(chunks) ? chunks : [];
+          var length = typeof totalLength === 'number' ? totalLength : 0;
+          if (!length) {
+            for (var i = 0; i < list.length; i += 1) {
+              length += (list[i] && list[i].length) ? list[i].length : 0;
+            }
+          }
+          var out = new BufferPolyfill(length);
+          var offset = 0;
+          for (var j = 0; j < list.length; j += 1) {
+            var part = BufferPolyfill.from(list[j] || []);
+            out.set(part, offset);
+            offset += part.length;
+          }
+          return out;
+        }
+
+        toString(encoding, start, end) {
+          var enc = String(encoding || 'utf8').toLowerCase();
+          var s = typeof start === 'number' ? Math.max(0, start) : 0;
+          var e = typeof end === 'number' ? Math.min(this.length, end) : this.length;
+          var view = this.subarray(s, e);
+          if (enc === 'hex') {
+            var hex = '';
+            for (var i = 0; i < view.length; i += 1) {
+              hex += view[i].toString(16).padStart(2, '0');
+            }
+            return hex;
+          }
+          if (enc === 'base64') {
+            var raw = '';
+            for (var j = 0; j < view.length; j += 1) {
+              raw += String.fromCharCode(view[j]);
+            }
+            return btoa(raw);
+          }
+          return new TextDecoder().decode(view);
+        }
+
+        copy(target, targetStart, sourceStart, sourceEnd) {
+          var to = target || new BufferPolyfill(0);
+          var tStart = typeof targetStart === 'number' ? targetStart : 0;
+          var sStart = typeof sourceStart === 'number' ? sourceStart : 0;
+          var sEnd = typeof sourceEnd === 'number' ? sourceEnd : this.length;
+          var src = this.subarray(sStart, sEnd);
+          to.set(src, tStart);
+          return src.length;
+        }
+
+        slice(start, end) {
+          return new BufferPolyfill(super.slice(start, end));
+        }
+      }
+
+      globalThis.Buffer = BufferPolyfill;
+    })();
+  </script>
+
+  <script type="module">
+    import { React, ReactDOMClient, PrivyReact } from '/v2/static/js/vendor/mfa_runtime_bundle.mjs';
+
+    const { useEffect, useMemo, useRef, useState } = React;
+    const { createRoot } = ReactDOMClient;
+    const { PrivyProvider, useLogin, usePrivy, useWallets, useIdentityToken, getIdentityToken: getIdentityTokenGlobal, useMfaEnrollment, useMfa } = PrivyReact;
+
+    function i18nPack() {
+      return (window.__indexI18n && window.__indexI18n.dict) ? window.__indexI18n.dict : { en: {} };
+    }
+
+    function currentLang() {
+      const raw = (window.__indexI18n && window.__indexI18n.lang) ? window.__indexI18n.lang : 'en';
+      const pack = i18nPack();
+      const s = String(raw || 'en');
+      return pack[s] ? s : (s.toLowerCase().startsWith('zh') ? 'zh-CN' : 'en');
+    }
+
+    function t(key) {
+      const pack = i18nPack();
+      const lang = currentLang();
+      const main = pack[lang] || pack.en || {};
+      const fallback = pack.en || {};
+      const val = main[key] ?? fallback[key];
+      return typeof val === 'string' ? val : '';
+    }
+
+    function writePrefetch(url, data) {
+      if (!url || !data) return;
+      try {
+        sessionStorage.setItem('v2_prefetch_payload:' + url, JSON.stringify({ ts: Date.now(), data }));
+      } catch (_) { }
+    }
+
+    async function prefetchDiscoverPublicData() {
+      const flagKey = 'v2_prefetch_index_discover_done_v1';
+      try {
+        if (sessionStorage.getItem(flagKey)) return;
+      } catch (_) { }
+
+      const urls = [
+        '/api/pm/events?limit=18&tab=all',
+        '/api/pm/categories',
+      ];
+
+      let successCount = 0;
+      await Promise.all(urls.map(async (url) => {
+        try {
+          const r = await fetch(url, { credentials: 'include', cache: 'no-store' });
+          if (!r.ok) return;
+          const data = await r.json();
+          writePrefetch(url, data);
+          successCount += 1;
+        } catch (_) { }
+      }));
+
+      if (successCount > 0) {
+        try {
+          sessionStorage.setItem(flagKey, String(Date.now()));
+        } catch (_) { }
+      }
+    }
+
+    async function prefetchCopytraderData() {
+      const flagKey = 'v2_prefetch_index_copytrader_done_v1';
+      try {
+        if (sessionStorage.getItem(flagKey)) return;
+      } catch (_) { }
+
+      const urls = [
+        '/api/v2/copytrader/wallets/search?category=overall&sort_by=score&page=1&limit=20',
+      ];
+
+      let successCount = 0;
+      await Promise.all(urls.map(async (url) => {
+        try {
+          const r = await fetch(url, { credentials: 'include', cache: 'no-store' });
+          if (!r.ok) return;
+          const data = await r.json();
+          writePrefetch(url, data);
+          successCount += 1;
+        } catch (_) { }
+      }));
+
+      if (successCount > 0) {
+        try {
+          sessionStorage.setItem(flagKey, String(Date.now()));
+        } catch (_) { }
+      }
+    }
+
+    function scheduleDiscoverPrefetch() {
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(() => {
+          prefetchDiscoverPublicData();
+          prefetchCopytraderData();
+        }, { timeout: 1500 });
+        return;
+      }
+      setTimeout(() => {
+        prefetchDiscoverPublicData();
+        prefetchCopytraderData();
+      }, 200);
+    }
+
+    scheduleDiscoverPrefetch();
+
+    // T902: 服务端 TOTP 二次验证的轻量输入框（非 window.prompt，符合 UI 规范）。
+    function promptTotpCode() {
+      return new Promise(function (resolve) {
+        const overlay = document.createElement('div');
+        overlay.setAttribute('data-veyra-totp', '1');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(8,10,18,.78);display:flex;align-items:center;justify-content:center;padding:16px;';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#0f1522;border:1px solid rgba(120,200,255,.16);border-radius:14px;padding:22px;width:100%;max-width:340px;color:#e6edf7;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.55);';
+        box.innerHTML =
+          '<div style="font-size:15px;font-weight:700;margin-bottom:6px;">' + t('mfa_totp_title') + '</div>' +
+          '<div style="font-size:13px;opacity:.78;margin-bottom:14px;">' + t('mfa_totp_prompt') + '</div>' +
+          '<input id="veyra-totp-input" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" style="width:100%;box-sizing:border-box;letter-spacing:.35em;font-size:20px;text-align:center;padding:10px;border-radius:8px;border:1px solid rgba(120,200,255,.28);background:#0b1120;color:#fff;outline:none;" />' +
+          '<div style="display:flex;gap:10px;margin-top:16px;">' +
+            '<button id="veyra-totp-ok" style="flex:1;padding:10px;border:0;border-radius:8px;background:#2563eb;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">' + t('mfa_totp_confirm') + '</button>' +
+            '<button id="veyra-totp-cancel" style="flex:1;padding:10px;border:1px solid rgba(120,200,255,.24);border-radius:8px;background:transparent;color:#e6edf7;font-size:14px;cursor:pointer;">' + t('mfa_totp_cancel') + '</button>' +
+          '</div>';
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        const input = box.querySelector('#veyra-totp-input');
+        const cleanup = function () { try { document.body.removeChild(overlay); } catch (_) { } };
+        const ok = function () {
+          const code = (input.value || '').replace(/\D/g, '').slice(0, 6);
+          cleanup();
+          resolve(code.length === 6 ? code : null);
+        };
+        const cancel = function () { cleanup(); resolve(null); };
+        box.querySelector('#veyra-totp-ok').addEventListener('click', ok);
+        box.querySelector('#veyra-totp-cancel').addEventListener('click', cancel);
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); ok(); }
+          if (e.key === 'Escape') cancel();
+        });
+        setTimeout(function () { try { input.focus(); } catch (_) { } }, 30);
+      });
+    }
+
+    function TypewriterMessage({ msg }) {
+      const [typed, setTyped] = useState('');
+      useEffect(() => {
+        const text = String((msg && msg.text) || '');
+        if (!text) {
+          setTyped('');
+          return;
+        }
+        let i = 0;
+        setTyped('');
+        const timer = setInterval(() => {
+          i += 1;
+          setTyped(text.slice(0, i));
+          if (i >= text.length) clearInterval(timer);
+        }, 18);
+        return () => clearInterval(timer);
+      }, [msg && msg.text]);
+      return React.createElement(
+        'div',
+        { className: 'msg ' + ((msg && msg.show) ? 'show ' : '') + ((msg && msg.type) || 'info') },
+        typed
+      );
+    }
+
+    function CyberStatusFeed({ active }) {
+      const [lines, setLines] = React.useState([]);
+      React.useEffect(() => {
+        if (!active) { setLines([]); return; }
+        const POOL = [
+          '⚡ SYNCING POLYGON RPC → mainnet.veyra.proxy',
+          '🔐 SECURING SESSION HANDSHAKE [tls1.3 / ecdhe-x25519]',
+          '🛡️  VALIDATING SAFE PROXY OWNERSHIP',
+          '🧠 BOOTING PRIVY EMBEDDED RUNTIME',
+          '🔑 NEGOTIATING IDENTITY TOKEN ENVELOPE',
+          '📡 PROBING CLOB v2 EDGE [pUSD·USDC.e·USDC]',
+          '🔍 SCANNING ORDERBOOK DEPTH PARTITIONS',
+          '⚛️  COMPILING SIGNATURE PROFILE [eip-712]',
+          '📦 LOADING COPYTRADER WHALE INDEX',
+          '🌐 RESOLVING PUBLIC GAMMA SHARDS',
+          '⏱️  CALIBRATING POLLING WINDOW = 480ms',
+          '🧬 ANALYZING WALLET TOPOLOGY',
+          '🎯 MAPPING MARKET CONDITION_IDS',
+          '🚰 ENFORCING WITHDRAW READINESS GATES',
+          '🔌 WIRING WS STREAMS [trades · books · holders]',
+          '📜 VERIFYING SIGNER ENROLLMENT MANIFEST',
+          '🧩 INSTALLING I18N HOT-RELOAD CHANNEL',
+          '📊 PRECACHING DISCOVER FEED [silent]',
+          '🤝 AUTHORIZING PRIVY ↔ SAFE BRIDGE',
+          '📨 OPENING SECURE CHANNEL TO veyra-edge-3',
+        ];
+        const HEX = '0123456789abcdef';
+        const rndHex = (n) => Array.from({ length: n }, () => HEX[(Math.random() * 16) | 0]).join('');
+        const ts = () => {
+          const d = new Date();
+          const pad = (x) => String(x).padStart(2, '0');
+          const ms = String(d.getMilliseconds()).padStart(3, '0');
+          return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()) + '.' + ms;
+        };
+        const emit = () => {
+          const tag = POOL[(Math.random() * POOL.length) | 0];
+          const txid = '0x' + rndHex(6) + '…' + rndHex(4);
+          const line = '[' + ts() + '] ' + tag + ' · ' + txid + ' OK';
+          setLines((prev) => {
+            const next = prev.concat([{ id: Date.now() + ':' + Math.random().toString(36).slice(2, 8), text: line }]);
+            if (next.length > 14) next.splice(0, next.length - 14);
+            return next;
+          });
+        };
+        for (let i = 0; i < 4; i += 1) setTimeout(emit, i * 220);
+        const id = setInterval(emit, 180);
+        return () => clearInterval(id);
+      }, [active]);
+      if (!active) return null;
+      return React.createElement(
+        'div',
+        {
+          className: 'cyber-feed',
+          style: {
+            marginTop: '12px',
+            padding: '10px 12px',
+            background: 'rgba(7, 14, 24, 0.78)',
+            border: '1px solid rgba(34, 211, 238, 0.35)',
+            borderRadius: '6px',
+            color: '#67e8f9',
+            fontFamily: '"JetBrains Mono", "Fira Code", Menlo, Consolas, monospace',
+            fontSize: '0.72rem',
+            lineHeight: '1.55',
+            maxHeight: '180px',
+            overflow: 'hidden',
+            textShadow: '0 0 6px rgba(34,211,238,0.45)',
+          },
+        },
+        lines.map((ln) => React.createElement(
+          'div',
+          { key: ln.id, style: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } },
+          ln.text
+        ))
+      );
+    }
+
+    function startLoginStepRotator(setMsg) {
+      const keys = ['msg_step_1', 'msg_step_2', 'msg_step_3', 'msg_step_4'];
+      let i = 0;
+      setMsg({ type: 'info', text: t(keys[0]), show: true });
+      const id = setInterval(() => {
+        i = (i + 1) % keys.length;
+        setMsg((prev) => {
+          if (!prev || prev.type !== 'info' || !prev.show) return prev;
+          return { type: 'info', text: t(keys[i]), show: true };
+        });
+      }, 1400);
+      return () => clearInterval(id);
+    }
+
+    // T794: Capture referral code from ?ref= URL param on page load and persist in localStorage
+    // so it survives Privy's login modal flow and can be sent to the server on verify.
+    // T879 (2026-05-06): Also accept the cookie fallback set by landing.html when the
+    // user lands on the marketing page first (the most common entry point).
+    (function () {
+      try {
+        var _rp = new URLSearchParams(window.location.search).get('ref') || '';
+        if (_rp && /^[A-Z0-9]{4,20}$/i.test(_rp)) {
+          localStorage.setItem('veyra_ref_code', _rp.toUpperCase());
+          return;
+        }
+        // Fallback: try cookie set by landing.html
+        var ck = (document.cookie || '').split(';').map(function (s) { return s.trim(); })
+          .find(function (s) { return s.indexOf('veyra_ref_code=') === 0; });
+        if (ck) {
+          var v = decodeURIComponent(ck.substring('veyra_ref_code='.length) || '');
+          if (v && /^[A-Z0-9]{4,20}$/i.test(v) && !localStorage.getItem('veyra_ref_code')) {
+            localStorage.setItem('veyra_ref_code', v.toUpperCase());
+          }
+        }
+      } catch (_) { }
+    })();
+
+    function parseMfaAction() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const action = (params.get('mfa_action') || '').toLowerCase();
+        if (action === 'enroll' || action === 'unenroll' || action === 'verify') {
+          return action;
+        }
+      } catch (e) { }
+      return null;
+    }
+
+    function postToOpenerAndClose(type, payload) {
+      try {
+        if (window.opener && !window.opener.closed) {
+          window.opener.postMessage({ type, ...payload }, window.location.origin);
+        }
+      } catch (e) { }
+      setTimeout(() => { try { window.close(); } catch (e) { } }, 400);
+    }
+
+    function MfaInner({ action }) {
+      const privy = usePrivy();
+      const { ready, authenticated } = privy;
+      const [msg, setMsg] = useState({ type: 'info', text: t('msg_mfa_boot'), show: true });
+      const [enroll, setEnroll] = useState(null);
+      const [busy, setBusy] = useState(false);
+      const triggeredRef = useRef(false);
+      const codeRef = useRef(null);
+
+      useEffect(() => {
+        if (!ready || triggeredRef.current) return;
+        if (!authenticated) {
+          setMsg({ type: 'err', text: t('msg_mfa_no_session'), show: true });
+          return;
+        }
+        triggeredRef.current = true;
+        (async () => {
+          try {
+            if (action === 'enroll') {
+              // T902: 服务端 TOTP 注册 —— 拉取 QR 与 secret，等待用户输入确认码。
+              const resp = await fetch('/api/user/mfa/enroll/start', { method: 'POST', credentials: 'include' });
+              const data = await resp.json();
+              if (!resp.ok) throw new Error((data && data.error) || ('(' + resp.status + ')'));
+              setEnroll({ secret: data.secret, qr_svg: data.qr_svg, otpauth_uri: data.otpauth_uri });
+              setMsg({ type: 'info', text: t('msg_mfa_open_enroll'), show: true });
+            } else if (action === 'verify') {
+              setMsg({ type: 'info', text: t('msg_mfa_open_verify'), show: true });
+              const code = await promptTotpCode();
+              if (!code) { postToOpenerAndClose('privy_mfa_cancel', { action }); return; }
+              const resp = await fetch('/api/user/mfa/verify-mark', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code }),
+              });
+              if (!resp.ok) throw new Error(t('mfa_totp_invalid') + ' (' + resp.status + ')');
+              setMsg({ type: 'ok', text: t('msg_mfa_verified'), show: true });
+              postToOpenerAndClose('privy_mfa_done', { action: 'verify' });
+            } else if (action === 'unenroll') {
+              const code = await promptTotpCode();
+              if (!code) { postToOpenerAndClose('privy_mfa_cancel', { action }); return; }
+              const resp = await fetch('/api/user/mfa/disable', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code }),
+              });
+              if (!resp.ok) throw new Error(t('mfa_totp_invalid') + ' (' + resp.status + ')');
+              setMsg({ type: 'ok', text: t('msg_mfa_synced'), show: true });
+              postToOpenerAndClose('privy_mfa_done', { action: 'unenroll' });
+            }
+          } catch (err) {
+            setMsg({ type: 'err', text: t('prefix_err') + (err?.message || String(err)), show: true });
+            postToOpenerAndClose('privy_mfa_error', { action, error: String(err?.message || err) });
+          }
+        })();
+      }, [ready, authenticated]);
+
+      async function confirmEnroll() {
+        const code = ((codeRef.current && codeRef.current.value) || '').replace(/\D/g, '').slice(0, 6);
+        if (code.length !== 6 || !enroll) return;
+        setBusy(true);
+        try {
+          const resp = await fetch('/api/user/mfa/enroll/confirm', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret: enroll.secret, code }),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            throw new Error((data && data.error === 'invalid_totp') ? t('mfa_totp_invalid') : ('(' + resp.status + ')'));
+          }
+          setMsg({ type: 'ok', text: t('msg_mfa_verified'), show: true });
+          postToOpenerAndClose('privy_mfa_done', { action: 'enroll' });
+        } catch (err) {
+          setMsg({ type: 'err', text: t('prefix_err') + (err?.message || String(err)), show: true });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      if (enroll) {
+        return React.createElement('div', { className: 'msg show info', style: { textAlign: 'center' } },
+          React.createElement('div', {
+            dangerouslySetInnerHTML: { __html: enroll.qr_svg || '' },
+            style: { background: '#fff', borderRadius: 10, padding: 10, width: 200, height: 200, margin: '0 auto 10px', boxSizing: 'border-box' },
+          }),
+          React.createElement('div', { style: { fontSize: 12, opacity: 0.85, marginBottom: 12, wordBreak: 'break-all' } }, enroll.secret),
+          React.createElement('input', {
+            ref: codeRef, inputMode: 'numeric', maxLength: 6, placeholder: '000000',
+            style: { width: '100%', boxSizing: 'border-box', letterSpacing: '.3em', fontSize: 18, textAlign: 'center', padding: 8, borderRadius: 8, border: '1px solid rgba(120,200,255,.3)', background: '#0b1120', color: '#fff' },
+          }),
+          React.createElement('button', {
+            onClick: confirmEnroll, disabled: busy,
+            style: { width: '100%', marginTop: 12, padding: 10, border: 0, borderRadius: 8, background: '#2563eb', color: '#fff', fontWeight: 600, cursor: 'pointer' },
+          }, t('mfa_totp_confirm'))
+        );
+      }
+
+      return React.createElement(TypewriterMessage, { msg });
+    }
+
+    function LoginInner() {
+      const privy = usePrivy();
+      const { ready, authenticated, user, logout } = privy;
+      const walletState = useWallets ? useWallets() : {};
+      const wallets = Array.isArray(walletState && walletState.wallets) ? walletState.wallets : [];
+      const walletsReady = !!(walletState && walletState.ready);
+      const identityTokenState = useIdentityToken ? useIdentityToken() : {};
+      const identityToken = (identityTokenState && typeof identityTokenState.identityToken === 'string')
+        ? identityTokenState.identityToken
+        : '';
+      const getIdentityTokenFromHook = (identityTokenState && typeof identityTokenState.getIdentityToken === 'function')
+        ? identityTokenState.getIdentityToken
+        : null;
+      const { init: initMfa, promptMfa, showMfaPromptModal } = useMfa ? useMfa() : {
+        init: null,
+        promptMfa: null,
+        showMfaPromptModal: null,
+      };
+      const getAccessToken = privy.getAccessToken || (async () => '');
+      const getIdentityToken =
+        (typeof privy.getIdentityToken === 'function' && privy.getIdentityToken.bind(privy))
+        || getIdentityTokenFromHook
+        || (typeof getIdentityTokenGlobal === 'function' ? getIdentityTokenGlobal : null)
+        || (async () => identityToken || '');
+      const [busy, setBusy] = useState(false);
+      const popupTimerRef = useRef(null);
+      const manualTriggerRef = useRef(false);
+      const completedLoginRef = useRef(false);
+      const hardResetRetryRef = useRef(false);
+      const FAST_REDIRECT_MS = 120;
+      const [msg, setMsg] = useState({ type: 'info', text: t('msg_login_waiting'), show: true });
+
+      const loginHookState = useLogin ? useLogin({
+        onError: (error) => {
+          clearPopupTimer();
+          manualTriggerRef.current = false;
+          completedLoginRef.current = false;
+          setMsg({ type: 'err', text: t('msg_privy_login_failed') + (error?.message || String(error)), show: true });
+          setBusy(false);
+        },
+      }) : {};
+      const loginFn = (loginHookState && typeof loginHookState.login === 'function')
+        ? loginHookState.login
+        : (typeof privy.login === 'function' ? privy.login.bind(privy) : null);
+
+      React.useEffect(() => {
+        if (!busy) return undefined;
+        return startLoginStepRotator(setMsg);
+      }, [busy]);
+
+      function clearPopupTimer() {
+        if (popupTimerRef.current) {
+          clearTimeout(popupTimerRef.current);
+          popupTimerRef.current = null;
+        }
+      }
+
+      function clearPrivyBrowserState() {
+        try {
+          const keys = [];
+          for (let i = 0; i < localStorage.length; i += 1) {
+            const key = localStorage.key(i);
+            if (key && key.toLowerCase().startsWith('privy:')) keys.push(key);
+          }
+          keys.forEach((key) => {
+            try { localStorage.removeItem(key); } catch (_) { }
+          });
+        } catch (_) { }
+        try {
+          document.cookie = 'privy-session=; Max-Age=0; path=/; SameSite=Lax';
+          document.cookie = 'privy-token=; Max-Age=0; path=/; SameSite=Lax';
+          document.cookie = 'privy-id-token=; Max-Age=0; path=/; SameSite=Lax';
+        } catch (_) { }
+      }
+
+      async function clearBackendSessionBestEffort() {
+        try {
+          await fetch('/api/user/logout', {
+            method: 'POST',
+            credentials: 'include',
+          });
+        } catch (_) { }
+      }
+
+      async function resetHomepageSession() {
+        try {
+          if (typeof logout === 'function') {
+            await logout();
+          }
+        } catch (_) { }
+        await clearBackendSessionBestEffort();
+        clearPrivyBrowserState();
+      }
+
+      const primaryWallet = useMemo(() => {
+        const userWalletAddress = user && user.wallet && user.wallet.address
+          ? String(user.wallet.address).toLowerCase()
+          : '';
+        const connectedWallet = userWalletAddress
+          ? wallets.find((wallet) => wallet && String(wallet.address || '').toLowerCase() === userWalletAddress)
+          : null;
+        if (connectedWallet && connectedWallet.address) {
+          return String(connectedWallet.address).toLowerCase();
+        }
+        if (userWalletAddress) return userWalletAddress;
+        if (!user) return '';
+        const linked = Array.isArray(user.linkedAccounts) ? user.linkedAccounts : [];
+        const w = linked.find((a) => a && a.address);
+        return w && w.address ? String(w.address).toLowerCase() : '';
+      }, [user, wallets]);
+
+      const normalizeMfaMethods = (arr) => {
+        if (!Array.isArray(arr)) return [];
+        const out = [];
+        arr.forEach((m) => {
+          const k = String(m || '').toLowerCase().trim();
+          if (!k) return;
+          if (out.includes(k)) return;
+          out.push(k);
+        });
+        return out;
+      };
+
+      const getKnownMfaMethods = (candidateUser) => {
+        if (!candidateUser || typeof candidateUser !== 'object') return [];
+        return normalizeMfaMethods(candidateUser.mfaMethods || candidateUser.mfa_methods || []);
+      };
+
+      async function runLoginMfaPrompt(methods) {
+        // T902: 登录 MFA 改为服务端 TOTP —— 采集 6 位验证码，由后端校验。
+        setMsg({ type: 'info', text: t('msg_mfa_secondary'), show: true });
+        const code = await promptTotpCode();
+        if (!code) {
+          throw new Error(t('err_mfa_prompt_unavailable'));
+        }
+        return code;
+      }
+
+      async function readJsonSafe(resp) {
+        try {
+          return await resp.json();
+        } catch (_) {
+          return {};
+        }
+      }
+
+      async function completeLogin(currentUser) {
+        clearPopupTimer();
+        setBusy(true);
+        setMsg({ type: 'info', text: t('msg_verify_token'), show: true });
+        try {
+          const candidateUser = currentUser || user || {};
+          let knownMfaMethods = getKnownMfaMethods(candidateUser);
+
+          const normalizeIdToken = (tokenValue) => {
+            if (!tokenValue) return '';
+            if (typeof tokenValue === 'string') return tokenValue.trim();
+            if (typeof tokenValue === 'object') {
+              const cands = [
+                tokenValue.identityToken,
+                tokenValue.idToken,
+                tokenValue.id_token,
+                tokenValue.token,
+              ];
+              for (const v of cands) {
+                if (typeof v === 'string' && v.trim()) return v.trim();
+              }
+            }
+            return '';
+          };
+
+          const normalizeAccessToken = (tokenValue) => {
+            if (!tokenValue) return '';
+            if (typeof tokenValue === 'string') return tokenValue.trim();
+            if (typeof tokenValue === 'object') {
+              const cands = [
+                tokenValue.accessToken,
+                tokenValue.access_token,
+                tokenValue.token,
+              ];
+              for (const v of cands) {
+                if (typeof v === 'string' && v.trim()) return v.trim();
+              }
+            }
+            return '';
+          };
+
+          const readAuthTokens = async () => {
+            let nextAccessToken = '';
+            for (let attempt = 0; attempt < 3 && !nextAccessToken; attempt++) {
+              if (attempt > 0) await new Promise(r => setTimeout(r, 150));
+              try {
+                nextAccessToken = normalizeAccessToken(await getAccessToken());
+              } catch (_) {
+                nextAccessToken = '';
+              }
+            }
+            let nextIdToken = '';
+            if (!nextAccessToken) {
+              try {
+                nextIdToken = normalizeIdToken(await getIdentityToken());
+              } catch (_) {
+                nextIdToken = normalizeIdToken(identityToken);
+              }
+              if (!nextIdToken && identityToken) {
+                nextIdToken = normalizeIdToken(identityToken);
+              }
+            }
+            return { accessToken: nextAccessToken, idToken: nextIdToken };
+          };
+
+          // T794: Capture referral code from ?ref= URL param and persist in localStorage.
+          try {
+            const _refParam = new URLSearchParams(window.location.search).get('ref');
+            if (_refParam && /^[A-Z0-9]{4,20}$/i.test(_refParam)) {
+              localStorage.setItem('veyra_ref_code', _refParam.toUpperCase());
+            }
+          } catch (_) { }
+
+          const doServerVerify = async (verifiedFlag, authTokens, mfaCode) => fetch('/api/user/privy/verify', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(authTokens && authTokens.accessToken ? { 'Authorization': 'Bearer ' + authTokens.accessToken } : {}),
+              'privy-id-token': (authTokens && authTokens.idToken) || '',
+            },
+            body: JSON.stringify({
+              id_token: (authTokens && !authTokens.accessToken ? authTokens.idToken : '') || '',
+              identity_token: (authTokens && !authTokens.accessToken ? authTokens.idToken : '') || '',
+              access_token: (authTokens && authTokens.accessToken) || '',
+              wallet_address: primaryWallet,
+              user: candidateUser,
+              mfa_verified: !!verifiedFlag,
+              mfa_code: mfaCode || '',
+              mfa_methods: knownMfaMethods,
+              // T794: include referral code so backend can process it on new registrations.
+              ref_code: (() => { try { return localStorage.getItem('veyra_ref_code') || ''; } catch (_) { return ''; } })(),
+            }),
+          });
+
+          let authTokens = await readAuthTokens();
+          let resp = await doServerVerify(false, authTokens);
+          let data = await readJsonSafe(resp);
+
+          if (!resp.ok && resp.status === 403 && data && data.error === 'mfa_required') {
+            const serverMethods = normalizeMfaMethods(data.methods || []);
+            if (serverMethods.length) {
+              knownMfaMethods = serverMethods;
+            }
+            const mfaCode = await runLoginMfaPrompt(knownMfaMethods);
+            resp = await doServerVerify(false, authTokens, mfaCode);
+            data = await readJsonSafe(resp);
+          }
+
+          if (!resp.ok && resp.status === 401) {
+            const errText = String((data && (data.message || data.error)) || '').toLowerCase();
+            const shouldRefreshRetry = errText.includes('invalid jwt token provided') || errText.includes('missing id_token') || errText.includes('missing id_token or access_token') || errText.includes('invalid auth token');
+            if (shouldRefreshRetry) {
+              setMsg({ type: 'info', text: 'SYS> Refreshing Privy session and retrying login...', show: true });
+              try {
+                if (typeof privy.refreshUser === 'function') {
+                  await privy.refreshUser();
+                }
+              } catch (_) { }
+              authTokens = await readAuthTokens();
+              resp = await doServerVerify(false, authTokens);
+              data = await readJsonSafe(resp);
+            }
+            if ((!resp.ok || !authTokens.accessToken) && shouldRefreshRetry && !hardResetRetryRef.current) {
+              hardResetRetryRef.current = true;
+              setMsg({ type: 'info', text: 'SYS> Resetting stale Privy session and restarting login...', show: true });
+              await resetHomepageSession();
+              completedLoginRef.current = false;
+              manualTriggerRef.current = true;
+              await new Promise((r) => setTimeout(r, 250));
+              if (typeof loginFn === 'function') {
+                loginFn();
+                return;
+              }
+            }
+          }
+
+          if (!resp.ok) {
+            let errMsg = t('err_server_error') + ` (${resp.status})`;
+            errMsg = (data && (data.message || data.error)) || errMsg;
+            throw new Error(errMsg);
+          }
+          hardResetRetryRef.current = false;
+          const tip = data && data.auto_provisioned
+            ? (t('msg_login_ok') + ' ' + t('msg_auto_pm_ready'))
+            : t('msg_login_ok');
+          setMsg({ type: 'ok', text: tip, show: true });
+          manualTriggerRef.current = false;
+          // T794: Clear stored referral code after successful login (one-time use).
+          try { localStorage.removeItem('veyra_ref_code'); } catch (_) { }
+          setTimeout(() => { window.location.href = '/v2/discover'; }, FAST_REDIRECT_MS);
+        } catch (err) {
+          manualTriggerRef.current = false;
+          setMsg({ type: 'err', text: t('msg_login_failed') + (err.message || String(err)), show: true });
+          setBusy(false);
+        }
+      }
+
+      useEffect(() => {
+        if (!ready || !authenticated || completedLoginRef.current) return;
+        if (!walletsReady) return;
+        if (!primaryWallet) return;
+        completedLoginRef.current = true;
+        clearPopupTimer();
+        if (!busy) setBusy(true);
+        setMsg({ type: 'info', text: t('msg_verify_token'), show: true });
+        completeLogin(user).catch(() => {
+          completedLoginRef.current = false;
+        });
+      }, [ready, authenticated, user, walletsReady, primaryWallet]);
+
+      return React.createElement(
+        React.Fragment,
+        null,
+        React.createElement(
+          'button',
+          {
+            className: 'btn',
+            disabled: !ready || busy,
+            onClick: async () => {
+              setBusy(true);
+              completedLoginRef.current = false;
+              hardResetRetryRef.current = false;
+              manualTriggerRef.current = true;
+
+              if (authenticated && walletsReady && primaryWallet) {
+                clearPopupTimer();
+                setMsg({ type: 'info', text: t('msg_verify_token'), show: true });
+                completeLogin(user).catch(() => {
+                  completedLoginRef.current = false;
+                });
+                return;
+              }
+
+              if (!authenticated) {
+                await clearBackendSessionBestEffort();
+                clearPrivyBrowserState();
+              }
+
+              setMsg({ type: 'info', text: t('msg_launch_modal'), show: true });
+              clearPopupTimer();
+              popupTimerRef.current = setTimeout(function () {
+                popupTimerRef.current = null;
+                setBusy(false);
+                setMsg({ type: 'err', text: t('msg_modal_timeout'), show: true });
+              }, 12000);
+              try {
+                if (typeof loginFn !== 'function') {
+                  throw new Error('Privy login API is unavailable in current runtime');
+                }
+                loginFn();
+              } catch (e) {
+                clearPopupTimer();
+                setBusy(false);
+                setMsg({ type: 'err', text: t('msg_open_modal_failed') + (e?.message || String(e)), show: true });
+              }
+            },
+          },
+          busy ? t('btn_processing') : t('btn_login')
+        ),
+        React.createElement(TypewriterMessage, { msg }),
+        React.createElement(CyberStatusFeed, { active: busy })
+      );
+    }
+
+    async function boot() {
+      const app = document.getElementById('app');
+
+      try {
+        const u = new URL(window.location.href);
+        if (u.searchParams.get('logged_out') === '1') {
+          try {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i += 1) {
+              const k = localStorage.key(i);
+              if (k && k.toLowerCase().startsWith('privy:')) keys.push(k);
+            }
+            keys.forEach((k) => { try { localStorage.removeItem(k); } catch (_) { } });
+          } catch (_) { }
+          try {
+            const sk = [];
+            for (let i = 0; i < sessionStorage.length; i += 1) {
+              const k = sessionStorage.key(i);
+              if (k && k.toLowerCase().startsWith('privy:')) sk.push(k);
+            }
+            sk.forEach((k) => { try { sessionStorage.removeItem(k); } catch (_) { } });
+          } catch (_) { }
+          try {
+            if (window.indexedDB && typeof indexedDB.databases === 'function') {
+              const dbs = await indexedDB.databases();
+              (dbs || []).forEach((db) => {
+                const name = db && db.name ? String(db.name) : '';
+                if (name.toLowerCase().startsWith('privy') || name.toLowerCase().includes('walletconnect')) {
+                  try { indexedDB.deleteDatabase(name); } catch (_) { }
+                }
+              });
+            }
+          } catch (_) { }
+          try {
+            ['privy-session', 'privy-token', 'privy-id-token', 'privy-refresh-token'].forEach((c) => {
+              document.cookie = c + '=; Max-Age=0; path=/; SameSite=Lax';
+            });
+          } catch (_) { }
+          try {
+            u.searchParams.delete('logged_out');
+            const cleanUrl = u.pathname + (u.searchParams.toString() ? '?' + u.searchParams.toString() : '') + (u.hash || '');
+            window.history.replaceState({}, '', cleanUrl);
+          } catch (_) { }
+        }
+      } catch (_) { }
+
+      const cfgResp = await fetch('/api/user/privy/config', { credentials: 'include' });
+      const cfg = await cfgResp.json();
+      if (!cfg.enabled || !cfg.app_id) {
+        app.innerHTML = '<div class="msg show err">' + t('msg_privy_not_configured') + '</div>';
+        return;
+      }
+
+      const root = createRoot(app);
+      const mfaAction = parseMfaAction();
+      const child = mfaAction
+        ? React.createElement(MfaInner, { action: mfaAction })
+        : React.createElement(LoginInner);
+      const appOrigin = window.location.origin;
+      root.render(
+        React.createElement(
+          PrivyProvider,
+          {
+            appId: cfg.app_id,
+            config: {
+              appUrl: appOrigin,
+              embeddedWallets: {
+                ethereum: {
+                  createOnLogin: 'users-without-wallets',
+                },
+              },
+              loginMethods: ['wallet', 'email', 'google'],
+              appearance: {
+                theme: 'dark',
+                accentColor: '#2ee68b',
+                showWalletLoginFirst: true,
+                walletChainType: 'ethereum-only',
+                walletList: ['detected_ethereum_wallets', 'metamask', 'coinbase_wallet', 'rainbow'],
+              },
+              externalWallets: {
+                walletConnect: {
+                  enabled: false,
+                },
+              },
+            },
+          },
+          child
+        )
+      );
+    }
+
+    boot().catch((err) => {
+      const app = document.getElementById('app');
+      app.innerHTML = '<div class="msg show err">' + t('msg_bundle_load_failed') + (err.message || String(err)) + '</div>';
+    });
+  </script>
+
+  <div id="vpCookieToast" style="display:none;position:fixed;left:50%;bottom:4px;transform:translateX(-50%);z-index:100000;
+            max-width:760px;width:calc(100% - 32px);background:#101524;color:#e5e9f3;
+            border:1px solid #1f2740;border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.45);
+            padding:18px 20px;font-family:Inter,system-ui,-apple-system,sans-serif;" role="dialog" aria-live="polite"
+    aria-label="Cookie consent">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;">
+      <div
+        style="flex:0 0 36px;height:36px;border-radius:10px;background:#1c2742;display:flex;align-items:center;justify-content:center;color:#7aa6ff;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+          stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="9" cy="10" r="1.2" fill="currentColor" />
+          <circle cx="15" cy="14" r="1.2" fill="currentColor" />
+          <circle cx="9.5" cy="15.5" r="1" fill="currentColor" />
+          <circle cx="14.5" cy="9.5" r="1" fill="currentColor" />
+        </svg>
+      </div>
+      <div style="flex:1 1 320px;min-width:240px;color:#e5e9f3;">
+        <div id="vpCookieTitle" style="font-weight:600;font-size:.95rem;margin-bottom:4px;">Cookie Settings</div>
+        <div id="vpCookieText" style="font-size:.84rem;color:#9aa3b8;line-height:1.45;">We use cookies to enhance your
+          experience. By continuing you agree to our cookie policy.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button id="vpCookieDeny" type="button"
+          style="padding:8px 14px;border-radius:8px;border:1px solid #2b3756;background:transparent;color:#cbd2e3;font-size:.82rem;cursor:pointer;">Deny
+          All</button>
+        <button id="vpCookieOver18" type="button"
+          style="padding:8px 14px;border-radius:8px;border:1px solid #b91c1c;background:#dc2626;color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">I
+          am over 18</button>
+        <button id="vpCookieAccept" type="button"
+          style="padding:8px 14px;border-radius:8px;border:1px solid #2563eb;background:#3b82f6;color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;">Accept
+          All</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function vpCookieConsent() {
+      var KEY = 'veyra_cookie_consent_v1';
+      try { if (localStorage.getItem(KEY)) return; } catch (_) { return; }
+      var I18N = {
+        en: { title: 'Cookie Settings', text: 'We use cookies to enhance your experience. By continuing you agree to our cookie policy.', deny: 'Deny All', over18: 'I am over 18', accept: 'Accept All' },
+        'zh-CN': { title: 'Cookie 设置', text: '我们使用 Cookie 提升体验。继续使用即同意我们的 Cookie 政策。', deny: '全部拒绝', over18: '我已经满 18 岁', accept: '全部接受' },
+        fr: { title: 'Paramètres des cookies', text: "Nous utilisons des cookies pour améliorer votre expérience. En continuant, vous acceptez notre politique de cookies.", deny: 'Tout refuser', over18: "J'ai plus de 18 ans", accept: 'Tout accepter' },
+        ja: { title: 'Cookie 設定', text: '体験向上のため Cookie を使用します。続行することで Cookie ポリシーに同意したとみなされます。', deny: 'すべて拒否', over18: '18歳以上です', accept: 'すべて許可' },
+        ko: { title: '쿠키 설정', text: '사용자 경험 향상을 위해 쿠키를 사용합니다. 계속 사용 시 쿠키 정책에 동의한 것으로 간주됩니다.', deny: '모두 거부', over18: '만 18세 이상입니다', accept: '모두 허용' },
+        th: { title: 'การตั้งค่าคุกกี้', text: 'เราใช้คุกกี้เพื่อพัฒนาประสบการณ์ของคุณ การใช้งานต่อถือว่าคุณยอมรับนโยบายคุกกี้ของเรา', deny: 'ปฏิเสธทั้งหมด', over18: 'ฉันอายุเกิน 18 ปี', accept: 'ยอมรับทั้งหมด' },
+        vi: { title: 'Cài đặt Cookie', text: 'Chúng tôi sử dụng cookie để cải thiện trải nghiệm của bạn. Tiếp tục đồng nghĩa với việc bạn chấp nhận chính sách cookie.', deny: 'Từ chối tất cả', over18: 'Tôi trên 18 tuổi', accept: 'Chấp nhận tất cả' },
+        es: { title: 'Configuración de cookies', text: 'Usamos cookies para mejorar tu experiencia. Al continuar aceptas nuestra política de cookies.', deny: 'Rechazar todo', over18: 'Soy mayor de 18', accept: 'Aceptar todo' },
+        pt: { title: 'Configurações de cookies', text: 'Usamos cookies para melhorar sua experiência. Ao continuar você aceita nossa política de cookies.', deny: 'Recusar tudo', over18: 'Tenho mais de 18', accept: 'Aceitar tudo' },
+      };
+      function pickLang() {
+        try {
+          var l = localStorage.getItem('veyra_lang') || localStorage.getItem('vp_lang') || (navigator.language || 'en');
+          if (l && I18N[l]) return l;
+          var short = (l || '').split('-')[0];
+          if (short && I18N[short]) return short;
+        } catch (_) { }
+        return 'en';
+      }
+      var lang = pickLang();
+      var d = I18N[lang] || I18N.en;
+      function show() {
+        var el = document.getElementById('vpCookieToast');
+        if (!el) return;
+        document.getElementById('vpCookieTitle').textContent = d.title;
+        document.getElementById('vpCookieText').textContent = d.text;
+        document.getElementById('vpCookieDeny').textContent = d.deny;
+        document.getElementById('vpCookieOver18').textContent = d.over18;
+        document.getElementById('vpCookieAccept').textContent = d.accept;
+        el.style.display = 'block';
+        function close(action) {
+          try { localStorage.setItem(KEY, action + ':' + Date.now()); } catch (_) { }
+          el.style.display = 'none';
+        }
+        document.getElementById('vpCookieDeny').addEventListener('click', function () {
+          try { localStorage.setItem(KEY, 'deny:' + Date.now()); } catch (_) { }
+          window.location.href = 'https://www.google.com/';
+        });
+        document.getElementById('vpCookieOver18').addEventListener('click', function () { close('over18'); });
+        document.getElementById('vpCookieAccept').addEventListener('click', function () { close('accept'); });
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show);
+      else show();
+    })();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,20 @@
+{
+  "search.title": "Pesquisar",
+  "search.subtitle": "Pesquise em todos os eventos Polymarket: esportes, política, cripto, esports e mais.",
+  "search.input.placeholder": "Buscar times, jogadores, candidatos, tokens, cidades…",
+  "search.button.go": "Pesquisar",
+  "search.tab.active": "Ativo",
+  "search.tab.resolved": "Resolvido",
+  "search.tab.all": "Tudo",
+  "search.loading": "Pesquisando…",
+  "search.empty.no_query": "Digite uma palavra-chave para pesquisar.",
+  "search.empty.no_results": "Sem resultados. Tente outras palavras.",
+  "search.error": "Pesquisa falhou. Tente novamente.",
+  "search.card.ends": "Termina",
+  "search.card.vol": "Vol.",
+  "search.card.markets": "Mercados",
+  "search.summary.results": "{n} resultados",
+  "search.summary.page": "Página {page} de {total}",
+  "search.pagination.prev": "Anterior",
+  "search.pagination.next": "Próximo"
+}

@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "เชื่อมต่อกระเป๋า PM แล้ว",
+  "go.badge.unbound": "ยังไม่เชื่อมต่อกระเป๋า PM",
+  "go.btn.authorize": "อนุมัติกระเป๋าเงิน",
+  "go.btn.dashboard": "ไปที่แดชบอร์ด",
+  "go.contentLoading": "กำลังโหลดเนื้อหา…",
+  "go.heading": "คู่มือผู้ใช้ V e Y r a",
+  "go.loadFailedPrefix": "โหลดล้มเหลว:",
+  "go.loading": "กำลังเปลี่ยนเส้นทาง โปรดรอสักครู่…",
+  "go.title": "กำลังเปลี่ยนเส้นทาง",
+  "go.toc": "สารบัญ",
+  "go.toc.empty": "(ไม่มีหัวข้อ)"
+}

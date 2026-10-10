@@ -1,0 +1,17 @@
+{
+  "futures.title": "Mercados de Futuros",
+  "futures.subtitle": "Opera en mercados de futuros en Polymarket.",
+  "futures.filter.sport": "Deporte",
+  "futures.filter.all": "Todos",
+  "futures.loading": "Cargando mercados de futuros…",
+  "futures.empty": "No hay mercados de futuros disponibles.",
+  "futures.error": "Error al cargar mercados de futuros. Inténtalo de nuevo.",
+  "futures.summary.results": "resultados",
+  "futures.card.ends": "Termina",
+  "futures.drawer.close": "Cerrar",
+  "futures.drawer.loading": "Cargando detalles del mercado…",
+  "futures.drawer.empty": "Sin resultados disponibles.",
+  "futures.drawer.error": "Error al cargar detalles del mercado.",
+  "futures.drawer.subtitle": "Detalles del Mercado",
+  "futures.drawer.no_outcomes": "Sin resultados para este mercado."
+}

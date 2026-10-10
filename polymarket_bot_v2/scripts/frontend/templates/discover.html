@@ -1,0 +1,659 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('discover.title','Discover') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('discover.title','Discover') }}{% endblock %}
+
+{% block content %}
+<script>document.body.setAttribute('data-requires-pm','1');</script>
+{% if ssr_events_json %}
+<script id="vp-discover-ssr" type="application/json">{{ ssr_events_json | escape_script_json | safe }}</script>
+{% endif %}
+{% if ssr_tags_json %}
+<script id="vp-discover-tags-ssr" type="application/json">{{ ssr_tags_json | escape_script_json | safe }}</script>
+{% endif %}
+{% if ssr_cats_json %}
+<script id="vp-discover-cats-ssr" type="application/json">{{ ssr_cats_json | escape_script_json | safe }}</script>
+{% endif %}
+
+<style>
+
+.disc-tabs { display:flex; gap:6px; flex-wrap:wrap; padding:6px 0 14px; border-bottom:1px solid var(--border); margin-bottom:14px; overflow-x:auto; }
+.disc-tab { background:transparent; border:1px solid var(--border); border-radius:999px; padding:6px 16px; color:var(--text-secondary); cursor:pointer; font-size:.78rem; white-space:nowrap; transition:all .15s; }
+.disc-tab:hover { border-color:var(--accent); color:var(--text-primary); }
+.disc-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+
+.disc-cats { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; padding-bottom:8px; }
+.disc-cat-chip { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; background:var(--bg-card); border:1px solid var(--border); border-radius:999px; color:var(--text-secondary); cursor:pointer; font-size:.78rem; transition:all .15s; text-decoration:none; }
+.disc-cat-chip:hover { border-color:var(--accent); transform:translateY(-1px); }
+.disc-cat-chip.active { background:linear-gradient(135deg, var(--accent), #8b5cf6); border-color:transparent; color:#fff; font-weight:600; box-shadow:0 4px 12px rgba(139,92,246,.3); }
+.disc-cat-icon { font-size:.95em; }
+
+.disc-tags-divider { height:1px; background:var(--border); margin:0 0 10px; opacity:.5; }
+/* T541 — wrap tag chips so they never overflow the viewport */
+.disc-tags { display:flex; gap:6px; row-gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:14px; padding-bottom:6px; overflow:visible; min-height:30px; }
+.disc-tag-chip { flex-shrink:0; display:inline-flex; align-items:center; padding:4px 10px; background:transparent; border:1px solid var(--border); border-radius:999px; color:var(--text-muted); cursor:pointer; font-size:.78rem; text-decoration:none; transition:all .15s; }
+.disc-tag-chip:hover { border-color:var(--accent); color:var(--text-primary); }
+.disc-tag-chip.active { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+.disc-tag-more { background:var(--bg-card); border-color:var(--border); color:var(--text-secondary); font-weight:600; }
+
+.tag-pop-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:9998; backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; }
+.tag-pop { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:18px; width:min(70vw, 720px); max-height:70vh; overflow:auto; box-shadow:0 24px 60px rgba(0,0,0,.5); }
+.tag-pop h3 { margin:0 0 12px; font-size:.95rem; color:var(--text-primary); display:flex; justify-content:space-between; align-items:center; }
+.tag-pop-close { background:transparent; border:0; color:var(--text-muted); font-size:1.2rem; cursor:pointer; padding:0 6px; }
+.tag-pop-grid { display:flex; flex-wrap:wrap; gap:6px; }
+
+.event-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+@media (max-width: 1100px) { .event-grid { grid-template-columns:repeat(2, 1fr); } }
+@media (max-width: 720px)  { .event-grid { grid-template-columns:1fr; } }
+
+/* T531 — Polymarket /finance card visual alignment.
+   Reference: https://polymarket.com/finance — rounded card with subtle
+   border, 38px square icon, tight title (line-clamp-3), big % "chance"
+   center for binary, sub-rows for multi with mini Yes/No buttons. */
+.event-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:0; display:flex; flex-direction:column; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; position:relative; overflow:hidden; min-height:200px; }
+.event-card:hover { border-color:rgba(139,92,246,.45); transform:translateY(-1px); box-shadow:0 6px 18px rgba(0,0,0,.28); }
+
+.event-card-head { display:flex; gap:10px; align-items:flex-start; padding:12px 12px 0 12px; min-height:46px; }
+.event-card-img { width:38px; height:38px; min-width:38px; border-radius:6px; object-fit:cover; flex-shrink:0; background:var(--bg-primary); border:1px solid var(--border); }
+.event-card-meta { flex:1; min-width:0; }
+.event-card-title { font-size:.92rem; font-weight:600; color:var(--text-primary); line-height:1.3; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; word-break:break-word; }
+
+.event-card-body { flex:1; display:flex; flex-direction:column; padding:10px 12px 8px 12px; min-height:90px; }
+
+/* Binary card mid: big centered "XX% chance" + Yes/No row */
+.binary-mid { display:flex; align-items:center; justify-content:space-between; gap:10px; flex:1; }
+.binary-prob { display:flex; flex-direction:column; align-items:center; min-width:62px; }
+.binary-prob .bp-pct { font-size:1.55rem; font-weight:700; color:var(--text-primary); line-height:1; font-variant-numeric:tabular-nums; }
+.binary-prob .bp-label { font-size:.66rem; color:var(--text-muted); margin-top:3px; text-transform:lowercase; letter-spacing:.2px; }
+.binary-actions { display:flex; flex-direction:column; gap:6px; flex:1; }
+.quick-bet-btn { width:100%; padding:8px 10px; border:0; border-radius:8px; cursor:pointer; font-weight:600; font-size:.82rem; display:flex; align-items:center; justify-content:space-between; gap:6px; transition:filter .15s, background .15s; }
+.quick-bet-btn:hover { filter:brightness(1.08); }
+.quick-bet-btn .qb-label { font-weight:600; }
+.quick-bet-btn .qb-price { font-weight:700; opacity:.92; font-variant-numeric:tabular-nums; }
+.qb-yes { background:rgba(34,197,94,.18); color:#86efac; border:1px solid rgba(34,197,94,.4); }
+.qb-yes:hover { background:rgba(34,197,94,.32); color:#fff; }
+.qb-no  { background:rgba(239,68,68,.18); color:#fca5a5; border:1px solid rgba(239,68,68,.4); }
+.qb-no:hover  { background:rgba(239,68,68,.32); color:#fff; }
+
+/* Legacy two-column prob-row kept for backwards compatibility (no longer used by binary) */
+.prob-row { display:flex; gap:8px; }
+.prob-cell { flex:1; display:flex; flex-direction:column; gap:6px; }
+
+.prob-bar-wrap { height:4px; background:var(--bg-primary); border-radius:999px; overflow:hidden; display:flex; margin-top:6px; }
+.prob-bar-yes { background:#22c55e; }
+.prob-bar-no  { background:#ef4444; }
+
+/* Multi card: list of sub-rows like Polymarket finance cards. */
+.multi-list { display:flex; flex-direction:column; gap:4px; flex:1; }
+.multi-item { display:flex; align-items:center; gap:8px; padding:6px 8px; background:transparent; border-radius:6px; transition:background .12s; }
+.multi-item:hover { background:rgba(139,92,246,.06); }
+.multi-item-name { flex:1; font-size:.82rem; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.multi-item-prob { font-weight:700; font-size:.85rem; color:var(--text-primary); min-width:42px; text-align:right; font-variant-numeric:tabular-nums; }
+.multi-bar { display:none; }
+.multi-mini-btns { display:flex; gap:4px; }
+.multi-mini-btn { padding:3px 8px; border-radius:5px; font-size:.68rem; font-weight:700; cursor:pointer; transition:filter .15s, background .15s; min-width:34px; text-align:center; font-variant-numeric:tabular-nums; }
+.multi-mini-btn.yes { background:rgba(34,197,94,.18); border:1px solid rgba(34,197,94,.4); color:#86efac; }
+.multi-mini-btn.yes:hover { background:#22c55e; color:#fff; }
+.multi-mini-btn.no  { background:rgba(239,68,68,.18); border:1px solid rgba(239,68,68,.4); color:#fca5a5; }
+.multi-mini-btn.no:hover  { background:#ef4444; color:#fff; }
+.multi-buy-btn { padding:4px 10px; background:rgba(34,197,94,.15); border:1px solid #22c55e; border-radius:6px; color:#22c55e; font-size:.72rem; font-weight:600; cursor:pointer; transition:all .12s; }
+.multi-buy-btn:hover { background:#22c55e; color:#fff; }
+
+.event-card-tags { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:.68rem; color:var(--text-muted); min-height:0; }
+.event-card-cat-badge { background:rgba(139,92,246,.12); color:#a78bfa; padding:1px 6px; border-radius:4px; font-weight:600; letter-spacing:.3px; font-size:.65rem; }
+.event-card-cat-badge.blank { background:transparent; padding:0; }
+.event-card-end { display:inline-flex; align-items:center; gap:4px; }
+.event-card-end.urgent { color:#fca5a5; font-weight:600; }
+
+.event-card-foot { display:flex; justify-content:space-between; align-items:center; font-size:.7rem; color:var(--text-muted); padding:8px 12px 10px 12px; border-top:1px solid var(--border); min-height:32px; gap:8px; }
+.event-card-vol { color:#a78bfa; font-weight:700; font-size:.78rem; font-variant-numeric:tabular-nums; }
+
+@keyframes shimmer { 0%{ background-position:-400px 0; } 100%{ background-position:400px 0; } }
+@keyframes spinrot { from{ transform:rotate(0deg); } to{ transform:rotate(360deg); } }
+.skel-card { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; flex-direction:column; gap:12px; min-height:260px; position:relative; }
+.skel-line, .skel-block { background:linear-gradient(90deg, rgba(139,92,246,.06) 0%, rgba(139,92,246,.22) 50%, rgba(139,92,246,.06) 100%); background-size:800px 100%; animation:shimmer 1.4s linear infinite; border-radius:6px; }
+.skel-row { display:flex; gap:10px; align-items:center; }
+.skel-img { width:48px; height:48px; border-radius:10px; }
+.skel-title { height:14px; width:80%; }
+.skel-sub { height:10px; width:55%; margin-top:4px; }
+.skel-btn { height:36px; flex:1; border-radius:10px; }
+.skel-foot { height:12px; width:100%; margin-top:6px; }
+
+.skel-spinner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:34px; height:34px; border:3px solid rgba(139,92,246,.2); border-top-color:var(--accent); border-radius:50%; animation:spinrot .9s linear infinite; pointer-events:none; }
+
+.qb-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:flex-start; justify-content:center; z-index:200000; backdrop-filter:blur(6px); padding:calc(var(--header-height,64px) + 16px) 16px 24px; overflow-y:auto; }
+.qb-modal { background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:0; width:min(440px, 100%); max-height:88vh; overflow:auto; box-shadow:0 24px 60px rgba(0,0,0,.65); position:relative; }
+
+.qb-modal-head { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); padding:0 12px; }
+.qb-mode-tabs { display:flex; }
+.qb-mode-tab { background:transparent; border:0; padding:14px 16px; color:var(--text-muted); cursor:pointer; font-weight:700; font-size:.92rem; border-bottom:2px solid transparent; }
+.qb-mode-tab.active { color:var(--text-primary); border-bottom-color:var(--accent); }
+.qb-otype { display:flex; align-items:center; gap:6px; }
+.qb-otype-select { background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--text-secondary); padding:5px 10px; font-size:.78rem; cursor:pointer; }
+.qb-gear { background:transparent; border:0; color:var(--text-muted); cursor:pointer; padding:4px; }
+.qb-gear:hover { color:var(--text-primary); }
+
+.qb-modal-body { padding:16px; }
+.qb-mkt-title { font-size:.84rem; font-weight:600; color:var(--text-primary); padding:8px 10px; background:var(--bg-primary); border-radius:8px; margin-bottom:12px; line-height:1.4; }
+
+.qb-outcome-row { display:flex; gap:8px; margin-bottom:14px; }
+.qb-outcome-btn { flex:1; padding:11px 8px; border:1px solid var(--border); background:transparent; border-radius:10px; cursor:pointer; color:var(--text-secondary); font-weight:700; font-size:.92rem; display:flex; flex-direction:column; align-items:center; gap:1px; transition:all .15s; }
+.qb-outcome-btn .qb-out-px { font-size:.76rem; opacity:.85; font-weight:500; }
+.qb-outcome-btn.yes-active { background:linear-gradient(135deg, #22c55e, #16a34a); color:#fff; border-color:transparent; box-shadow:0 4px 12px rgba(34,197,94,.25); }
+.qb-outcome-btn.no-active  { background:linear-gradient(135deg, #ef4444, #dc2626); color:#fff; border-color:transparent; box-shadow:0 4px 12px rgba(239,68,68,.25); }
+
+.qb-section { margin-bottom:14px; }
+.qb-section-label { font-size:.78rem; color:var(--text-muted); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+.qb-section-label .qb-bal { color:var(--text-muted); font-size:.72rem; }
+.qb-amt-display { font-size:1.6rem; font-weight:800; color:var(--text-primary); text-align:right; padding:6px 0; min-height:1em; }
+.qb-amt-display.dim { color:var(--text-muted); }
+
+.qb-quick-amts { display:flex; gap:6px; flex-wrap:nowrap; }
+.qb-quick-amt { flex:1; padding:8px 0; background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; color:var(--text-secondary); cursor:pointer; font-size:.82rem; font-weight:600; transition:all .12s; }
+.qb-quick-amt:hover { border-color:var(--accent); color:var(--text-primary); }
+.qb-quick-amt.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.qb-quick-amt.disabled { opacity:.5; cursor:not-allowed; }
+
+.stepper-input { display:flex; align-items:center; background:var(--bg-primary); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.stepper-input button { background:transparent; border:0; width:40px; height:40px; color:var(--text-secondary); font-size:1.1rem; font-weight:700; cursor:pointer; transition:all .12s; }
+.stepper-input button:hover:not(:disabled) { background:var(--bg-card); color:var(--accent); }
+.stepper-input button:disabled { opacity:.4; cursor:not-allowed; }
+.stepper-input input { flex:1; background:transparent; border:0; color:var(--text-primary); font-size:1rem; font-weight:700; text-align:center; padding:8px 4px; -moz-appearance:textfield; }
+.stepper-input input::-webkit-outer-spin-button, .stepper-input input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+.stepper-input input:focus { outline:none; }
+.stepper-suffix { padding-right:12px; color:var(--text-muted); font-size:.85rem; font-weight:500; }
+
+.qb-share-adjusts { display:flex; gap:6px; margin-top:8px; flex-wrap:nowrap; }
+.qb-share-adj { flex:1; padding:6px 0; background:var(--bg-primary); border:1px solid var(--border); border-radius:6px; color:var(--text-muted); cursor:pointer; font-size:.74rem; font-weight:600; transition:all .12s; }
+.qb-share-adj:hover { border-color:var(--accent); color:var(--text-primary); }
+
+.qb-summary { background:var(--bg-primary); border-radius:8px; padding:10px 12px; margin:12px 0; }
+.qb-sum-row { display:flex; justify-content:space-between; font-size:.82rem; padding:3px 0; }
+.qb-sum-row b { color:var(--text-primary); font-weight:700; }
+.qb-sum-row b.profit { color:#22c55e; }
+.qb-sum-row b.cost { color:#a78bfa; }
+
+.qb-balance { font-size:.74rem; color:var(--text-muted); margin:6px 0 8px; }
+.qb-error { color:#fca5a5; font-size:.78rem; padding:7px 10px; background:rgba(220,38,38,.1); border:1px solid rgba(220,38,38,.3); border-radius:6px; margin:8px 0; }
+
+.qb-submit { width:100%; padding:13px; border-radius:10px; border:0; cursor:pointer; font-weight:700; font-size:.95rem; background:linear-gradient(135deg, var(--accent), #8b5cf6); color:#fff; transition:all .15s; }
+.qb-submit:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 18px rgba(139,92,246,.35); }
+.qb-submit:disabled { opacity:.5; cursor:not-allowed; }
+
+.qb-gear-pop { position:absolute; top:54px; right:14px; background:#000; border:1px solid var(--border); border-radius:10px; padding:14px; width:260px; box-shadow:0 12px 36px rgba(0,0,0,.6); z-index:200001; opacity:1; }
+.qb-gear-pop h4 { margin:0 0 8px; font-size:.82rem; color:var(--text-primary); }
+.qb-gear-pop .gear-item { padding:6px 0; font-size:.78rem; color:var(--text-secondary); display:flex; justify-content:space-between; align-items:center; }
+.qb-gear-pop .gear-item .gear-tag { font-size:.65rem; color:var(--text-muted); padding:2px 6px; background:var(--bg-primary); border-radius:4px; }
+
+.scroll-sentinel { width:100%; min-height:60px; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:.82rem; padding:18px 0 8px; }
+/* T587 — 胶囊提示“正在载入更多市场机会”，让用户知道 SSR 首屏 15 张后还会续加。 */
+.scroll-sentinel .vp-loading-pill { display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px; background:rgba(139,92,246,.10); border:1px solid rgba(139,92,246,.35); color:#cbb6ff; font-weight:500; }
+.scroll-sentinel .vp-loading-pill .vp-loading-dot { width:7px; height:7px; border-radius:50%; background:#a78bfa; box-shadow:0 0 8px rgba(167,139,250,.6); animation:vpDotPulse 1.2s ease-in-out infinite; }
+@keyframes vpDotPulse { 0%,100% { opacity:.35; transform:scale(.8); } 50% { opacity:1; transform:scale(1.15); } }
+.scroll-sentinel .vp-end-pill { display:inline-flex; align-items:center; padding:5px 12px; border-radius:999px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.10); color:var(--text-muted); font-size:.78rem; }
+</style>
+
+<div id="vp-discover-root">
+
+  <div class="disc-tabs" id="vp-disc-tabs">
+    <button class="disc-tab"       data-i18n="discover.tab.all" data-vp-disc-tab="all">{{ i18n_dict.get('discover.tab.all','All') }}</button>
+    <button class="disc-tab"       data-vp-disc-tab="hot"><span>🔥</span> <span data-i18n="discover.tab.hot">{{ i18n_dict.get('discover.tab.hot','Hot') }}</span></button>
+    <button class="disc-tab"    data-vp-disc-tab="volume"><span>📈</span> <span data-i18n="discover.tab.total">{{ i18n_dict.get('discover.tab.total','Volume') }}</span></button>
+    <button class="disc-tab"       data-vp-disc-tab="new"><span>🆕</span> <span data-i18n="discover.tab.new">{{ i18n_dict.get('discover.tab.new','New') }}</span></button>
+    <button class="disc-tab" data-vp-disc-tab="liquidity"><span>💎</span> <span data-i18n="discover.tab.liquidity">{{ i18n_dict.get('discover.tab.liquidity','Liquidity') }}</span></button>
+  </div>
+
+  <div class="disc-cats" id="vp-disc-cats">
+    <a class="disc-cat-chip"></a>
+    <template>
+      <a class="disc-cat-chip"
+        
+        >
+        <span class="disc-cat-icon"></span>
+        <span></span>
+      </a>
+    </template>
+  </div>
+
+  <!-- T501 Wave 6C: per-category sub-tags (rendered by discover.js renderTags()) -->
+  <div id="vp-disc-tags-wrap" style="display:none;">
+    <div class="disc-tags-divider"></div>
+    <div class="disc-tags" id="vp-disc-tags"></div>
+  </div>
+
+  <template>
+    <div>
+      <div class="disc-tags-divider"></div>
+      <div class="disc-tags">
+        <a class="disc-tag-chip"></a>
+        <template>
+          <a class="disc-tag-chip"
+            
+            
+            ></a>
+        </template>
+        <button class="disc-tag-chip disc-tag-more"
+               
+               ></button>
+      </div>
+    </div>
+  </template>
+
+  <template>
+    <div class="tag-pop-overlay">
+      <div class="tag-pop">
+        <h3>
+          <span></span>
+          <button class="tag-pop-close">✕</button>
+        </h3>
+        <div class="tag-pop-grid">
+          <template>
+            <a class="disc-tag-chip"
+              
+              
+              ></a>
+          </template>
+          <template>
+            <div style="color:var(--text-muted);font-size:.82rem;padding:14px"></div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <template>
+    <div class="v-card" style="margin-bottom:14px;border:1px solid #dc2626;background:rgba(220,38,38,.08)">
+      <div style="color:#fca5a5"><span></span>：<span></span></div>
+    </div>
+  </template>
+  <div id="vp-disc-error" style="display:none" class="v-card" style="margin-bottom:14px;border:1px solid #dc2626;background:rgba(220,38,38,.08)"></div>
+
+  <div id="discover-static-skeleton" class="event-grid" style="margin-top:6px">
+    {% for _ in range(12) %}
+    <div class="skel-card">
+      <div class="skel-row">
+        <div class="skel-block skel-img"></div>
+        <div style="flex:1">
+          <div class="skel-line skel-title"></div>
+          <div class="skel-line skel-sub"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px"><div class="skel-block skel-btn"></div><div class="skel-block skel-btn"></div></div>
+      <div class="skel-line skel-foot"></div>
+      <div class="skel-spinner" aria-label="loading"></div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="event-grid" id="vp-disc-grid">
+
+    <template>
+      <div class="event-card">
+        <div class="event-card-head">
+          <img class="event-card-img" width="48" height="48" decoding="async" loading="lazy" onerror="this.style.visibility='hidden'">
+          <div class="event-card-meta">
+            <div class="event-card-title"></div>
+            <div class="event-card-tags">
+
+              <template>
+                <span class="event-card-cat-badge blank">&nbsp;</span>
+              </template>
+              <template>
+                <span class="event-card-cat-badge"></span>
+              </template>
+              <template>
+                <span class="event-card-cat-badge blank">&nbsp;</span>
+              </template>
+              <span class="event-card-end"></span>
+            </div>
+          </div>
+        </div>
+
+        <template>
+          <div>
+            <div class="prob-row">
+              <div class="prob-cell">
+                <button class="quick-bet-btn qb-yes">
+                  <span class="qb-label"><span></span> <span></span></span>
+                  <span class="qb-price"></span>
+                </button>
+              </div>
+              <div class="prob-cell">
+                <button class="quick-bet-btn qb-no">
+                  <span class="qb-label"><span></span> <span></span></span>
+                  <span class="qb-price"></span>
+                </button>
+              </div>
+            </div>
+            <div class="prob-bar-wrap" style="margin-top:8px">
+              <div class="prob-bar-yes"></div>
+              <div class="prob-bar-no" ></div>
+            </div>
+          </div>
+        </template>
+
+        <template>
+          <div class="multi-list">
+            <template>
+              <div class="multi-item">
+                <div class="multi-item-name"></div>
+                <div class="multi-bar"><div class="multi-bar-fill"></div></div>
+                <div class="multi-item-prob"></div>
+                <button class="multi-buy-btn"></button>
+              </div>
+            </template>
+            <template>
+              <div style="font-size:.74rem;color:var(--text-muted);padding:6px 8px;background:var(--bg-primary);border-radius:8px"></div>
+            </template>
+          </div>
+        </template>
+
+        <div class="event-card-foot">
+          <span><span></span> <span class="event-card-vol"></span></span>
+          <span></span>
+        </div>
+      </div>
+    </template>
+
+    <template>
+      <template>
+        <div class="skel-card">
+          <div class="skel-row">
+            <div class="skel-block skel-img"></div>
+            <div style="flex:1">
+              <div class="skel-line skel-title"></div>
+              <div class="skel-line skel-sub"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px"><div class="skel-block skel-btn"></div><div class="skel-block skel-btn"></div></div>
+          <div class="skel-line skel-foot"></div>
+          <div class="skel-spinner" aria-label="loading"></div>
+        </div>
+      </template>
+    </template>
+  </div>
+
+  <div class="scroll-sentinel" id="vp-disc-sentinel">
+    <span></span>
+    <span></span>
+  </div>
+
+  <template>
+    <div class="qb-modal-overlay">
+      <div class="qb-modal" style="position:relative">
+
+        <div class="qb-modal-head">
+          <div class="qb-mode-tabs">
+            <button class="qb-mode-tab" data-i18n="discover.qb.tab.buy">{{ i18n_dict.get('discover.qb.tab.buy','Buy') }}</button>
+            <button class="qb-mode-tab" data-i18n="discover.qb.tab.sell">{{ i18n_dict.get('discover.qb.tab.sell','Sell') }}</button>
+          </div>
+          <div class="qb-otype">
+            <select class="qb-otype-select">
+              <option value="market" data-i18n="discover.qb.orderType.market">{{ i18n_dict.get('discover.qb.orderType.market','Market') }}</option>
+              <option value="limit" data-i18n="discover.qb.orderType.limit">{{ i18n_dict.get('discover.qb.orderType.limit','Limit') }}</option>
+            </select>
+            <button class="qb-gear" data-i18n-attr="title:discover.qb.gear.tooltip" title="{{ i18n_dict.get('discover.qb.gear.tooltip','Advanced (Split/Merge)') }}">⚙</button>
+          </div>
+        </div>
+
+        <template>
+          <div class="qb-gear-pop">
+            <h4 data-i18n="discover.qb.gear.title">{{ i18n_dict.get('discover.qb.gear.title','Advanced Position Ops') }}</h4>
+            <div class="gear-item">
+              <span data-i18n="discover.qb.gear.split">{{ i18n_dict.get('discover.qb.gear.split','Split (SPLIT)') }}</span><span class="gear-tag" data-i18n="discover.qb.gear.comingSoon">{{ i18n_dict.get('discover.qb.gear.comingSoon','Coming Soon') }}</span>
+            </div>
+            <div class="gear-item">
+              <span data-i18n="discover.qb.gear.merge">{{ i18n_dict.get('discover.qb.gear.merge','Merge (MERGE)') }}</span><span class="gear-tag" data-i18n="discover.qb.gear.comingSoon">{{ i18n_dict.get('discover.qb.gear.comingSoon','Coming Soon') }}</span>
+            </div>
+            <div style="font-size:.7rem;color:var(--text-muted);margin-top:8px;line-height:1.4">
+              <span data-i18n="discover.qb.gear.splitDesc">{{ i18n_dict.get('discover.qb.gear.splitDesc','Split: 1 USDC -> 1 YES + 1 NO share.') }}</span><br><span data-i18n="discover.qb.gear.mergeDesc">{{ i18n_dict.get('discover.qb.gear.mergeDesc','Merge: 1 YES + 1 NO share -> 1 USDC.') }}</span><br>
+            </div>
+          </div>
+        </template>
+
+        <div class="qb-modal-body">
+          <div class="qb-mkt-title"></div>
+
+          <div class="qb-outcome-row">
+            <button class="qb-outcome-btn"
+                   
+                   >
+              <span data-i18n="discover.qb.outcome.yes">{{ i18n_dict.get('discover.qb.outcome.yes','Yes') }}</span>
+              <span class="qb-out-px"></span>
+            </button>
+            <button class="qb-outcome-btn"
+                   
+                   >
+              <span data-i18n="discover.qb.outcome.no">{{ i18n_dict.get('discover.qb.outcome.no','No') }}</span>
+              <span class="qb-out-px"></span>
+            </button>
+          </div>
+
+          <template>
+            <div>
+
+              <template>
+                <div>
+                  <div class="qb-section">
+                    <div class="qb-section-label">
+                      <span data-i18n="discover.qb.sharesLabel">{{ i18n_dict.get('discover.qb.sharesLabel','Shares') }}</span>
+                      <span class="qb-bal"><span data-i18n="discover.qb.balanceLabel">{{ i18n_dict.get('discover.qb.balanceLabel','Balance:') }}</span> $<span></span></span>
+                    </div>
+
+                    <div class="stepper-input">
+                      <button>−</button>
+                      <input type="number" step="1"
+                            
+                            >
+                      <span class="stepper-suffix"></span>
+                      <button>+</button>
+                    </div>
+                    <div class="qb-quick-amts" style="margin-top:8px">
+                      <template>
+                        <button class="qb-quick-amt"
+                               
+                               ></button>
+                      </template>
+                      <button class="qb-quick-amt"
+                             
+                             
+                              data-i18n="discover.qb.maxBtn">{{ i18n_dict.get('discover.qb.maxBtn','MAX') }}</button>
+                    </div>
+                  </div>
+
+                  <div class="qb-summary">
+                    <div class="qb-sum-row"><span data-i18n="discover.qb.summary.totalCost">{{ i18n_dict.get('discover.qb.summary.totalCost','Total Cost') }}</span><b class="cost"></b></div>
+                    <div class="qb-sum-row"><span data-i18n="discover.qb.summary.estProfit">{{ i18n_dict.get('discover.qb.summary.estProfit','Est. Profit') }}</span><b class="profit"></b></div>
+                  </div>
+                </div>
+              </template>
+
+              <template>
+                <div class="qb-section">
+                  <div class="qb-section-label">
+                    <span data-i18n="discover.qb.sellSharesLabel">{{ i18n_dict.get('discover.qb.sellSharesLabel','Sell Shares') }}</span>
+                    <span class="qb-bal"><span data-i18n="discover.qb.holdingsLabel">{{ i18n_dict.get('discover.qb.holdingsLabel','Holdings:') }}</span> <span></span> <span></span></span>
+                  </div>
+                  <div class="stepper-input">
+                    <button>−</button>
+                    <input type="number" min="0" step="0.01"
+                          
+                          >
+                    <span class="stepper-suffix" style="padding-right:16px"></span>
+                    <button>+</button>
+                  </div>
+                  <div class="qb-share-adjusts" style="margin-top:8px">
+                    <button class="qb-share-adj">25%</button>
+                    <button class="qb-share-adj">50%</button>
+                    <button class="qb-share-adj">MAX</button>
+                  </div>
+                  <template>
+                    <div style="font-size:.74rem;color:var(--text-muted);margin-top:6px" data-i18n="discover.qb.holdingsLoading">{{ i18n_dict.get('discover.qb.holdingsLoading','Loading holdings...') }}</div>
+                  </template>
+                </div>
+
+                <div class="qb-summary">
+                  <div class="qb-sum-row"><span data-i18n="discover.qb.summary.estSellPrice">{{ i18n_dict.get('discover.qb.summary.estSellPrice','Est. Sell Price') }}</span><b></b></div>
+                  <div class="qb-sum-row"><span data-i18n="discover.qb.summary.estRecover">{{ i18n_dict.get('discover.qb.summary.estRecover','Est. Proceeds') }}</span><b class="cost"></b></div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <template>
+            <div>
+
+              <div class="qb-section">
+                <div class="qb-section-label"><span data-i18n="discover.qb.limitPriceLabel">{{ i18n_dict.get('discover.qb.limitPriceLabel','Limit Price') }}</span></div>
+                <div class="stepper-input">
+                  <button>−</button>
+                  <input type="number" min="1" max="99" step="1"
+                        
+                        
+                        >
+                  <span class="stepper-suffix">¢</span>
+                  <button>+</button>
+                </div>
+              </div>
+
+              <div class="qb-section">
+                <div class="qb-section-label">
+                  <span data-i18n="discover.qb.sharesLabel">{{ i18n_dict.get('discover.qb.sharesLabel','Shares') }}</span>
+                  <template>
+                    <span class="qb-bal"><span data-i18n="discover.qb.holdingsLabel">{{ i18n_dict.get('discover.qb.holdingsLabel','Holdings:') }}</span> <span></span></span>
+                  </template>
+                </div>
+                <div class="stepper-input">
+                  <button>−</button>
+                  <input type="number" min="1" step="1"
+                        
+                        >
+                  <span class="stepper-suffix" style="padding-right:16px"></span>
+                  <button>+</button>
+                </div>
+                <div class="qb-share-adjusts">
+                  <template>
+                    <button class="qb-share-adj">-100</button>
+                  </template>
+                  <template>
+                    <button class="qb-share-adj">-10</button>
+                  </template>
+                  <template>
+                    <button class="qb-share-adj">+10</button>
+                  </template>
+                  <template>
+                    <button class="qb-share-adj">+100</button>
+                  </template>
+                  <template>
+                    <button class="qb-share-adj" data-i18n="discover.qb.maxBtn">{{ i18n_dict.get('discover.qb.maxBtn','MAX') }}</button>
+                  </template>
+                  <template>
+                    <button class="qb-share-adj">25%</button>
+                  </template>
+                  <template>
+                    <button class="qb-share-adj">50%</button>
+                  </template>
+                  <template>
+                    <button class="qb-share-adj" data-i18n="discover.qb.maxBtn">{{ i18n_dict.get('discover.qb.maxBtn','MAX') }}</button>
+                  </template>
+                </div>
+              </div>
+
+              <div class="qb-summary">
+                <template>
+                  <div>
+                    <div class="qb-sum-row"><span data-i18n="discover.qb.summary.totalCost">{{ i18n_dict.get('discover.qb.summary.totalCost','Total Cost') }}</span><b class="cost"></b></div>
+                    <div class="qb-sum-row"><span data-i18n="discover.qb.summary.estProfit">{{ i18n_dict.get('discover.qb.summary.estProfit','Est. Profit') }}</span><b class="profit"></b></div>
+                  </div>
+                </template>
+                <template>
+                  <div>
+                    <div class="qb-sum-row"><span></span><b class="cost"></b></div>
+                    <div class="qb-sum-row"><span></span><b></b></div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <template><div class="qb-error"></div></template>
+
+          <button class="qb-submit"
+                 
+                 >
+            <span></span>
+            <span data-i18n="discover.qb.submit.submitting">{{ i18n_dict.get('discover.qb.submit.submitting','Submitting...') }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+
+<!-- T417: 回到顶部悬浮按钮 -->
+<style>
+.disc-back-top {
+  position: fixed;
+  right: 24px;
+  bottom: 32px;
+  z-index: 999;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent, #7c3aed);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 18px rgba(124,58,237,.45);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px);
+  transition: opacity .22s, transform .22s;
+}
+.disc-back-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+.disc-back-top:hover {
+  filter: brightness(1.12);
+  transform: translateY(-2px);
+}
+.disc-back-top svg { width: 20px; height: 20px; }
+</style>
+<button id="disc-back-top-btn" class="disc-back-top" aria-label="回到顶部" title="回到顶部">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 15l-6-6-6 6"/></svg>
+</button>
+<script>
+(function() {
+  var btn = document.getElementById('disc-back-top-btn');
+  if (!btn) return;
+  var mainEl = document.querySelector('.main-content') || document.querySelector('main') || window;
+  var scrollSrc = (mainEl === window) ? window : mainEl;
+  function scrollToTop() {
+    if (mainEl === window) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (typeof mainEl.scrollTo === 'function') {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      mainEl.scrollTop = 0;
+    }
+  }
+  function onScroll() {
+    var top = (mainEl === window) ? window.scrollY : mainEl.scrollTop;
+    btn.classList.toggle('visible', top > 320);
+  }
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    scrollToTop();
+  });
+  scrollSrc.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+{% endblock %}

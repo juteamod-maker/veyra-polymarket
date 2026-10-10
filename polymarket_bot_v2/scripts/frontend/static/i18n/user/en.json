@@ -1,0 +1,22 @@
+{
+  "user.mfa.disabledLabel": "MFA disabled · Strongly recommended to protect your account and order authorisation",
+  "user.mfa.enabledLabel": "MFA enabled · Active methods:",
+  "user.mfa.hintNoSecret": "This system never touches your OTP / Passkey private keys; the MFA flow and service are provided by Privy.",
+  "user.mfa.manageBtn": "Manage / disable MFA",
+  "user.mfa.openBtn": "Enable MFA (recommended)",
+  "user.mfa.readPolicy": "Read the V e Y r a security policy →",
+  "user.mfa.title": "Account Security · Multi-Factor Auth (MFA)",
+  "user.pmWallet.bound": "Bound successfully (system-deployed Gnosis Safe)",
+  "user.pmWallet.fundWallet": "Fund Wallet (Safe)",
+  "user.pmWallet.gotoBind": "Authorise & link wallet",
+  "user.pmWallet.lockedHint": "For fund safety, the Polymarket wallet is auto-deployed via Gnosis Safe Proxy and bound to your Privy login. It cannot be modified manually. Contact an administrator to change it.",
+  "user.pmWallet.notBoundHtml": "No Polymarket fund wallet linked. For security, manual wallet input has been disabled; you must authorise via Privy so the system can derive and deploy a Gnosis Safe automatically.",
+  "user.pmWallet.title": "Polymarket Wallet",
+  "user.profile.active": "Active",
+  "user.profile.authWalletLabel": "Auth Wallet Address",
+  "user.profile.copy": "Copy",
+  "user.profile.displayNameLabel": "Display Name",
+  "user.profile.editTitle": "Edit Profile",
+  "user.profile.registeredAt": "Registered",
+  "user.profile.save": "Save Changes"
+}

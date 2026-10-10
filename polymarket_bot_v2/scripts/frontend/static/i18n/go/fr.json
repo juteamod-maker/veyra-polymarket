@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "Portefeuille PM lié",
+  "go.badge.unbound": "Portefeuille PM non lié",
+  "go.btn.authorize": "Autoriser le portefeuille",
+  "go.btn.dashboard": "Aller au tableau de bord",
+  "go.contentLoading": "Chargement du contenu…",
+  "go.heading": "Guide utilisateur V e Y r a",
+  "go.loadFailedPrefix": "Échec du chargement :",
+  "go.loading": "Redirection en cours…",
+  "go.title": "Redirection",
+  "go.toc": "Sommaire",
+  "go.toc.empty": "(aucun titre)"
+}

@@ -1,0 +1,22 @@
+{
+  "user.mfa.disabledLabel": "MFA無効 · アカウント保護のため強く推奨",
+  "user.mfa.enabledLabel": "MFA有効 · アクティブな方法：",
+  "user.mfa.hintNoSecret": "このシステムはOTP/パスキーの秘密鍵には一切触れません。MFAフローはPrivyが提供します。",
+  "user.mfa.manageBtn": "MFAを管理 / 無効化",
+  "user.mfa.openBtn": "MFAを有効化（推奨）",
+  "user.mfa.readPolicy": "V e Y r aセキュリティポリシーを読む →",
+  "user.mfa.title": "アカウントセキュリティ · 多要素認証（MFA）",
+  "user.pmWallet.bound": "正常に連携済み（システムによりGnosis Safeがデプロイされました）",
+  "user.pmWallet.fundWallet": "資金ウォレット（Safe）",
+  "user.pmWallet.gotoBind": "ウォレットを認証して連携",
+  "user.pmWallet.lockedHint": "資金の安全のため、PolymarketウォレットはGnosis Safe Proxyを介して自動的にデプロイされ、Privyログインに連携されています。手動での変更はできません。",
+  "user.pmWallet.notBoundHtml": "Polymarket資金ウォレットが連携されていません。セキュリティ上の理由から、手動のウォレット入力は無効です。Privyを介して認証する必要があります。",
+  "user.pmWallet.title": "Polymarketウォレット",
+  "user.profile.active": "アクティブ",
+  "user.profile.authWalletLabel": "認証ウォレットアドレス",
+  "user.profile.copy": "コピー",
+  "user.profile.displayNameLabel": "表示名",
+  "user.profile.editTitle": "プロフィールを編集",
+  "user.profile.registeredAt": "登録日",
+  "user.profile.save": "変更を保存"
+}

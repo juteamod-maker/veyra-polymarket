@@ -1,0 +1,20 @@
+{
+  "search.title": "搜索",
+  "search.subtitle": "搜索所有 Polymarket 事件：体育、政治、加密货币、电竞等。",
+  "search.input.placeholder": "搜索球队、球员、候选人、代币、天气城市…",
+  "search.button.go": "搜索",
+  "search.tab.active": "进行中",
+  "search.tab.resolved": "已结算",
+  "search.tab.all": "全部",
+  "search.loading": "搜索中…",
+  "search.empty.no_query": "请输入关键词开始搜索。",
+  "search.empty.no_results": "未找到结果，请尝试其他关键词。",
+  "search.error": "搜索失败，请重试。",
+  "search.card.ends": "结束",
+  "search.card.vol": "成交量",
+  "search.card.markets": "市场",
+  "search.summary.results": "共 {n} 条结果",
+  "search.summary.page": "第 {page} / {total} 页",
+  "search.pagination.prev": "上一页",
+  "search.pagination.next": "下一页"
+}

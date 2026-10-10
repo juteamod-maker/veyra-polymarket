@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="{{ lang or 'zh-CN' }}" data-lang="{{ lang or 'zh-CN' }}"
+    data-asset-version="{{ asset_version | default('0') }}" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0d0418">
+    <title>Veyra.Trade — Predict, Trade, Earn</title>
+    <meta name="description" data-i18n-attr="content:landing.meta.description"
+        content="Veyra.Trade — Predict weather, sports, value markets and copy top traders on Polymarket.">
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <link rel="preload" as="style" href="/v2/static/css/landing.css?v={{ asset_version | default('0') }}">
+    <link rel="stylesheet" href="/v2/static/css/landing.css?v={{ asset_version | default('0') }}">
+    <script>
+        // T879 (2026-05-06): The marketing landing page is the ACTUAL entry point
+        // for ?ref= referral links (e.g. https://veyra.trade/?ref=ABCDEFGH). The
+        // login page (/Index) only sees the URL AFTER the user clicks "Sign in",
+        // by which point the ?ref= param is gone. Capture and persist it here so
+        // the existing /api/user/privy/verify ref_code body field gets populated
+        // on the registration POST, properly attributing the new user.
+        (function () {
+            try {
+                var rp = new URLSearchParams(window.location.search).get('ref') || '';
+                if (rp && /^[A-Z0-9]{4,20}$/i.test(rp)) {
+                    try { localStorage.setItem('veyra_ref_code', rp.toUpperCase()); } catch (_) { }
+                    try {
+                        // Also drop a 30-day cookie so server-side flows (and the
+                        // Privy popup which runs on a different origin briefly)
+                        // can read it as a fallback if localStorage is wiped.
+                        var exp = new Date(Date.now() + 30 * 24 * 3600 * 1000).toUTCString();
+                        document.cookie = 'veyra_ref_code=' + encodeURIComponent(rp.toUpperCase()) +
+                            '; expires=' + exp + '; path=/; SameSite=Lax';
+                    } catch (_) { }
+                }
+            } catch (_) { }
+        })();
+    </script>
+    <script>
+        (function () {
+            try {
+                var ssrLang = {{ (lang or 'zh-CN') | tojson
+            }};
+        var supported = ['zh-CN', 'en', 'fr', 'ja', 'ko', 'th', 'vi', 'es', 'pt'];
+        var ls = null;
+        try { ls = localStorage.getItem('veyra_lang'); } catch (_) { }
+        var finalLang = (ls && supported.indexOf(ls) !== -1) ? ls : ssrLang;
+        window.__INIT_LANG__ = finalLang;
+        document.documentElement.setAttribute('lang', finalLang);
+        document.documentElement.setAttribute('data-lang', finalLang);
+        if (ls && ls !== ssrLang) {
+            document.cookie = 'veyra_lang=' + finalLang + '; path=/; max-age=31536000; SameSite=Lax';
+        }
+            } catch (_e) { }
+        }) ();
+        window.__I18N_PRELOAD__ = {{ landing_i18n_preload_json | escape_script_json | safe }};
+        window.__ASSET_V = "{{ asset_version | default('0') }}";
+    </script>
+</head>
+
+<body class="lp-body">
+    <div class="lp-stage" id="lp-stage" data-tab="1">
+
+        <div class="lp-card" id="lp-card" aria-live="polite">
+            <div class="lp-card__bg"></div>
+            <div class="lp-card__glow lp-card__glow--a"></div>
+            <div class="lp-card__glow lp-card__glow--b"></div>
+            <div class="lp-card__grid"></div>
+            <div class="lp-card__mascot" aria-hidden="true"></div>
+            <header class="lp-cardbar">
+                <span class="lp-brand-spacer" aria-hidden="true"></span>
+                <nav class="lp-topnav">
+                    <select class="lp-lang" id="lp-lang" aria-label="Language">
+                        <option value="zh-CN">简体中文</option>
+                        <option value="en">English</option>
+                        <option value="fr">Français</option>
+                        <option value="ja">日本語</option>
+                        <option value="ko">한국어</option>
+                        <option value="th">ไทย</option>
+                        <option value="vi">Tiếng Việt</option>
+                        <option value="es">Español</option>
+                        <option value="pt">Português</option>
+                    </select>
+                    <a class="lp-loginbtn" href="/Index" data-i18n="landing.topnav.login" id="lp-signin-link">Sign
+                        in</a>
+                </nav>
+            </header>
+
+            <div class="lp-card__inner">
+                <div class="lp-card__eyebrow">
+                    <span class="lp-card__dot"></span>
+                    <span class="lp-card__eyebrow-text" data-i18n>EYEBROW</span>
+                </div>
+
+                <h1 class="lp-card__title">
+                    <span class="lp-card__title-l1" data-i18n>TITLE L1</span>
+                    <span class="lp-card__title-l2" data-i18n>TITLE L2</span>
+                </h1>
+
+                <p class="lp-card__subtitle" data-i18n>SUBTITLE</p>
+
+                <div class="lp-card__metric">
+                    <span class="lp-card__metric-value" data-i18n>--</span>
+                    <span class="lp-card__metric-label" data-i18n>METRIC</span>
+                </div>
+
+                <ul class="lp-card__highlights" role="list">
+                    <li class="lp-card__chip" data-i18n>H1</li>
+                    <li class="lp-card__chip" data-i18n>H2</li>
+                    <li class="lp-card__chip" data-i18n>H3</li>
+                </ul>
+
+                <div class="lp-card__cta">
+                    <a class="lp-cta lp-cta--primary" href="/discover" data-i18n="landing.cta.primary">Launch app</a>
+                    <a class="lp-cta lp-cta--ghost" href="/v2/about" id="lp-cta-secondary"
+                        data-i18n="landing.cta.secondary">Learn more</a>
+                </div>
+            </div>
+
+            <footer class="lp-cardfoot">
+                <div class="lp-controls">
+                    <button class="lp-arrow" id="lp-prev" aria-label="Previous">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 18l-6-6 6-6" />
+                        </svg>
+                    </button>
+                    <ol class="lp-dots" id="lp-dots" role="tablist" aria-label="Tabs">
+                        <li><button class="lp-dot" data-target="1" aria-label="Tab 1"></button></li>
+                        <li><button class="lp-dot" data-target="2" aria-label="Tab 2"></button></li>
+                        <li><button class="lp-dot" data-target="3" aria-label="Tab 3"></button></li>
+                        <li><button class="lp-dot" data-target="4" aria-label="Tab 4"></button></li>
+                        <li><button class="lp-dot" data-target="5" aria-label="Tab 5"></button></li>
+                    </ol>
+                    <button class="lp-arrow" id="lp-next" aria-label="Next">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 6l6 6-6 6" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="lp-legal">
+                    <a class="lp-legal__pill" href="/v2/about" data-i18n="landing.footer.about">About</a>
+                    <a class="lp-legal__pill" href="/v2/faq" data-i18n="landing.footer.faq">FAQ</a>
+                    <a class="lp-legal__pill" href="/v2/terms" data-i18n="landing.footer.terms">Terms</a>
+                    <a class="lp-legal__pill" href="/v2/privacy" data-i18n="landing.footer.privacy">Privacy</a>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="/v2/static/js/i18n.js?v={{ asset_version | default('0') }}"></script>
+    <script src="/v2/static/js/landing/landing.js?v={{ asset_version | default('0') }}" defer></script>
+    <script>
+        // T879: After DOM is ready, append the captured ?ref= to outbound CTA
+        // links so the existing static/index.html capture (URL-param-based)
+        // still works as a defense-in-depth path even if localStorage / cookie
+        // are wiped between landing and login.
+        (function () {
+            try {
+                var rp = new URLSearchParams(window.location.search).get('ref') || '';
+                if (!rp || !/^[A-Z0-9]{4,20}$/i.test(rp)) return;
+                var refUpper = rp.toUpperCase();
+                ['#lp-signin-link', '.lp-cta--primary'].forEach(function (sel) {
+                    document.querySelectorAll(sel).forEach(function (a) {
+                        try {
+                            var u = new URL(a.getAttribute('href'), window.location.origin);
+                            if (!u.searchParams.has('ref')) {
+                                u.searchParams.set('ref', refUpper);
+                                a.setAttribute('href', u.pathname + u.search);
+                            }
+                        } catch (_) { }
+                    });
+                });
+            } catch (_) { }
+        })();
+    </script>
+</body>
+
+</html>

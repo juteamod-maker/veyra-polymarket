@@ -1,0 +1,13 @@
+{
+  "go.badge.bound": "PM wallet linked",
+  "go.badge.unbound": "PM wallet not linked",
+  "go.btn.authorize": "Authorize wallet",
+  "go.btn.dashboard": "Go to dashboard",
+  "go.contentLoading": "Loading content...",
+  "go.heading": "V e Y r a User Guide",
+  "go.loadFailedPrefix": "Load failed:",
+  "go.loading": "Redirecting, please wait…",
+  "go.title": "Redirecting",
+  "go.toc": "Contents",
+  "go.toc.empty": "(no headings)"
+}

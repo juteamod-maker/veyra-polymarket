@@ -1,0 +1,4430 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('copytrader.title','Copy Trader V2') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('copytrader.title','Copy Trader V2') }}{% endblock %}
+
+{% block content %}
+<script>document.body.setAttribute('data-requires-pm', '1');</script>
+
+<style>
+  /* ── page layout ─────────────────────────────────────────────────────── */
+  .ct-page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 0 40px;
+  }
+
+  /* ── tabs ────────────────────────────────────────────────────────────── */
+  .ct-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    width: fit-content;
+  }
+
+  .ct-tab {
+    background: transparent;
+    border: 0;
+    padding: 9px 20px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 8px;
+    font-size: .86rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all .18s;
+    white-space: nowrap;
+  }
+
+  .ct-tab i {
+    width: 15px;
+    height: 15px;
+  }
+
+  .ct-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-primary);
+  }
+
+  .ct-tab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(139, 92, 246, .3);
+  }
+
+  /* ── tab panes ───────────────────────────────────────────────────────── */
+  .ct-pane {
+    display: none;
+  }
+
+  .ct-pane.active {
+    display: block;
+  }
+
+  /* ── filter / sidebar layout ─────────────────────────────────────────── */
+  .ct-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width:900px) {
+    .ct-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .ct-filter-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    position: sticky;
+    top: calc(var(--header-height, 64px) + 12px);
+    align-self: start;
+  }
+
+  .ct-filter-title {
+    font-size: .82rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ct-filter-title i {
+    width: 14px;
+    height: 14px;
+    color: var(--accent);
+  }
+
+  .ct-field {
+    margin-bottom: 12px;
+  }
+
+  .ct-field label {
+    font-size: .76rem;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .ct-field select,
+  .ct-field input[type=number],
+  .ct-field input[type=text] {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 7px 10px;
+    font-size: .83rem;
+    outline: none;
+    transition: border-color .15s;
+  }
+
+  .ct-field select:focus,
+  .ct-field input:focus {
+    border-color: var(--accent);
+  }
+
+  .ct-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .ct-checkbox-row input[type=checkbox] {
+    accent-color: var(--accent);
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+  }
+
+  .ct-checkbox-row label {
+    font-size: .82rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .ct-search-btn {
+    width: 100%;
+    padding: 10px;
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: .88rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 4px;
+    transition: opacity .15s;
+  }
+
+  .ct-search-btn:hover {
+    opacity: .88;
+  }
+
+  .ct-search-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+
+  .ct-search-btn i {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* ── wallet card grid ────────────────────────────────────────────────── */
+  .ct-wallet-grid {
+    display: block;
+    width: 100%;
+  }
+
+  .ct-wallet-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all .18s;
+  }
+
+  .ct-wallet-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 6px 24px rgba(139, 92, 246, .14);
+    transform: translateY(-2px);
+  }
+
+  .ct-wallet-card.bot-flag {
+    border-color: rgba(239, 68, 68, .35);
+  }
+
+  .ct-wcard-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ct-wcard-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .9rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .ct-wcard-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ct-wcard-addr {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ct-wcard-cat {
+    font-size: .68rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .ct-score-badge {
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: .8rem;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .ct-score-hi {
+    background: rgba(34, 197, 94, .15);
+    color: #22c55e;
+  }
+
+  .ct-score-mid {
+    background: rgba(245, 158, 11, .15);
+    color: #f59e0b;
+  }
+
+  .ct-score-lo {
+    background: rgba(239, 68, 68, .12);
+    color: #ef4444;
+  }
+
+  .ct-wcard-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ct-stat-cell {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .ct-stat-label {
+    font-size: .67rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  .ct-stat-val {
+    font-size: .92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 2px;
+  }
+
+  .ct-stat-val.pos {
+    color: #22c55e;
+  }
+
+  .ct-stat-val.neg {
+    color: #ef4444;
+  }
+
+  .ct-bot-warn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .73rem;
+    color: #ef4444;
+    background: rgba(239, 68, 68, .08);
+    border: 1px solid rgba(239, 68, 68, .2);
+    border-radius: 8px;
+    padding: 5px 9px;
+  }
+
+  .ct-bot-warn i {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+
+  .ct-wcard-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .ct-action-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    border-radius: 9px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: .78rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all .15s;
+  }
+
+  .ct-action-btn i {
+    width: 13px;
+    height: 13px;
+  }
+
+  .ct-action-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .ct-action-btn.primary {
+    background: rgba(139, 92, 246, .14);
+    border-color: rgba(139, 92, 246, .35);
+    color: #a78bfa;
+  }
+
+  .ct-action-btn.primary:hover {
+    background: rgba(139, 92, 246, .25);
+  }
+
+  .ct-action-btn.disabled,
+  .ct-action-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    border-color: var(--border);
+    color: var(--text-muted);
+    background: rgba(148, 163, 184, .08);
+  }
+
+  /* ── results header ──────────────────────────────────────────────────── */
+  .ct-results-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    font-size: .82rem;
+    color: var(--text-muted);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ct-results-count {
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+
+  .ct-page-size-note {
+    font-size: .82rem;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .ct-pagination {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .ct-page-btn {
+    min-width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    font-size: .8rem;
+    font-weight: 700;
+    transition: all .15s;
+  }
+
+  .ct-page-btn:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .ct-page-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(139, 92, 246, .18);
+  }
+
+  .ct-page-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .ct-page-ellipsis {
+    color: var(--text-muted);
+    font-size: .82rem;
+    font-weight: 700;
+  }
+
+  .ct-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+
+  .ct-empty-state i {
+    width: 40px;
+    height: 40px;
+    opacity: .4;
+    margin-bottom: 10px;
+  }
+
+  .ct-empty-state p {
+    font-size: .88rem;
+    margin-top: 4px;
+  }
+
+  /* ── analytics pane ──────────────────────────────────────────────────── */
+  .ct-analytics-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  .ct-analytics-tab-btn {
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: .78rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  .ct-analytics-tab-btn.active {
+    background: rgba(29, 41, 57, .16);
+    border-color: #1d2939;
+    color: var(--text-primary);
+  }
+
+  .ct-analytics-panel {
+    display: none;
+  }
+
+  .ct-analytics-panel.active {
+    display: block;
+  }
+
+  .ct-addr-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .ct-addr-input {
+    flex: 1;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    padding: 9px 14px;
+    font-size: .86rem;
+    outline: none;
+    transition: border-color .15s;
+    font-family: monospace;
+  }
+
+  .ct-addr-input:focus {
+    border-color: var(--accent);
+  }
+
+  .ct-addr-btn {
+    padding: 9px 18px;
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: .86rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity .15s;
+  }
+
+  .ct-addr-btn:hover {
+    opacity: .88;
+  }
+
+  .ct-addr-btn:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+  }
+
+  .ct-addr-btn i {
+    width: 15px;
+    height: 15px;
+  }
+
+  .ct-analytics-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+
+  .ct-analytics-card h3 {
+    font-size: .88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .ct-analytics-card h3 i {
+    width: 16px;
+    height: 16px;
+    color: var(--accent);
+  }
+
+  .ct-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .ct-kpi-cell {
+    background: var(--bg-primary);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .ct-kpi-label {
+    font-size: .7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  .ct-kpi-val {
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 3px;
+  }
+
+  .ct-kpi-val.pos {
+    color: #22c55e;
+  }
+
+  .ct-kpi-val.neg {
+    color: #ef4444;
+  }
+
+  .ct-cat-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ct-cat-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ct-cat-name {
+    font-size: .76rem;
+    color: var(--text-secondary);
+    width: 80px;
+    flex-shrink: 0;
+    text-transform: capitalize;
+  }
+
+  .ct-cat-bar-wrap {
+    flex: 1;
+    height: 8px;
+    background: var(--bg-primary);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+
+  .ct-cat-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #3b82f6);
+    border-radius: 99px;
+    transition: width .4s ease;
+  }
+
+  .ct-cat-pct {
+    font-size: .72rem;
+    color: var(--text-muted);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  .ct-pos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .8rem;
+  }
+
+  .ct-pos-table th {
+    text-align: left;
+    padding: 6px 8px;
+    color: var(--text-muted);
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .ct-pos-table td {
+    padding: 8px;
+    color: var(--text-primary);
+    border-bottom: 1px solid rgba(255, 255, 255, .04);
+    vertical-align: middle;
+  }
+
+  .ct-pos-table tr:hover td {
+    background: rgba(139, 92, 246, .04);
+  }
+
+  .ct-pos-table .mono {
+    font-family: monospace;
+    font-size: .75rem;
+  }
+
+  .ct-pos-outcome-yes {
+    color: #22c55e;
+    font-weight: 700;
+  }
+
+  .ct-pos-outcome-no {
+    color: #ef4444;
+    font-weight: 700;
+  }
+
+  .ct-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ct-activity-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    border-radius: 10px;
+  }
+
+  .ct-activity-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .ct-activity-dot.buy {
+    background: #22c55e;
+  }
+
+  .ct-activity-dot.sell {
+    background: #ef4444;
+  }
+
+  .ct-activity-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ct-activity-mkt {
+    font-size: .78rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ct-activity-meta {
+    font-size: .7rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+  }
+
+  .ct-activity-amt {
+    font-size: .82rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .ct-activity-amt.buy {
+    color: #22c55e;
+  }
+
+  .ct-activity-amt.sell {
+    color: #ef4444;
+  }
+
+  /* ── tasks pane ──────────────────────────────────────────────────────── */
+  .ct-tasks-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .ct-tasks-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ct-tasks-title i {
+    width: 18px;
+    height: 18px;
+    color: var(--accent);
+  }
+
+  .ct-settings-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .ct-settings-bar span {
+    font-size: .82rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ct-settings-bar span i {
+    width: 14px;
+    height: 14px;
+    color: var(--text-muted);
+  }
+
+  .ct-toggle {
+    position: relative;
+    display: inline-block;
+    width: 42px;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+
+  .ct-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .ct-toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    transition: all .2s;
+  }
+
+  .ct-toggle-slider:before {
+    content: '';
+    position: absolute;
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: all .2s;
+  }
+
+  .ct-toggle input:checked+.ct-toggle-slider {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .ct-toggle input:checked+.ct-toggle-slider:before {
+    transform: translateX(18px);
+    background: #fff;
+  }
+
+  .ct-task-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+
+  .ct-task-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color .18s;
+  }
+
+  .ct-task-card.running {
+    border-left: 3px solid #22c55e;
+  }
+
+  .ct-task-card.paused {
+    border-left: 3px solid #f59e0b;
+  }
+
+  .ct-task-card.stopped {
+    border-left: 3px solid var(--border);
+  }
+
+  .ct-task-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .ct-task-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ct-task-label {
+    font-size: .92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .ct-task-addr {
+    font-size: .72rem;
+    font-family: monospace;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  .ct-status-badge {
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .ct-status-badge.running {
+    background: rgba(34, 197, 94, .12);
+    color: #22c55e;
+  }
+
+  .ct-status-badge.paused {
+    background: rgba(245, 158, 11, .12);
+    color: #f59e0b;
+  }
+
+  .ct-status-badge.stopped {
+    background: rgba(100, 100, 100, .12);
+    color: var(--text-muted);
+  }
+
+  .ct-task-params {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ct-param-cell {
+    background: var(--bg-primary);
+    border-radius: 8px;
+    padding: 7px 10px;
+  }
+
+  .ct-param-label {
+    font-size: .67rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+
+  .ct-param-val {
+    font-size: .84rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 1px;
+  }
+
+  .ct-task-cats {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .ct-cat-chip {
+    padding: 3px 8px;
+    background: rgba(139, 92, 246, .1);
+    border: 1px solid rgba(139, 92, 246, .2);
+    border-radius: 6px;
+    font-size: .68rem;
+    color: #a78bfa;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .ct-task-last {
+    font-size: .73rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .ct-task-last i {
+    width: 12px;
+    height: 12px;
+  }
+
+  .ct-task-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  /* ── add / edit task button ───────────────────────────────────────────── */
+  .ct-add-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: var(--accent);
+    border: 0;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    font-size: .86rem;
+    cursor: pointer;
+    transition: opacity .15s;
+  }
+
+  .ct-add-btn:hover {
+    opacity: .88;
+  }
+
+  .ct-add-btn i {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ── modal ───────────────────────────────────────────────────────────── */
+  .ct-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .65);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 200010;
+    backdrop-filter: blur(6px);
+    padding: calc(var(--header-height, 64px) + 18px) 16px 16px;
+  }
+
+  .ct-modal-overlay.open {
+    display: flex;
+  }
+
+  .ct-modal {
+    background: var(--bg-card);
+    border-radius: 16px;
+    padding: 0;
+    width: min(840px, 95vw);
+    max-height: calc(100vh - var(--header-height, 64px) - 34px);
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .65);
+  }
+
+  .ct-modal-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: #1d2939;
+    z-index: 1;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .ct-modal-header h3 {
+    font-size: .96rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ct-modal-header h3 i {
+    width: 18px;
+    height: 18px;
+    color: var(--accent);
+  }
+
+  .ct-modal-close {
+    background: transparent;
+    border: 0;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+  }
+
+  .ct-modal-close:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  .ct-modal-close i {
+    width: 18px;
+    height: 18px;
+  }
+
+  .ct-modal-body {
+    padding: 20px;
+  }
+
+  .ct-modal-field {
+    margin-bottom: 16px;
+  }
+
+  .ct-modal-field label {
+    display: block;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+  }
+
+  .ct-modal-field input[type=text],
+  .ct-modal-field input[type=number],
+  .ct-modal-field textarea,
+  .ct-modal-field select {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text-primary);
+    padding: 9px 12px;
+    font-size: .84rem;
+    outline: none;
+    transition: border-color .15s;
+    box-sizing: border-box;
+  }
+
+  .ct-modal-field input:focus,
+  .ct-modal-field textarea:focus,
+  .ct-modal-field select:focus {
+    border-color: var(--accent);
+  }
+
+  .ct-modal-field textarea {
+    resize: vertical;
+    min-height: 70px;
+  }
+
+  .ct-modal-hint {
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .ct-modal-cats {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+
+  .ct-modal-cat-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 11px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    transition: all .15s;
+    background: transparent;
+  }
+
+  .ct-modal-cat-chip.selected {
+    background: rgba(139, 92, 246, .15);
+    border-color: rgba(139, 92, 246, .4);
+    color: #a78bfa;
+  }
+
+  .ct-modal-row2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .ct-toggle-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    border-radius: 9px;
+    margin-bottom: 16px;
+  }
+
+  .ct-toggle-field-label {
+    font-size: .82rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+
+  .ct-modal-footer {
+    padding: 14px 20px 18px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    border-top: 1px solid var(--border);
+  }
+
+  .ct-modal-cancel {
+    padding: 9px 18px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: .86rem;
+    cursor: pointer;
+    transition: all .15s;
+  }
+
+  .ct-modal-cancel:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+  }
+
+  .ct-modal-save {
+    padding: 9px 22px;
+    background: var(--accent);
+    border: 0;
+    border-radius: 9px;
+    color: #fff;
+    font-weight: 700;
+    font-size: .86rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity .15s;
+  }
+
+  .ct-modal-save:hover {
+    opacity: .88;
+  }
+
+  .ct-modal-save:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+  }
+
+  .ct-modal-save i {
+    width: 15px;
+    height: 15px;
+  }
+
+  .ct-modal-err {
+    font-size: .78rem;
+    color: #ef4444;
+    margin-top: 8px;
+    min-height: 18px;
+  }
+
+  /* ── skeleton ────────────────────────────────────────────────────────── */
+  @keyframes ct-shimmer {
+    0% {
+      background-position: -400px 0
+    }
+
+    100% {
+      background-position: 400px 0
+    }
+  }
+
+  .ct-skel {
+    background: linear-gradient(90deg, rgba(139, 92, 246, .06) 0%, rgba(139, 92, 246, .2) 50%, rgba(139, 92, 246, .06) 100%);
+    background-size: 800px 100%;
+    animation: ct-shimmer 1.4s linear infinite;
+    border-radius: 6px;
+  }
+
+  .ct-skel-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── misc ────────────────────────────────────────────────────────────── */
+  .ct-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+    opacity: .5;
+  }
+
+  .ct-info-msg {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .8rem;
+    color: var(--text-muted);
+    background: var(--bg-primary);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+
+  .ct-info-msg i {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--accent);
+  }
+
+  .ct-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: .85rem;
+    font-weight: 600;
+    z-index: 300000;
+    pointer-events: none;
+    transition: opacity .3s;
+  }
+
+  .ct-toast.success {
+    background: #22c55e;
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(34, 197, 94, .3);
+  }
+
+  .ct-toast.error {
+    background: #ef4444;
+    color: #fff;
+    box-shadow: 0 6px 20px rgba(239, 68, 68, .3);
+  }
+
+  .ct-toast.hidden {
+    opacity: 0;
+  }
+
+  /* ── step guide (RPG funnel) ──────────────────────────────────────────── */
+  .ct-step-guide {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .ct-step {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    position: relative;
+    cursor: default;
+    transition: background .15s;
+  }
+
+  .ct-step.done {
+    background: rgba(34, 197, 94, .06);
+    cursor: pointer;
+  }
+
+  .ct-step.active {
+    background: rgba(139, 92, 246, .1);
+  }
+
+  .ct-step.locked {
+    opacity: .45;
+  }
+
+  .ct-step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    border-left: 10px solid var(--border);
+    z-index: 1;
+  }
+
+  .ct-step-num {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--bg-primary);
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .74rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    transition: all .15s;
+  }
+
+  .ct-step.done .ct-step-num {
+    background: rgba(34, 197, 94, .2);
+    border-color: #22c55e;
+    color: #22c55e;
+  }
+
+  .ct-step.active .ct-step-num {
+    background: rgba(139, 92, 246, .2);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .ct-step-text {
+    min-width: 0;
+  }
+
+  .ct-step-label {
+    font-size: .78rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+  }
+
+  .ct-step.locked .ct-step-label {
+    color: var(--text-muted);
+  }
+
+  .ct-step-desc {
+    font-size: .68rem;
+    color: var(--text-muted);
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── tab locked overlay ───────────────────────────────────────────────── */
+  .ct-tab-locked {
+    position: relative;
+  }
+
+  .ct-tab-locked::after {
+    content: attr(data-lock-msg);
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .86rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, .7);
+    border-radius: 14px;
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  /* ── analytics profile header ─────────────────────────────────────────── */
+  .ct-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
+
+  .ct-profile-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+  }
+
+  .ct-profile-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ct-profile-addr {
+    font-family: monospace;
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ct-profile-meta {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+
+  .ct-profile-badge {
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: .69rem;
+    font-weight: 700;
+  }
+
+  .ct-badge-cat {
+    background: rgba(139, 92, 246, .12);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, .2);
+  }
+
+  .ct-badge-bot {
+    background: rgba(239, 68, 68, .1);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, .2);
+  }
+
+  .ct-badge-ok {
+    background: rgba(34, 197, 94, .1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, .2);
+  }
+
+  .ct-profile-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .ct-stats-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  @media (max-width:900px) {
+    .ct-stats-row {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  .ct-stat-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    text-align: center;
+  }
+
+  .ct-stat-box-label {
+    font-size: .67rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+  }
+
+  .ct-stat-box-val {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 4px;
+  }
+
+  .ct-stat-box-val.pos {
+    color: #22c55e;
+  }
+
+  .ct-stat-box-val.neg {
+    color: #ef4444;
+  }
+
+  .ct-stat-box-val.acc {
+    color: var(--accent);
+  }
+
+  /* ── T398 overrides: full-width leaderboard + analytics shell ───────── */
+  .ct-page {
+    max-width: none;
+    padding: 0 20px 40px;
+  }
+
+  .ct-pane.active {
+    animation: ct-fade-in .18s ease;
+  }
+
+  @keyframes ct-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .ct-discover-hero {
+    position: relative;
+    margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background:
+      radial-gradient(circle at top left, rgba(59, 130, 246, .18), transparent 26%),
+      radial-gradient(circle at top right, rgba(34, 197, 94, .14), transparent 22%),
+      linear-gradient(180deg, rgba(8, 16, 29, .98), rgba(11, 20, 36, .94));
+    overflow: hidden;
+  }
+
+  .ct-discover-hero::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(96, 165, 250, .55), transparent);
+  }
+
+  .ct-discover-topbar {
+    padding: 18px 22px 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .ct-discover-title-wrap {
+    max-width: 840px;
+  }
+
+  .ct-discover-kicker {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    color: #8fb4ff;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .ct-discover-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #f8fbff;
+    margin: 0;
+  }
+
+  .ct-discover-subtitle {
+    font-size: .92rem;
+    line-height: 1.6;
+    color: rgba(226, 232, 240, .72);
+    margin-top: 8px;
+  }
+
+  .ct-discover-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* T497++ Wave 6A: align chip with .ct-filter-trigger button style — same
+   rectangle radius (12px) and padding so the "Free Copy Trading" tag and the
+   filter button next to it look like a coherent toolbar pair instead of one
+   pill + one rectangle. */
+  .ct-discover-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 14px;
+    border-radius: 12px;
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, .18);
+    color: #dbe6ff;
+    font-size: .84rem;
+    font-weight: 800;
+  }
+
+  .ct-discover-chip i {
+    width: 15px;
+    height: 15px;
+    color: #7dd3fc;
+  }
+
+  .ct-discover-tabs {
+    display: flex;
+    gap: 6px;
+    overflow: auto;
+    padding: 0 22px 14px;
+    scrollbar-width: none;
+  }
+
+  .ct-discover-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ct-discover-tab {
+    flex: 0 0 auto;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(226, 232, 240, .8);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: .83rem;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all .18s;
+  }
+
+  .ct-discover-tab i {
+    width: 15px;
+    height: 15px;
+  }
+
+  .ct-discover-tab:hover {
+    background: rgba(15, 23, 42, .68);
+    color: #fff;
+  }
+
+  .ct-discover-tab.active {
+    color: #fff;
+    border-color: #3b82f6;
+    background: rgba(37, 99, 235, .12);
+    box-shadow: inset 0 -2px 0 #3b82f6;
+  }
+
+  .ct-toolbar-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .ct-results-head {
+    margin-bottom: 0;
+  }
+
+  .ct-results-count {
+    font-size: .92rem;
+    color: #e2e8f0;
+  }
+
+  .ct-cache-freshness {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, .72);
+    border: 1px solid rgba(148, 163, 184, .18);
+    color: #cbd5e1;
+    font-size: .74rem;
+  }
+
+  .ct-filter-actions {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .ct-filter-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 12px;
+    color: #f8fafc;
+    font-size: .84rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all .18s;
+  }
+
+  .ct-filter-trigger:hover,
+  .ct-filter-trigger.open {
+    border-color: #3b82f6;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, .22);
+  }
+
+  .ct-filter-trigger i {
+    width: 15px;
+    height: 15px;
+  }
+
+  .ct-filter-popover {
+    /* T497++ Wave 6A: centered viewport modal (no longer trigger-anchored) so
+     language switches that change toolbar width can never push the popover
+     off-screen. Default state hidden; .open + .ct-portaled toggles via JS. */
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, calc(100vw - 40px));
+    max-height: calc(100vh - 80px);
+    overflow: auto;
+    z-index: 200020;
+    display: none;
+    background: rgba(9, 15, 28, .98);
+    border: 1px solid rgba(71, 85, 105, .5);
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+    padding: 18px;
+  }
+
+  .ct-filter-popover.open {
+    display: block;
+  }
+
+  /* Backdrop element injected by JS, sibling of popover. */
+  .ct-filter-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .55);
+    backdrop-filter: blur(4px);
+    z-index: 200015;
+    display: none;
+  }
+
+  .ct-filter-backdrop.open {
+    display: block;
+  }
+
+  .ct-filter-popover.ct-portaled {
+    /* legacy hook — no extra rules needed in centered mode */
+  }
+
+  .ct-filter-popover .ct-filter-title {
+    margin-bottom: 12px;
+    font-size: .84rem;
+  }
+
+  .ct-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .ct-filter-grid .ct-field {
+    margin-bottom: 0;
+  }
+
+  .ct-filter-grid .ct-field.full {
+    grid-column: 1 / -1;
+  }
+
+  .ct-filter-grid .ct-field label {
+    font-size: .74rem;
+    color: #94a3b8;
+  }
+
+  .ct-filter-grid .ct-field select,
+  .ct-filter-grid .ct-field input[type=text],
+  .ct-filter-grid .ct-field input[type=number] {
+    background: #0b1222;
+    border-color: #1e293b;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .ct-filter-grid .ct-field input[type=range] {
+    width: 100%;
+    accent-color: #3b82f6;
+  }
+
+  .ct-filter-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .ct-filter-reset {
+    border: 1px solid rgba(148, 163, 184, .18);
+    background: transparent;
+    color: #cbd5e1;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: .8rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .ct-leaderboard-shell {
+    border: 1px solid rgba(30, 41, 59, .95);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(9, 15, 26, .98), rgba(12, 20, 34, .96));
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    display: block;
+  }
+
+  .ct-leaderboard-table {
+    width: 100%;
+    min-width: 100%;
+    table-layout: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ct-leaderboard-head,
+  .ct-leaderboard-row {
+    display: grid;
+    grid-template-columns: 44px minmax(200px, 1.4fr) 80px 90px 120px 90px 110px 140px;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .ct-leaderboard-head {
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(51, 65, 85, .72);
+    color: #94a3b8;
+    font-size: .75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .ct-leaderboard-row {
+    padding: 10px 18px;
+    border-top: 1px solid rgba(30, 41, 59, .88);
+    min-height: 40px;
+    align-items: center;
+    transition: background .18s;
+  }
+
+  .ct-leaderboard-row:hover {
+    background: rgba(30, 41, 59, .38);
+  }
+
+  .ct-leaderboard-rank {
+    color: #e2e8f0;
+    font-size: 1.05rem;
+    font-weight: 900;
+  }
+
+  .ct-leaderboard-rank-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ct-watch-star {
+    width: 18px;
+    height: 18px;
+    color: #64748b;
+  }
+
+  .ct-trader-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .ct-trader-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: conic-gradient(from 140deg, #f59e0b, #60a5fa, #34d399, #f59e0b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .82rem;
+    font-weight: 900;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, .95);
+  }
+
+  .ct-trader-meta {
+    min-width: 0;
+  }
+
+  .ct-trader-name {
+    font-size: 1rem;
+    font-weight: 900;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ct-trader-sub {
+    margin-top: 4px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    line-height: 1.2;
+  }
+
+  .ct-trader-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 5px;
+    border-radius: 999px;
+    font-size: .62rem;
+    font-weight: 600;
+    color: #a5c9ff;
+    background: rgba(30, 41, 59, .95);
+    border: 1px solid rgba(96, 165, 250, .12);
+    flex-shrink: 0;
+    white-space: nowrap;
+    height: 18px;
+    line-height: 1;
+  }
+
+  .ct-leaderboard-metric {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #f8fafc;
+  }
+
+  .ct-leaderboard-metric.subdued {
+    color: #cbd5e1;
+  }
+
+  .ct-leaderboard-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 76px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: .88rem;
+    font-weight: 900;
+  }
+
+  .ct-leaderboard-pill.pos {
+    background: rgba(34, 197, 94, .16);
+    color: #4ade80;
+  }
+
+  .ct-leaderboard-pill.neg {
+    background: rgba(239, 68, 68, .16);
+    color: #f87171;
+  }
+
+  .ct-leaderboard-score {
+    color: #93c5fd;
+  }
+
+  .ct-leaderboard-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .ct-leaderboard-actions .ct-action-btn {
+    min-width: 74px;
+    flex: 0 0 auto;
+  }
+
+  .ct-analytics-shell {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .ct-analytics-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    position: sticky;
+    top: calc(var(--header-height, 64px) + 12px);
+  }
+
+  .ct-analytics-main {
+    min-width: 0;
+  }
+
+  .ct-analytics-side-card {
+    background: linear-gradient(180deg, rgba(9, 15, 26, .98), rgba(12, 20, 34, .96));
+    border: 1px solid rgba(30, 41, 59, .95);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+
+  .ct-profile-header {
+    position: relative;
+    display: block;
+    margin-bottom: 0;
+    padding: 18px;
+    min-height: 110px;
+  }
+
+  .ct-profile-avatar {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    margin-bottom: 14px;
+  }
+
+  .ct-profile-addr {
+    font-size: 1.02rem;
+    white-space: normal;
+    word-break: break-all;
+    max-width: none;
+  }
+
+  .ct-profile-meta {
+    margin-top: 10px;
+  }
+
+  .ct-profile-actions {
+    margin-top: 16px;
+  }
+
+  .ct-profile-hero {
+    margin-top: 18px;
+    padding: 16px 0 12px;
+    border-top: 1px solid rgba(51, 65, 85, .72);
+    border-bottom: 1px solid rgba(51, 65, 85, .72);
+  }
+
+  .ct-profile-hero-label {
+    font-size: .78rem;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .ct-profile-hero-value {
+    margin-top: 6px;
+    font-size: 2.1rem;
+    font-weight: 900;
+    color: #f8fafc;
+  }
+
+  .ct-profile-hero-value.pos {
+    color: #4ade80;
+  }
+
+  .ct-profile-hero-value.neg {
+    color: #f87171;
+  }
+
+  .ct-profile-hero-sub {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: .82rem;
+    color: #cbd5e1;
+  }
+
+  .ct-profile-bar {
+    margin-top: 10px;
+    height: 12px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #1e293b;
+    display: flex;
+  }
+
+  .ct-profile-bar-pos {
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+  }
+
+  .ct-profile-bar-neg {
+    background: linear-gradient(90deg, #ef4444, #f97316);
+  }
+
+  .ct-summary-card {
+    padding: 18px;
+    position: relative;
+  }
+
+  .ct-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .ct-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(51, 65, 85, .5);
+  }
+
+  .ct-summary-row:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  .ct-summary-key {
+    font-size: .78rem;
+    color: #94a3b8;
+  }
+
+  .ct-summary-val {
+    font-size: .86rem;
+    font-weight: 800;
+    color: #f8fafc;
+    text-align: right;
+  }
+
+  .ct-analytics-tabs {
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .ct-analytics-tab-btn {
+    background: #0f172a;
+    border-color: rgba(148, 163, 184, .18);
+    color: #cbd5e1;
+    padding: 10px 14px;
+  }
+
+  .ct-analytics-tab-btn.active {
+    background: rgba(37, 99, 235, .14);
+    border-color: #3b82f6;
+    color: #fff;
+  }
+
+  .ct-analytics-card {
+    background: linear-gradient(180deg, rgba(9, 15, 26, .98), rgba(12, 20, 34, .96));
+    border: 1px solid rgba(30, 41, 59, .95);
+    border-radius: 18px;
+  }
+
+  .ct-stats-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .ct-stat-box {
+    background: rgba(15, 23, 42, .82);
+    border-color: rgba(51, 65, 85, .9);
+  }
+
+  .ct-panel-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .ct-panel-note {
+    font-size: .78rem;
+    color: #94a3b8;
+  }
+
+  .ct-table-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .ct-mini-pagination {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .ct-mini-page-btn {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    background: #0f172a;
+    color: #e2e8f0;
+    font-size: .8rem;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .ct-mini-page-btn.active {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+  }
+
+  .ct-mini-page-btn:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 1100px) {
+    .ct-leaderboard-table {
+      min-width: 980px;
+    }
+
+    .ct-leaderboard-head,
+    .ct-leaderboard-row {
+      grid-template-columns: 40px minmax(200px, 1.3fr) 82px 92px 120px 92px 110px 142px;
+    }
+
+    .ct-analytics-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .ct-analytics-sidebar {
+      position: static;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .ct-page {
+      padding: 0 12px 32px;
+    }
+
+    .ct-discover-title {
+      font-size: 1.32rem;
+    }
+
+    .ct-filter-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .ct-stats-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ct-leaderboard-head {
+      display: none;
+    }
+
+    .ct-leaderboard-row {
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding: 16px;
+    }
+
+    .ct-leaderboard-rank-wrap,
+    .ct-trader-cell,
+    .ct-leaderboard-actions {
+      justify-content: flex-start;
+    }
+  }
+
+  /* ── T399: unified main card layout ──────────────────────────────── */
+  /* ── T399: header card (tabs + category row only) ─────────────────── */
+  .ct-main-card {
+    border: 1px solid rgba(51, 65, 85, .5);
+    border-radius: 16px;
+    background: var(--bg-card);
+    margin-bottom: 16px;
+    overflow: visible;
+  }
+
+  .ct-page-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ct-main-card .ct-tabs {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin: 0;
+    width: auto;
+  }
+
+  .ct-main-card .ct-tab {
+    font-size: .84rem;
+    padding: 8px 16px;
+  }
+
+  .ct-main-card .ct-tab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 2px 12px rgba(139, 92, 246, .3);
+  }
+
+  .ct-discover-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .ct-discover-cat-section {
+    border-top: 1px solid var(--border);
+    padding: 10px 16px 4px;
+  }
+
+  .ct-discover-cat-section .ct-discover-tabs {
+    padding: 0;
+  }
+
+  /* results bar: outside the header card */
+  .ct-discover-results-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 0 10px;
+  }
+
+  .ct-discover-results-bar .ct-results-count {
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+
+  .ct-filters-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    color: var(--text-primary);
+    font-size: .84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all .18s;
+  }
+
+  .ct-filters-btn:hover,
+  .ct-filters-btn.open {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .ct-filters-btn i {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* panes outside card */
+  #ct-pane-analytics {
+    padding: 0;
+  }
+
+  #ct-pane-tasks {
+    padding: 0;
+  }
+
+  /* T904: mobile (<=768px) layout reconstruction */
+  @media (max-width: 768px) {
+    .ct-page {
+      padding: 0 10px 28px !important;
+      max-width: 100% !important;
+    }
+
+    .ct-page-topbar {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .ct-tabs {
+      width: 100% !important;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+    }
+
+    .ct-tab {
+      padding: 8px 14px !important;
+      font-size: .8rem !important;
+      flex: 0 0 auto;
+    }
+
+    .ct-layout {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    .ct-filter-card {
+      position: static !important;
+      padding: 12px !important;
+    }
+
+    .ct-filter-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .ct-stats-row {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      gap: 8px !important;
+    }
+
+    .ct-leaderboard-table {
+      min-width: 0 !important;
+      overflow-x: visible !important;
+    }
+
+    .ct-leaderboard-head {
+      display: none !important;
+    }
+
+    /* T904+ refined: visual card layout for trader rows on mobile.
+       DOM order: 1.rank-wrap 2.trader-cell 3.score 4.trades 5.pnl 6.winrate 7.position 8.actions */
+    .ct-leaderboard-row {
+      display: grid !important;
+      grid-template-columns: 56px 1fr 1fr !important;
+      grid-template-rows: auto auto auto auto auto !important;
+      grid-template-areas:
+        "rank trader trader"
+        "scor scor   trad"
+        "pnl  pnl    win"
+        "pos  pos    pos"
+        "act  act    act" !important;
+      gap: 10px !important;
+      padding: 14px 14px 14px 18px !important;
+      border-radius: 14px !important;
+      background:
+        radial-gradient(120% 80% at 0% 0%, rgba(96, 165, 250, 0.10), transparent 60%),
+        linear-gradient(160deg, rgba(13, 21, 38, 0.96) 0%, rgba(17, 28, 52, 0.96) 100%) !important;
+      border: 1px solid rgba(96, 165, 250, 0.22) !important;
+      box-shadow: 0 8px 22px rgba(2, 6, 23, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ct-leaderboard-row::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, #f59e0b 0%, #ef4444 100%);
+      border-top-left-radius: 14px;
+      border-bottom-left-radius: 14px;
+    }
+
+    .ct-leaderboard-row:hover {
+      border-color: rgba(96, 165, 250, 0.45) !important;
+      transform: translateY(-1px);
+    }
+
+    .ct-leaderboard-row>* {
+      min-width: 0 !important;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    /* 1) Rank */
+    .ct-leaderboard-row> :nth-child(1) {
+      grid-area: rank;
+      display: flex !important;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      padding: 4px 0;
+      background: rgba(245, 158, 11, 0.10);
+      border: 1px solid rgba(245, 158, 11, 0.30);
+      border-radius: 10px;
+      width: auto !important;
+    }
+
+    .ct-leaderboard-row> :nth-child(1) .ct-watch-star {
+      width: 14px !important;
+      height: 14px !important;
+      color: #f59e0b;
+    }
+
+    .ct-leaderboard-row> :nth-child(1) .ct-leaderboard-rank {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fbbf24;
+      line-height: 1;
+    }
+
+    /* 2) Trader cell */
+    .ct-leaderboard-row> :nth-child(2) {
+      grid-area: trader;
+      display: flex !important;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed rgba(96, 165, 250, 0.18);
+      width: auto !important;
+    }
+
+    .ct-leaderboard-row> :nth-child(2) .ct-trader-avatar {
+      width: 38px !important;
+      height: 38px !important;
+      flex-shrink: 0;
+      font-size: .85rem;
+    }
+
+    .ct-leaderboard-row> :nth-child(2) .ct-trader-meta {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .ct-leaderboard-row> :nth-child(2) .ct-trader-name {
+      font-size: .92rem;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .ct-leaderboard-row> :nth-child(2) .ct-trader-sub {
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    /* 3-7) KPI tiles */
+    .ct-leaderboard-row> :nth-child(3),
+    .ct-leaderboard-row> :nth-child(4),
+    .ct-leaderboard-row> :nth-child(5),
+    .ct-leaderboard-row> :nth-child(6),
+    .ct-leaderboard-row> :nth-child(7) {
+      display: flex !important;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 2px;
+      padding: 8px 10px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+      border-radius: 10px;
+    }
+
+    .ct-leaderboard-row> :nth-child(3)::before,
+    .ct-leaderboard-row> :nth-child(4)::before,
+    .ct-leaderboard-row> :nth-child(5)::before,
+    .ct-leaderboard-row> :nth-child(6)::before,
+    .ct-leaderboard-row> :nth-child(7)::before {
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #64748b;
+      line-height: 1;
+    }
+
+    .ct-leaderboard-row> :nth-child(3)::before {
+      content: 'SCORE';
+    }
+
+    .ct-leaderboard-row> :nth-child(4)::before {
+      content: 'TRADES';
+    }
+
+    .ct-leaderboard-row> :nth-child(5)::before {
+      content: 'PNL';
+    }
+
+    .ct-leaderboard-row> :nth-child(6)::before {
+      content: 'WIN%';
+    }
+
+    .ct-leaderboard-row> :nth-child(7)::before {
+      content: 'POSITION';
+    }
+
+    .ct-leaderboard-row> :nth-child(3) {
+      grid-area: scor;
+    }
+
+    .ct-leaderboard-row> :nth-child(4) {
+      grid-area: trad;
+    }
+
+    .ct-leaderboard-row> :nth-child(5) {
+      grid-area: pnl;
+    }
+
+    .ct-leaderboard-row> :nth-child(6) {
+      grid-area: win;
+    }
+
+    .ct-leaderboard-row> :nth-child(7) {
+      grid-area: pos;
+      grid-column: 1 / -1 !important;
+    }
+
+    /* Pills inside KPI tiles: remove pill chrome, just show value bold */
+    .ct-leaderboard-row> :nth-child(3) .ct-leaderboard-pill,
+    .ct-leaderboard-row> :nth-child(4) .ct-leaderboard-metric,
+    .ct-leaderboard-row> :nth-child(5) .ct-leaderboard-pill,
+    .ct-leaderboard-row> :nth-child(6) .ct-leaderboard-pill,
+    .ct-leaderboard-row> :nth-child(7) .ct-leaderboard-pill {
+      background: transparent !important;
+      border: 0 !important;
+      padding: 0 !important;
+      font-size: 1.02rem !important;
+      font-weight: 800 !important;
+      line-height: 1.15 !important;
+    }
+
+    .ct-leaderboard-row> :nth-child(4) .ct-leaderboard-metric {
+      color: #cbd5e1 !important;
+    }
+
+    /* 8) Action */
+    .ct-leaderboard-row> :nth-child(8) {
+      grid-area: act;
+      width: 100%;
+      padding-top: 4px;
+      border-top: 1px dashed rgba(96, 165, 250, 0.18);
+    }
+
+    .ct-leaderboard-actions {
+      display: flex !important;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 100%;
+      justify-content: stretch !important;
+    }
+
+    .ct-leaderboard-actions .ct-action-btn {
+      flex: 1 1 auto;
+      min-width: 110px;
+      justify-content: center;
+      padding: 10px 12px !important;
+      font-weight: 700;
+    }
+
+    .ct-discover-title {
+      font-size: 1.15rem !important;
+    }
+
+    .ct-discover-title-wrap {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .ct-analytics-shell {
+      grid-template-columns: 1fr !important;
+    }
+
+    .ct-analytics-sidebar {
+      position: static !important;
+    }
+
+    .ct-main-card {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+</style>
+
+<main class="ct-page">
+
+  <div class="ct-main-card">
+    <div class="ct-page-topbar">
+      <div class="ct-tabs" role="tablist">
+        <button class="ct-tab active" id="ct-tab-discover" onclick="CT.switchTab('discover')" role="tab"
+          aria-selected="true">
+          <i data-lucide="search"></i>
+          <span data-i18n="copytrader.tab.discover">{{ i18n_dict.get('copytrader.tab.discover','Wallet Discovery')
+            }}</span>
+        </button>
+        <button class="ct-tab" id="ct-tab-analytics" onclick="CT.switchTab('analytics')" role="tab"
+          aria-selected="false">
+          <i data-lucide="bar-chart-2"></i>
+          <span data-i18n="copytrader.tab.analytics">{{ i18n_dict.get('copytrader.tab.analytics','Wallet Analytics')
+            }}</span>
+          <span id="ct-analytics-lock-badge"
+            style="font-size:.66rem;padding:2px 6px;background:rgba(245,158,11,.15);color:#f59e0b;border-radius:5px;margin-left:2px">{{
+            i18n_dict.get('copytrader.tab.selectFirst','Select First') }}</span>
+        </button>
+        <button class="ct-tab" id="ct-tab-tasks" onclick="CT.switchTab('tasks')" role="tab" aria-selected="false">
+          <i data-lucide="list-checks"></i>
+          <span data-i18n="copytrader.tab.tasks">{{ i18n_dict.get('copytrader.tab.tasks','Task Management') }}</span>
+          <span id="ct-tasks-lock-badge"
+            style="font-size:.66rem;padding:2px 6px;background:rgba(245,158,11,.15);color:#f59e0b;border-radius:5px;margin-left:2px;display:none">{{
+            i18n_dict.get('copytrader.tab.setFollowFirst','Set Follow First') }}</span>
+        </button>
+      </div>
+      <div class="ct-discover-controls" id="ct-discover-controls">
+        <span class="ct-discover-chip"><i data-lucide="zap"></i>{{
+          i18n_dict.get('copytrader.pagination.pageSizeNote','Free Copy Trading') }}</span>
+        <div class="ct-filter-actions">
+          <button class="ct-filter-trigger" id="ct-filter-trigger" onclick="CT.toggleDiscoverFilters()">
+            <i data-lucide="sliders-horizontal"></i>
+            <span>{{ i18n_dict.get('copytrader.filter.title','Filter Wallets') }}</span>
+            <i data-lucide="chevron-down"></i>
+          </button>
+          <div class="ct-filter-popover" id="ct-filter-popover">
+            <div class="ct-filter-title"><i data-lucide="filter"></i> <span data-i18n="copytrader.filter.title">{{
+                i18n_dict.get('copytrader.filter.title','Filter Wallets') }}</span></div>
+            <div class="ct-filter-grid">
+              <div class="ct-field">
+                <label data-i18n="copytrader.filter.category">{{ i18n_dict.get('copytrader.filter.category','Category')
+                  }}</label>
+                <select id="ct-f-category">
+                  <option value="overall" data-i18n="copytrader.filter.overall">{{
+                    i18n_dict.get('copytrader.filter.overall','Overall (Top)') }}</option>
+                  <option value="all" data-i18n="copytrader.filter.allCats">{{
+                    i18n_dict.get('copytrader.filter.allCats','All Categories') }}</option>
+                </select>
+              </div>
+              <div class="ct-field">
+                <label data-i18n="copytrader.filter.sortBy">{{ i18n_dict.get('copytrader.filter.sortBy','Sort By')
+                  }}</label>
+                <select id="ct-f-sort">
+                  <option value="score" data-i18n="copytrader.sort.score">{{
+                    i18n_dict.get('copytrader.sort.score','Score') }}</option>
+                  <option value="pnl_total_usd" data-i18n="copytrader.sort.pnl">{{
+                    i18n_dict.get('copytrader.sort.pnl','Total PnL') }}</option>
+                  <option value="win_rate" data-i18n="copytrader.sort.winRate">{{
+                    i18n_dict.get('copytrader.sort.winRate','Win Rate') }}</option>
+                  <option value="trade_count_30d" data-i18n="copytrader.sort.trades30d">{{
+                    i18n_dict.get('copytrader.sort.trades30d','Trades (30d)') }}</option>
+                </select>
+              </div>
+              <div class="ct-field full">
+                <label data-i18n="copytrader.filter.minScore">{{ i18n_dict.get('copytrader.filter.minScore','Min Score
+                  (1-100)') }}</label>
+                <input type="range" id="ct-f-min-score" min="0" max="100" step="1" value="0"
+                  oninput="document.getElementById('ct-f-min-score-v').textContent=this.value">
+                <div class="ct-modal-hint"><span id="ct-f-min-score-v">0</span></div>
+              </div>
+              <div class="ct-field full">
+                <label data-i18n="copytrader.filter.minPnl">{{ i18n_dict.get('copytrader.filter.minPnl','Min PnL (USD)')
+                  }}</label>
+                <input type="range" id="ct-f-min-pnl" min="1" max="5" step="1" value="1"
+                  oninput="CT._setMinPnlTier(this.value)">
+                <div class="ct-modal-hint"><span id="ct-f-min-pnl-v">1</span></div>
+              </div>
+              <div class="ct-field">
+                <label data-i18n="copytrader.filter.minTrades">{{ i18n_dict.get('copytrader.filter.minTrades','Min
+                  Trades (30d, 1-100)') }}</label>
+                <input type="range" id="ct-f-min-trades" min="0" max="100" step="1" value="0"
+                  oninput="document.getElementById('ct-f-min-trades-v').textContent=this.value">
+                <div class="ct-modal-hint"><span id="ct-f-min-trades-v">0</span></div>
+              </div>
+              <div class="ct-field">
+                <label data-i18n="copytrader.filter.minWinRate">{{ i18n_dict.get('copytrader.filter.minWinRate','Min Win
+                  Rate (1-100%)') }}</label>
+                <input type="range" id="ct-f-min-winrate" min="0" max="100" step="1" value="0"
+                  oninput="document.getElementById('ct-f-min-winrate-v').textContent=this.value + '%'">
+                <div class="ct-modal-hint"><span id="ct-f-min-winrate-v">0%</span></div>
+              </div>
+              <div class="ct-field full">
+                <div class="ct-checkbox-row" style="margin:0">
+                  <input type="checkbox" id="ct-f-exclude-bots" checked>
+                  <label for="ct-f-exclude-bots" data-i18n="copytrader.filter.excludeBots">{{
+                    i18n_dict.get('copytrader.filter.excludeBots','Exclude Bot Wallets') }}</label>
+                </div>
+              </div>
+            </div>
+            <div class="ct-filter-footer">
+              <button class="ct-filter-reset" onclick="CT.resetDiscoverFilters()"><span
+                  data-i18n="copytrader.filter.reset">{{ i18n_dict.get('copytrader.filter.reset','Reset')
+                  }}</span></button>
+              <button class="ct-search-btn" id="ct-search-btn" onclick="CT.searchWallets(1, 'search')">
+                <i data-lucide="search"></i>
+                <span data-i18n="copytrader.filter.searchBtn">{{ i18n_dict.get('copytrader.filter.searchBtn','Search
+                  Wallets') }}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ct-discover-cat-section" id="ct-discover-cat-section">
+      <div class="ct-discover-tabs" id="ct-discover-tabs">
+        <button class="ct-discover-tab active" data-category="overall" onclick="CT.setDiscoverCategory('overall')"><i
+            data-lucide="trophy"></i><span data-i18n="copytrader.filter.overall">{{
+            i18n_dict.get('copytrader.filter.overall','Overall (Top)') }}</span></button>
+        <button class="ct-discover-tab" data-category="sports" onclick="CT.setDiscoverCategory('sports')"><i
+            data-lucide="medal"></i><span>{{ i18n_dict.get('copytrader.category.sports','Sports') }}</span></button>
+        <button class="ct-discover-tab" data-category="crypto" onclick="CT.setDiscoverCategory('crypto')"><i
+            data-lucide="chart-column"></i><span>{{ i18n_dict.get('copytrader.category.crypto','Crypto')
+            }}</span></button>
+        <button class="ct-discover-tab" data-category="politics" onclick="CT.setDiscoverCategory('politics')"><i
+            data-lucide="landmark"></i><span>{{ i18n_dict.get('copytrader.category.politics','Politics')
+            }}</span></button>
+        <button class="ct-discover-tab" data-category="weather" onclick="CT.setDiscoverCategory('weather')"><i
+            data-lucide="cloud-sun"></i><span>{{ i18n_dict.get('copytrader.category.weather','Weather')
+            }}</span></button>
+        <button class="ct-discover-tab" data-category="all" onclick="CT.setDiscoverCategory('all')"><i
+            data-lucide="layout-grid"></i><span data-i18n="copytrader.filter.allCats">{{
+            i18n_dict.get('copytrader.filter.allCats','All Categories') }}</span></button>
+      </div>
+    </div>
+
+  </div><!-- /ct-main-card -->
+
+  <div class="ct-pane active" id="ct-pane-discover">
+    <div class="ct-discover-results-bar" id="ct-toolbar-discover">
+      <div>
+        <span id="ct-results-count" class="ct-results-count"></span>
+      </div>
+    </div>
+    <section class="ct-leaderboard-shell">
+      <div id="ct-wallet-grid" class="ct-wallet-grid"></div>
+      <div id="ct-wallet-pagination-row" class="ct-pagination-row"
+        style="padding:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div id="ct-wallet-pagination" class="ct-pagination" style="margin:0;padding:0"></div>
+        <div id="ct-wallet-freshness" class="ct-cache-freshness"
+          style="font-size:.78rem;color:var(--text-muted);white-space:nowrap"></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="ct-pane" id="ct-pane-analytics">
+
+    <div class="ct-addr-bar">
+      <input type="text" id="ct-analytics-addr" class="ct-addr-input"
+        data-i18n-attr="placeholder:copytrader.analytics.addrPlaceholder"
+        placeholder="{{ i18n_dict.get('copytrader.analytics.addrPlaceholder','Enter wallet address (0x...)') }}">
+      <button class="ct-addr-btn" id="ct-analytics-btn" onclick="CT.loadAnalytics()">
+        <i data-lucide="search"></i>
+        <span data-i18n="copytrader.analytics.analyzeBtn">{{ i18n_dict.get('copytrader.analytics.analyzeBtn','Analyze')
+          }}</span>
+      </button>
+    </div>
+
+    <div id="ct-analytics-empty" class="ct-empty-state">
+      <i data-lucide="lock" style="display:block;margin:0 auto 10px;width:36px;height:36px;opacity:.35"></i>
+      <div data-i18n="copytrader.analytics.emptyTitle">{{ i18n_dict.get('copytrader.analytics.emptyTitle','Select a
+        wallet from Discover tab first') }}</div>
+      <p data-i18n="copytrader.analytics.emptySub">{{ i18n_dict.get('copytrader.analytics.emptySub','Click Analyze on
+        any wallet card, or enter an address above') }}</p>
+    </div>
+
+    <div id="ct-analytics-body" style="display:none">
+      <div class="ct-analytics-shell">
+        <aside class="ct-analytics-sidebar">
+          <div class="ct-analytics-side-card">
+            <div class="ct-profile-header" id="ct-profile-header"></div>
+          </div>
+          <div class="ct-analytics-card ct-summary-card">
+            <h3><i data-lucide="file-text"></i> <span data-i18n="copytrader.analytics.summaryTitle">{{
+                i18n_dict.get('copytrader.analytics.summaryTitle','Wallet Details') }}</span></h3>
+            <div id="ct-summary-content"></div>
+          </div>
+        </aside>
+
+        <section class="ct-analytics-main">
+          <div class="ct-stats-row" id="ct-stats-row"></div>
+
+          <div class="ct-analytics-tabs" id="ct-analytics-tabs">
+            <button class="ct-analytics-tab-btn active" data-analytics-tab="positions"
+              onclick="CT.switchAnalyticsTab('positions')"><i data-lucide="layout-list"></i><span
+                data-i18n="copytrader.analytics.posTitle">{{ i18n_dict.get('copytrader.analytics.posTitle','Open
+                Positions') }}</span></button>
+            <button class="ct-analytics-tab-btn" data-analytics-tab="categories"
+              onclick="CT.switchAnalyticsTab('categories')"><i data-lucide="pie-chart"></i><span
+                data-i18n="copytrader.analytics.catTitle">{{ i18n_dict.get('copytrader.analytics.catTitle','Category
+                Breakdown') }}</span></button>
+            <button class="ct-analytics-tab-btn" data-analytics-tab="activity"
+              onclick="CT.switchAnalyticsTab('activity')"><i data-lucide="activity"></i><span
+                data-i18n="copytrader.analytics.actTitle">{{ i18n_dict.get('copytrader.analytics.actTitle','Recent
+                Activity') }}</span></button>
+            <button class="ct-analytics-tab-btn" data-analytics-tab="closed"
+              onclick="CT.switchAnalyticsTab('closed')"><i data-lucide="history"></i><span
+                data-i18n="copytrader.analytics.closedTitle">{{ i18n_dict.get('copytrader.analytics.closedTitle','Closed
+                Positions') }}</span></button>
+          </div>
+
+          <div class="ct-analytics-card ct-analytics-panel active" id="ct-panel-positions">
+            <div class="ct-panel-topbar">
+              <h3 style="margin:0"><i data-lucide="layout-list"></i> <span data-i18n="copytrader.analytics.posTitle">{{
+                  i18n_dict.get('copytrader.analytics.posTitle','Open Positions') }}</span></h3>
+              <div class="ct-panel-note">{{ i18n_dict.get('copytrader.analytics.positionsNote','10 rows per page') }}
+              </div>
+            </div>
+            <div id="ct-positions-content" style="overflow-x:auto"></div>
+          </div>
+
+          <div class="ct-analytics-card ct-analytics-panel" id="ct-panel-categories">
+            <h3><i data-lucide="pie-chart"></i> <span data-i18n="copytrader.analytics.catTitle">{{
+                i18n_dict.get('copytrader.analytics.catTitle','Category Breakdown') }}</span></h3>
+            <div class="ct-cat-bars" id="ct-cat-bars"></div>
+          </div>
+
+          <div class="ct-analytics-card ct-analytics-panel" id="ct-panel-activity">
+            <h3><i data-lucide="activity"></i> <span data-i18n="copytrader.analytics.actTitle">{{
+                i18n_dict.get('copytrader.analytics.actTitle','Recent Activity') }}</span></h3>
+            <div id="ct-activity-content"></div>
+          </div>
+
+          <div class="ct-analytics-card ct-analytics-panel" id="ct-panel-details">
+            <h3><i data-lucide="user"></i> <span data-i18n="copytrader.analytics.summaryTitle">{{
+                i18n_dict.get('copytrader.analytics.summaryTitle','Wallet Details') }}</span></h3>
+            <div id="ct-details-echo"></div>
+          </div>
+
+          <div class="ct-analytics-card ct-analytics-panel" id="ct-panel-closed">
+            <h3><i data-lucide="history"></i> <span data-i18n="copytrader.analytics.closedTitle">{{
+                i18n_dict.get('copytrader.analytics.closedTitle','Closed Positions') }}</span></h3>
+            <div id="ct-closed-summary" style="margin-bottom:12px;font-size:13px;opacity:.7"></div>
+            <div id="ct-closed-content" style="overflow-x:auto"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div class="ct-pane" id="ct-pane-tasks">
+
+    <div class="ct-settings-bar" id="ct-settings-bar">
+      <span><i data-lucide="settings-2"></i> <b data-i18n="copytrader.settings.enabled">{{
+          i18n_dict.get('copytrader.settings.enabled','Daemon Enabled') }}</b></span>
+      <label class="ct-toggle"
+        title="{{ i18n_dict.get('copytrader.settings.enabledHint','Enable or disable the copytrader V2 daemon') }}">
+        <input type="checkbox" id="ct-settings-enabled" onchange="CT.saveSettings()">
+        <span class="ct-toggle-slider"></span>
+      </label>
+      <span style="margin-left:auto;font-size:.74rem;color:var(--text-muted)" id="ct-settings-status"></span>
+    </div>
+
+    <div class="ct-tasks-top">
+      <div class="ct-tasks-title">
+        <i data-lucide="list-checks"></i>
+        <span data-i18n="copytrader.tasks.listTitle">{{ i18n_dict.get('copytrader.tasks.listTitle','Follow Tasks')
+          }}</span>
+        <span id="ct-task-count"
+          style="font-size:.78rem;font-weight:600;color:var(--text-muted);margin-left:4px"></span>
+      </div>
+      <button class="ct-add-btn" onclick="CT.openTaskModal()">
+        <i data-lucide="plus"></i>
+        <span data-i18n="copytrader.tasks.addBtn">{{ i18n_dict.get('copytrader.tasks.addBtn','Add Follow Task')
+          }}</span>
+      </button>
+    </div>
+
+    <div id="ct-task-grid" class="ct-task-grid"></div>
+  </div><!-- /ct-pane-tasks -->
+
+</main>
+
+<div class="ct-modal-overlay" id="ct-task-modal" role="dialog" aria-modal="true">
+  <div class="ct-modal" role="document">
+    <div class="ct-modal-header">
+      <h3 id="ct-modal-heading"><i data-lucide="user-plus"></i> <span data-i18n="copytrader.modal.addTitle">{{
+          i18n_dict.get('copytrader.modal.addTitle','Add Follow Task') }}</span></h3>
+      <button class="ct-modal-close" onclick="CT.closeTaskModal()"><i data-lucide="x"></i></button>
+    </div>
+    <div class="ct-modal-body">
+      <input type="hidden" id="ct-modal-task-id">
+
+      <div class="ct-modal-field">
+        <label for="ct-modal-addr" data-i18n="copytrader.modal.addr">{{ i18n_dict.get('copytrader.modal.addr','Wallet
+          Address') }} *</label>
+        <input type="text" id="ct-modal-addr" placeholder="0x..." style="font-family:monospace">
+        <div class="ct-modal-hint" data-i18n="copytrader.modal.addrHint">{{
+          i18n_dict.get('copytrader.modal.addrHint','42-char EVM address (0x...)') }}</div>
+      </div>
+
+      <div class="ct-modal-field">
+        <label for="ct-modal-label" data-i18n="copytrader.modal.label">{{ i18n_dict.get('copytrader.modal.label','Wallet
+          Label') }}</label>
+        <input type="text" id="ct-modal-label"
+          placeholder="{{ i18n_dict.get('copytrader.modal.labelPlaceholder','e.g. Top Sports Trader') }}">
+      </div>
+
+      <div class="ct-modal-field">
+        <label data-i18n="copytrader.modal.categories">{{ i18n_dict.get('copytrader.modal.categories','Categories (empty
+          = all)') }}</label>
+        <div class="ct-modal-cats" id="ct-modal-cats"></div>
+      </div>
+
+      <div class="ct-modal-row2">
+        <div class="ct-modal-field">
+          <label for="ct-modal-base-usdc" data-i18n="copytrader.modal.followMultiplier">{{
+            i18n_dict.get('copytrader.modal.followMultiplier','Follow Multiplier (from Strategy)') }}</label>
+          <input type="text" id="ct-modal-base-usdc" value="1x" disabled>
+          <div class="ct-modal-hint" data-i18n="copytrader.modal.followMultiplierHint">{{
+            i18n_dict.get('copytrader.modal.followMultiplierHint','This task uses your Strategy Follow Multiplier from
+            /v2/config.') }}</div>
+        </div>
+        <div class="ct-modal-field">
+          <label for="ct-modal-max-event" data-i18n="copytrader.modal.maxEvent">{{
+            i18n_dict.get('copytrader.modal.maxEvent','Max Per Event') }}</label>
+          <input type="number" id="ct-modal-max-event" min="1" max="10" value="1">
+        </div>
+      </div>
+
+      <div class="ct-modal-row2">
+        <div class="ct-modal-field">
+          <label for="ct-modal-min-score" data-i18n="copytrader.modal.minScore">{{
+            i18n_dict.get('copytrader.modal.minScore','Min Wallet Score') }}</label>
+          <input type="number" id="ct-modal-min-score" min="0" max="100" value="60">
+        </div>
+        <div class="ct-modal-field">
+          <label for="ct-modal-max-price" data-i18n="copytrader.modal.maxPrice">{{
+            i18n_dict.get('copytrader.modal.maxPrice','Max Entry Price') }}</label>
+          <input type="number" id="ct-modal-max-price" min="0" max="1" step="0.01" value="0.85">
+        </div>
+      </div>
+
+      <div class="ct-toggle-field">
+        <span class="ct-toggle-field-label" data-i18n="copytrader.modal.followSell">{{
+          i18n_dict.get('copytrader.modal.followSell','Mirror Sell Exits') }}</span>
+        <label class="ct-toggle">
+          <input type="checkbox" id="ct-modal-follow-sell" checked>
+          <span class="ct-toggle-slider"></span>
+        </label>
+      </div>
+
+      <div class="ct-modal-field">
+        <label for="ct-modal-notes" data-i18n="copytrader.modal.notes">{{ i18n_dict.get('copytrader.modal.notes','Notes
+          (optional)') }}</label>
+        <textarea id="ct-modal-notes" rows="2"
+          placeholder="{{ i18n_dict.get('copytrader.modal.notesPlaceholder','Optional description...') }}"></textarea>
+      </div>
+
+      <div class="ct-modal-err" id="ct-modal-err"></div>
+    </div>
+    <div class="ct-modal-footer">
+      <button class="ct-modal-cancel" onclick="CT.closeTaskModal()" data-i18n="copytrader.modal.cancel">{{
+        i18n_dict.get('copytrader.modal.cancel','Cancel') }}</button>
+      <button class="ct-modal-save" id="ct-modal-save-btn" onclick="CT.saveTask()">
+        <i data-lucide="check"></i>
+        <span id="ct-modal-save-label" data-i18n="copytrader.modal.save">{{
+          i18n_dict.get('copytrader.modal.save','Save') }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="ct-toast hidden" id="ct-toast"></div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('copytrader');
+  }
+</script>
+<script>
+  (function () {
+    var _t = window.__I18N_PRELOAD__ && window.__I18N_PRELOAD__[document.documentElement.getAttribute('data-lang') || 'zh-CN'];
+    function t(key, fallback) {
+      if (_t && _t[key] != null) return _t[key];
+      return fallback || key;
+    }
+
+    function escHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function api(path, opts) {
+      opts = opts || {};
+      var fo = { credentials: 'include' };
+      if (opts.method) fo.method = opts.method;
+      if (opts.body != null) {
+        fo.body = typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body);
+        fo.headers = { 'Content-Type': 'application/json' };
+      }
+      return fetch(path, fo).then(function (r) {
+        return r.text().then(function (txt) {
+          var ct = (r.headers.get('content-type') || '').toLowerCase();
+          var data = null;
+          if (ct.indexOf('application/json') >= 0 || (txt && (txt[0] === '{' || txt[0] === '['))) {
+            try {
+              data = txt ? JSON.parse(txt) : {};
+            } catch (_e) {
+              throw new Error('invalid_json_response');
+            }
+          } else {
+            if (!r.ok) {
+              throw new Error((txt || ('HTTP ' + r.status)).slice(0, 180));
+            }
+            data = {};
+          }
+          if (!r.ok) {
+            var errMsg = (data && (data.error || data.detail)) || ('HTTP ' + r.status);
+            throw new Error(typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg));
+          }
+          return data;
+        });
+      });
+    }
+
+    function fmtUsd(v) {
+      var n = parseFloat(v) || 0;
+      var sign = n >= 0 ? '+' : '';
+      return sign + '$' + Math.abs(n).toFixed(2);
+    }
+
+    function fmtCompactUsd(v) {
+      var n = parseFloat(v) || 0;
+      var abs = Math.abs(n);
+      var units = [
+        { value: 1000000000, suffix: 'B' },
+        { value: 1000000, suffix: 'M' },
+        { value: 1000, suffix: 'K' }
+      ];
+      for (var i = 0; i < units.length; i++) {
+        if (abs >= units[i].value) return '$' + (abs / units[i].value).toFixed(abs >= units[i].value * 10 ? 0 : 1) + units[i].suffix;
+      }
+      return '$' + abs.toFixed(abs >= 100 ? 0 : 2);
+    }
+
+    function fmtSignedCompactUsd(v) {
+      var n = parseFloat(v) || 0;
+      return (n >= 0 ? '+' : '-') + fmtCompactUsd(Math.abs(n));
+    }
+
+    function fmtPct(v) {
+      var n = parseFloat(v) || 0;
+      return (n * 100).toFixed(1) + '%';
+    }
+
+    function scoreClass(s) {
+      if (s >= 70) return 'ct-score-hi';
+      if (s >= 45) return 'ct-score-mid';
+      return 'ct-score-lo';
+    }
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 12) return addr || '';
+      return addr.slice(0, 6) + '...' + addr.slice(-4);
+    }
+
+    function avatarLetter(addr) {
+      return addr ? addr.slice(2, 4).toUpperCase() : '??';
+    }
+
+    var _toastTimer = null;
+    function toast(msg, type) {
+      var el = document.getElementById('ct-toast');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'ct-toast ' + (type || 'success');
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(function () { el.className = 'ct-toast hidden'; }, 3200);
+    }
+
+    function skel(count, minH) {
+      var html = '';
+      for (var i = 0; i < count; i++) {
+        html += '<div class="ct-skel-card" style="min-height:' + (minH || 180) + 'px">' +
+          '<div class="ct-skel-row" style="display:flex;gap:10px;align-items:center"><div class="ct-skel" style="width:40px;height:40px;border-radius:10px;flex-shrink:0"></div>' +
+          '<div style="flex:1"><div class="ct-skel" style="height:13px;width:70%"></div><div class="ct-skel" style="height:10px;width:45%;margin-top:6px"></div></div></div>' +
+          '<div class="ct-skel" style="height:50px;border-radius:8px"></div>' +
+          '<div style="display:flex;gap:6px"><div class="ct-skel" style="height:32px;flex:1;border-radius:8px"></div><div class="ct-skel" style="height:32px;flex:1;border-radius:8px"></div></div>' +
+          '</div>';
+      }
+      return html;
+    }
+
+    /* ─── CT module ──────────────────────────────────────────────────── */
+    window.CT = {
+      _currentTab: 'discover',
+      _analyticsBusy: false,
+      _searchBusy: false,
+      _tasksBusy: false,
+      _searchPage: 1,
+      _searchPageSize: 20,
+      _positionsPage: 1,
+      _positionsPageSize: 10,
+      _lastPositions: [],
+      _lastSearchMode: 'default',
+      _pnlTiers: [0, 100, 1000, 10000, 100000],
+      _followMultiplier: 1,
+      _followMultiplierPromise: null,
+      _readPrefetch: function (url, maxAgeMs) {
+        try {
+          var raw = sessionStorage.getItem('v2_prefetch_payload:' + url);
+          if (!raw) return null;
+          var parsed = JSON.parse(raw);
+          var ts = Number(parsed && parsed.ts) || 0;
+          if (Date.now() - ts > (maxAgeMs || 120000)) return null;
+          return parsed && parsed.data ? parsed.data : null;
+        } catch (_) { return null; }
+      },
+
+      _renderWalletResults: function (data) {
+        // T502 Wave 6D: cache the latest payload so toggleSort can re-render
+        // without re-issuing the network request.
+        this._lastWalletData = data;
+        var grid = document.getElementById('ct-wallet-grid');
+        var countEl = document.getElementById('ct-results-count');
+        var wallets = (data && data.wallets) || [];
+        var total = parseInt((data && data.total) || wallets.length || 0, 10) || 0;
+        var pageNo = parseInt((data && data.page) || this._searchPage || 1, 10) || 1;
+        var pages = parseInt((data && data.pages) || 1, 10) || 1;
+        this._searchPage = pageNo;
+
+        // T415: Cache freshness indicator — shown at bottom-right alongside pagination
+        var cacheTs = data && data.cache_updated_at;
+        // T415: Move freshness info to bottom-right freshness element instead of count bar
+        var freshnessEl = document.getElementById('ct-wallet-freshness');
+        if (freshnessEl) {
+          if (cacheTs) {
+            var ago = Math.round((Date.now() - new Date(cacheTs).getTime()) / 60000);
+            freshnessEl.innerHTML =
+              '<i data-lucide="clock" style="width:11px;height:11px;vertical-align:middle;margin-right:3px"></i>' +
+              escHtml(t('copytrader.walletCount', '钱包数量') + ': ' + total + '  ' +
+                t('copytrader.cacheAge', 'Updated') + ' ' +
+                (ago < 1 ? t('copytrader.justNow', 'just now') : ago + t('copytrader.minAgo', ' min ago')));
+            if (window.lucide) lucide.createIcons({ parentEl: freshnessEl });
+          } else {
+            freshnessEl.innerHTML = '';
+          }
+        }
+        // Keep wallet count/freshness in bottom-right area only (T415 UX).
+        countEl.innerHTML = '';
+        this._syncDiscoverCategoryTabs();
+
+        if (!wallets.length) {
+          grid.innerHTML = '<div class="ct-empty-state">' +
+            '<i data-lucide="search-x" style="display:block;margin:0 auto 10px;width:36px;height:36px;opacity:.4"></i>' +
+            '<div>' + escHtml(t('copytrader.discover.empty', 'No wallets found. Try adjusting your filters.')) + '</div></div>';
+          this._renderDiscoverPagination(pages, pageNo);
+          if (window.lucide) lucide.createIcons();
+          return;
+        }
+        var startRank = ((pageNo - 1) * this._searchPageSize) + 1;
+        // T502 Wave 7B: sortable column headers (server-side sort, so we
+        // just reflect the chosen field/direction in the arrow indicator).
+        var sortField = this._sortField || '';
+        var sortDir = this._sortDir || 'desc';
+        var sortableCols = [
+          { key: '', label: t('copytrader.leaderboard.rank', '#'), sortable: false },
+          { key: '', label: t('copytrader.leaderboard.trader', 'Trader'), sortable: false },
+          { key: 'score', label: t('copytrader.leaderboard.score', 'Score'), sortable: true },
+          { key: 'trades_30d', label: t('copytrader.stat.trades30d', 'Trades 30d'), sortable: true },
+          { key: 'pnl', label: t('copytrader.kpi.pnl', 'Realized PnL'), sortable: true },
+          { key: 'win_rate', label: t('copytrader.stat.winRate', 'Win Rate'), sortable: true },
+          { key: 'drawdown', label: t('copytrader.kpi.maxDrawdown', 'Max Drawdown'), sortable: true },
+          { key: '', label: t('copytrader.leaderboard.actions', 'Actions'), sortable: false },
+        ];
+        var headHtml = sortableCols.map(function (c) {
+          if (!c.sortable) return '<div>' + escHtml(c.label) + '</div>';
+          var arrow = '';
+          if (sortField === c.key) arrow = sortDir === 'asc' ? ' ▲' : ' ▼';
+          return '<div class="ct-th-sort" style="cursor:pointer;user-select:none" onclick="CT.toggleSort(\'' + c.key + '\')">' + escHtml(c.label) + escHtml(arrow) + '</div>';
+        }).join('');
+        grid.innerHTML =
+          '<div class="ct-leaderboard-table">' +
+          '<div class="ct-leaderboard-head">' + headHtml + '</div>' +
+          wallets.map(function (w, idx) { return CT._walletRow(w, startRank + idx); }).join('') +
+          '</div>';
+        this._renderDiscoverPagination(pages, pageNo);
+        if (window.lucide) lucide.createIcons();
+      },
+
+      /* T497 Wave 5B: portal helper — moves a modal/popover element into
+         <body> on first open so it escapes .main-content's stacking context
+         (which is created by position:fixed) and is no longer clipped by the
+         sidebar (z-index 50) or header (z-index 40). Idempotent. */
+      _portalToBody: function (id) {
+        var el = document.getElementById(id);
+        if (el && el.parentNode !== document.body) document.body.appendChild(el);
+        return el;
+      },
+
+      toggleDiscoverFilters: function (forceState) {
+        var pop = document.getElementById('ct-filter-popover');
+        var trigger = document.getElementById('ct-filter-trigger');
+        if (!pop || !trigger) return;
+        var shouldOpen = typeof forceState === 'boolean' ? forceState : !pop.classList.contains('open');
+        // T497++ Wave 6A: viewport-centered modal (NOT trigger-anchored).
+        // Switching language changes the toolbar layout/width — anchored popovers
+        // would risk being pushed off-screen. Centering plus a backdrop sidesteps
+        // every possible RTL / responsive breakpoint edge case.
+        if (shouldOpen) {
+          if (pop.parentNode !== document.body) document.body.appendChild(pop);
+          // Lazily create the backdrop (single instance, re-used).
+          var bd = document.getElementById('ct-filter-backdrop');
+          if (!bd) {
+            bd = document.createElement('div');
+            bd.id = 'ct-filter-backdrop';
+            bd.className = 'ct-filter-backdrop';
+            bd.addEventListener('click', function () { CT.toggleDiscoverFilters(false); });
+            document.body.appendChild(bd);
+          }
+          bd.classList.add('open');
+          // Clear any legacy inline left/top/width left over from anchored mode.
+          pop.style.left = ''; pop.style.top = ''; pop.style.width = '';
+        } else {
+          var bd2 = document.getElementById('ct-filter-backdrop');
+          if (bd2) bd2.classList.remove('open');
+        }
+        pop.classList.toggle('open', shouldOpen);
+        trigger.classList.toggle('open', shouldOpen);
+      },
+
+      _ensureFollowMultiplier: function () {
+        var self = this;
+        if (self._followMultiplierPromise) return self._followMultiplierPromise;
+        self._followMultiplierPromise = api('/api/v2/copytrader/settings').then(function (d) {
+          var s = (d && d.settings) || {};
+          self._followMultiplier = Number(s.follow_multiplier || 1) || 1;
+          return self._followMultiplier;
+        }).catch(function () {
+          self._followMultiplier = 1;
+          return self._followMultiplier;
+        }).finally(function () {
+          self._followMultiplierPromise = null;
+        });
+        return self._followMultiplierPromise;
+      },
+
+      resetDiscoverFilters: function () {
+        document.getElementById('ct-f-sort').value = 'score';
+        document.getElementById('ct-f-min-score').value = '0';
+        document.getElementById('ct-f-min-score-v').textContent = '0';
+        document.getElementById('ct-f-min-pnl').value = '1';
+        this._setMinPnlTier(1);
+        document.getElementById('ct-f-min-trades').value = '0';
+        document.getElementById('ct-f-min-trades-v').textContent = '0';
+        document.getElementById('ct-f-min-winrate').value = '0';
+        document.getElementById('ct-f-min-winrate-v').textContent = '0%';
+        document.getElementById('ct-f-exclude-bots').checked = true;
+        this.searchWallets(1, 'search');
+      },
+
+      setDiscoverCategory: function (category) {
+        var select = document.getElementById('ct-f-category');
+        if (select) select.value = category;
+        this._syncDiscoverCategoryTabs();
+        this.searchWallets(1, 'search');
+      },
+
+      _syncDiscoverCategoryTabs: function () {
+        var select = document.getElementById('ct-f-category');
+        var value = select ? select.value : 'overall';
+        document.querySelectorAll('.ct-discover-tab').forEach(function (btn) {
+          btn.classList.toggle('active', btn.dataset.category === value);
+        });
+      },
+
+      _formatPnlTier: function (v) {
+        var n = Number(v || 1);
+        if (n >= 100000) return '100K';
+        if (n >= 10000) return '10K';
+        if (n >= 1000) return '1K';
+        return String(n);
+      },
+
+      _setMinPnlTier: function (tier) {
+        var idx = Math.max(1, Math.min(5, parseInt(tier, 10) || 1));
+        var v = this._pnlTiers[idx - 1] || 0;
+        var el = document.getElementById('ct-f-min-pnl-v');
+        if (el) el.textContent = this._formatPnlTier(v);
+      },
+
+      _getMinPnlUsd: function () {
+        var raw = document.getElementById('ct-f-min-pnl').value;
+        var idx = Math.max(1, Math.min(5, parseInt(raw, 10) || 1));
+        return this._pnlTiers[idx - 1] || 0;
+      },
+
+      loadDefaultWallets: function () {
+        var grid = document.getElementById('ct-wallet-grid');
+        var countEl = document.getElementById('ct-results-count');
+        var paginationEl = document.getElementById('ct-wallet-pagination');
+        var freshnessEl = document.getElementById('ct-wallet-freshness');
+        this._searchPage = 1;
+        this._lastSearchMode = 'default';
+        grid.innerHTML = skel(6, 112);
+        countEl.innerHTML = '';
+        if (paginationEl) paginationEl.innerHTML = '';
+        if (freshnessEl) freshnessEl.innerHTML = '';
+        this._syncDiscoverCategoryTabs();
+
+        var reqUrl = '/api/v2/copytrader/wallets/search?category=overall&sort_by=score&page=1&limit=' + this._searchPageSize;
+        var self = this;
+        var pre = this._readPrefetch(reqUrl, 180000);
+        if (pre && Array.isArray(pre.wallets)) {
+          self._renderWalletResults(pre);
+        }
+        api(reqUrl)
+          .then(function (data) { self._renderWalletResults(data); })
+          .catch(function (e) {
+            grid.innerHTML = '<div class="ct-empty-state" style="grid-column:1/-1"><i data-lucide="alert-triangle" style="display:block;margin:0 auto 10px;width:36px;height:36px;opacity:.4"></i><div>' + escHtml(e.message || 'Error') + '</div></div>';
+            if (window.lucide) lucide.createIcons();
+          });
+      },
+
+      _modalTaskId: null,
+      _walletSelected: false,
+      _hasTasks: false,
+      _selfWallet: '',
+      _categories: [],
+
+      _updateSteps: function (step) {
+        var steps = [1, 2, 3];
+        steps.forEach(function (n) {
+          var el = document.getElementById('ct-step-' + n);
+          if (!el) return;
+          el.classList.remove('active', 'done', 'locked');
+          if (n < step) el.classList.add('done');
+          else if (n === step) el.classList.add('active');
+          else el.classList.add('locked');
+        });
+      },
+
+      /* T502 Wave 7B: column header sort toggle (asc → desc → off) — refetches
+         page 1 from the server so sort applies across all pages. */
+      toggleSort: function (field) {
+        if (!field) return;
+        if (this._sortField === field) {
+          if (this._sortDir === 'desc') { this._sortDir = 'asc'; }
+          else if (this._sortDir === 'asc') { this._sortField = ''; this._sortDir = 'desc'; }
+          else { this._sortDir = 'desc'; }
+        } else {
+          this._sortField = field;
+          this._sortDir = 'desc';
+        }
+        // Reset to page 1 — sort changes the dataset ordering, so previous
+        // page numbers no longer point to the same slice.
+        this.searchWallets(1, 'search');
+      },
+
+      /* tab switching */
+      switchTab: function (tab) {
+        if (tab === 'analytics' && !this._walletSelected) {
+          toast(t('copytrader.toast.selectWalletFirst', 'Select a wallet from Discover tab first'), 'error');
+          return;
+        }
+        if (tab === 'tasks' && !this._hasTasks) {
+          toast(t('copytrader.toast.setFollowFirst', 'Please set at least one follow task first'), 'error');
+          this.openTaskModal();
+          return;
+        }
+        this._currentTab = tab;
+        // T504 Wave 6D / 7A: keep URL in sync (?tab=) so each tab has its own
+        // shareable / refresh-stable URL AND a real history entry, so the
+        // browser back button steps tab→tab inside Copytrader before leaving
+        // the page.
+        try {
+          var url = new URL(window.location.href);
+          if (url.searchParams.get('tab') !== tab) {
+            url.searchParams.set('tab', tab);
+            history.pushState({ ctTab: tab }, '', url.toString());
+          }
+        } catch (_) { }
+        document.querySelectorAll('.ct-tab').forEach(function (b) {
+          var active = b.id === 'ct-tab-' + tab;
+          b.classList.toggle('active', active);
+          b.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        document.querySelectorAll('.ct-pane').forEach(function (p) {
+          p.classList.toggle('active', p.id === 'ct-pane-' + tab);
+        });
+        // T399: show/hide discover-only header sections
+        var isDiscover = (tab === 'discover');
+        var dc = document.getElementById('ct-discover-controls');
+        var cs = document.getElementById('ct-discover-cat-section');
+        var td = document.getElementById('ct-toolbar-discover');
+        if (dc) dc.style.display = isDiscover ? 'flex' : 'none';
+        if (cs) cs.style.display = isDiscover ? 'block' : 'none';
+        if (td) td.style.display = isDiscover ? 'flex' : 'none';
+        if (tab === 'tasks') { this._updateSteps(3); this.loadTasks(); }
+        else if (tab === 'analytics') this._updateSteps(2);
+        else this._updateSteps(1);
+      },
+
+      switchAnalyticsTab: function (tab) {
+        document.querySelectorAll('[data-analytics-tab]').forEach(function (btn) {
+          btn.classList.toggle('active', btn.dataset.analyticsTab === tab);
+        });
+        var map = {
+          categories: 'ct-panel-categories',
+          details: 'ct-panel-details',
+          positions: 'ct-panel-positions',
+          activity: 'ct-panel-activity',
+          closed: 'ct-panel-closed',
+        };
+        Object.keys(map).forEach(function (k) {
+          var el = document.getElementById(map[k]);
+          if (el) el.classList.toggle('active', k === tab);
+        });
+      },
+
+      _isSelfWallet: function (addr) {
+        var a = (addr || '').trim().toLowerCase();
+        var s = (this._selfWallet || '').trim().toLowerCase();
+        return !!(a && s && a === s);
+      },
+
+      /* ── TAB 1: DISCOVER ───────────────────────────────────────────── */
+      searchWallets: function (page, mode) {
+        if (this._searchBusy) return;
+        if (page != null) this._searchPage = Math.max(1, parseInt(page, 10) || 1);
+        var grid = document.getElementById('ct-wallet-grid');
+        var countEl = document.getElementById('ct-results-count');
+        var paginationEl = document.getElementById('ct-wallet-pagination');
+        var btn = document.getElementById('ct-search-btn');
+        grid.innerHTML = skel(6, 112);
+        countEl.innerHTML = '';
+        if (paginationEl) paginationEl.innerHTML = '';
+        btn.disabled = true;
+        this._searchBusy = true;
+
+        var params = new URLSearchParams();
+        var cat = document.getElementById('ct-f-category').value;
+        params.set('category', cat || 'overall');
+        // T502 Wave 7B: column-header sort overrides the dropdown sort
+        // and ships sort_by + sort_dir to the server so pagination respects
+        // the chosen ordering across pages.
+        var sortBy = this._sortField || (document.getElementById('ct-f-sort').value || 'score');
+        var sortDir = this._sortField ? (this._sortDir || 'desc') : 'desc';
+        params.set('sort_by', sortBy);
+        params.set('sort_dir', sortDir);
+        params.set('min_score', String(parseInt(document.getElementById('ct-f-min-score').value || '0', 10) || 0));
+        params.set('min_pnl_usd', String(this._getMinPnlUsd() || 0));
+        params.set('min_trades_30d', String(parseInt(document.getElementById('ct-f-min-trades').value || '0', 10) || 0));
+        params.set('min_win_rate', String(((parseInt(document.getElementById('ct-f-min-winrate').value || '0', 10) || 0) / 100).toFixed(2)));
+        params.set('exclude_bots', document.getElementById('ct-f-exclude-bots').checked ? 'true' : 'false');
+        params.set('page', String(this._searchPage));
+        params.set('limit', String(this._searchPageSize));
+
+        var reqUrl = '/api/v2/copytrader/wallets/search?' + params.toString();
+        var self = this;
+        api(reqUrl)
+          .then(function (data) {
+            self._searchBusy = false;
+            btn.disabled = false;
+            self.toggleDiscoverFilters(false);
+            self._renderWalletResults(data);
+          })
+          .catch(function (e) {
+            self._searchBusy = false;
+            btn.disabled = false;
+            grid.innerHTML = '<div class="ct-empty-state" style="grid-column:1/-1"><i data-lucide="alert-triangle" style="display:block;margin:0 auto 10px;width:36px;height:36px;opacity:.4"></i><div>' + escHtml(e.message || 'Error') + '</div></div>';
+            if (window.lucide) lucide.createIcons();
+          });
+      },
+
+      _renderDiscoverPagination: function (pages, currentPage) {
+        var el = document.getElementById('ct-wallet-pagination');
+        if (!el) return;
+        if (!pages || pages <= 1) {
+          el.innerHTML = '';
+          return;
+        }
+        var html = '';
+        html += '<button class="ct-page-btn" ' + (currentPage <= 1 ? 'disabled' : 'onclick="CT.searchWallets(' + (currentPage - 1) + ',\'search\')"') + '>' + escHtml(t('copytrader.pagination.prev', 'Prev')) + '</button>';
+        var start = Math.max(1, currentPage - 2);
+        var end = Math.min(pages, currentPage + 2);
+        if (start > 1) {
+          html += '<button class="ct-page-btn" onclick="CT.searchWallets(1,\'search\')">1</button>';
+          if (start > 2) html += '<span class="ct-page-ellipsis">...</span>';
+        }
+        for (var p = start; p <= end; p++) {
+          html += '<button class="ct-page-btn' + (p === currentPage ? ' active' : '') + '" ' + (p === currentPage ? 'disabled' : 'onclick="CT.searchWallets(' + p + ',\'search\')"') + '>' + p + '</button>';
+        }
+        if (end < pages) {
+          if (end < pages - 1) html += '<span class="ct-page-ellipsis">...</span>';
+          html += '<button class="ct-page-btn" onclick="CT.searchWallets(' + pages + ',\'search\')">' + pages + '</button>';
+        }
+        html += '<button class="ct-page-btn" ' + (currentPage >= pages ? 'disabled' : 'onclick="CT.searchWallets(' + (currentPage + 1) + ',\'search\')"') + '>' + escHtml(t('copytrader.pagination.next', 'Next')) + '</button>';
+        el.innerHTML = html;
+      },
+
+      _walletRow: function (w, rank) {
+        var addr = w.address || '';
+        var score = Math.round(w.score || 0);
+        var pnl = parseFloat(w.pnl_realized_usd || w.pnl_total_usd) || 0;
+        var winRate = parseFloat(w.win_rate) || 0;
+        var trades30d = w.trade_count_30d || 0;
+        var drawdown = parseFloat(w.max_drawdown_usd) || 0;
+        var cat = escHtml(w.primary_category || 'other');
+        var isBot = !!w.is_likely_bot;
+        var isSelf = this._isSelfWallet(addr);
+        var isPending = !w.data_complete;
+        var scoreHtml = isPending
+          ? '<span class="ct-leaderboard-pill ct-leaderboard-score"><i data-lucide="loader" style="width:12px;height:12px;animation:spin 1.2s linear infinite"></i></span>'
+          : '<span class="ct-leaderboard-pill ct-leaderboard-score">' + score + '</span>';
+        return '<div class="ct-leaderboard-row' + (isBot ? ' bot-flag' : '') + '" style="cursor:pointer" onclick="CT.goAnalytics(\'' + escHtml(addr) + '\')">' +
+          '<div class="ct-leaderboard-rank-wrap"><i data-lucide="star" class="ct-watch-star"></i><span class="ct-leaderboard-rank">' + rank + '</span></div>' +
+          '<div class="ct-trader-cell">' +
+          '<div class="ct-trader-avatar">' + escHtml(avatarLetter(addr)) + '</div>' +
+          '<div class="ct-trader-meta">' +
+          '<div class="ct-trader-name" title="' + escHtml(addr) + '">' + escHtml(shortAddr(addr)) + '</div>' +
+          '<div class="ct-trader-sub">' +
+          '<span class="ct-trader-badge"><i data-lucide="tag" style="width:11px;height:11px"></i>' + cat + '</span>' +
+          '<span class="ct-trader-badge">' + escHtml(t('copytrader.kpi.totalTrades', 'Total Trades')) + ': ' + escHtml(String(w.trade_count_total || 0)) + '</span>' +
+          (isBot ? '<span class="ct-trader-badge"><i data-lucide="bot" style="width:11px;height:11px"></i>' + escHtml(t('copytrader.botWarn', 'Flagged as bot')) + '</span>' : '') +
+          '</div>' +
+          '</div>' +
+          '</div>' +
+          '<div>' + scoreHtml + '</div>' +
+          '<div class="ct-leaderboard-metric subdued">' + escHtml(String(trades30d)) + '</div>' +
+          '<div><span class="ct-leaderboard-pill ' + (pnl >= 0 ? 'pos' : 'neg') + '">' + escHtml(fmtSignedCompactUsd(pnl)) + '</span></div>' +
+          '<div><span class="ct-leaderboard-pill pos">' + escHtml(fmtPct(winRate)) + '</span></div>' +
+          '<div><span class="ct-leaderboard-pill ' + (drawdown > 0 ? 'neg' : 'pos') + '">' + escHtml((drawdown > 0 ? '-' : '') + fmtCompactUsd(drawdown)) + '</span></div>' +
+          '<div class="ct-leaderboard-actions">' +
+          '<button class="ct-action-btn' + (isSelf ? ' disabled' : '') + '" ' + (isSelf ? 'disabled title="' + escHtml(t('copytrader.selfFollowBlocked', 'Your own wallet cannot be followed')) + '"' : 'onclick="event.stopPropagation();CT.openTaskModal(\'' + escHtml(addr) + '\')"') + '><i data-lucide="user-plus"></i> ' + escHtml(t('copytrader.action.copyTrade', 'Copy Trade')) + '</button>' +
+          '</div>' +
+          '</div>';
+      },
+
+      _renderCategoryOptions: function () {
+        var select = document.getElementById('ct-f-category');
+        var wrap = document.getElementById('ct-modal-cats');
+        var cats = this._categories.slice();
+        if (!cats.length) cats = ['sports', 'politics', 'crypto', 'weather', 'business', 'finance', 'macro', 'technology', 'science', 'world', 'culture', 'entertainment', 'other'];
+        if (select) {
+          var current = select.value || 'overall';
+          var html = '<option value="overall" data-i18n="copytrader.filter.overall">' + escHtml(t('copytrader.filter.overall', 'Overall (Top)')) + '</option>';
+          html += '<option value="all" data-i18n="copytrader.filter.allCats">' + escHtml(t('copytrader.filter.allCats', 'All Categories')) + '</option>';
+          html += cats.map(function (c) {
+            var k = 'copytrader.category.' + c;
+            return '<option value="' + escHtml(c) + '">' + escHtml(t(k, c.charAt(0).toUpperCase() + c.slice(1))) + '</option>';
+          }).join('');
+          select.innerHTML = html;
+          select.value = current;
+        }
+        if (wrap) {
+          wrap.innerHTML = cats.map(function (c) {
+            var k = 'copytrader.category.' + c;
+            return '<button type="button" class="ct-modal-cat-chip" data-cat="' + escHtml(c) + '">' + escHtml(t(k, c.charAt(0).toUpperCase() + c.slice(1))) + '</button>';
+          }).join('');
+        }
+      },
+
+      loadCategories: function () {
+        var self = this;
+        return api('/api/v2/copytrader/categories').then(function (d) {
+          self._categories = (d.categories || []).filter(function (c) { return !!c; });
+          self._renderCategoryOptions();
+        }).catch(function () {
+          self._categories = [];
+          self._renderCategoryOptions();
+        });
+      },
+
+      goAnalytics: function (addr) {
+        this._walletSelected = true;
+        var badge = document.getElementById('ct-analytics-lock-badge');
+        if (badge) badge.style.display = 'none';
+        var step2 = document.getElementById('ct-step-2');
+        if (step2) step2.classList.remove('locked');
+        this.switchTab('analytics');
+        document.getElementById('ct-analytics-addr').value = addr;
+        this.loadAnalytics();
+      },
+
+      /* ── TAB 2: ANALYTICS ──────────────────────────────────────────── */
+      loadAnalytics: function () {
+        var addr = (document.getElementById('ct-analytics-addr').value || '').trim();
+        if (!addr) return;
+        if (this._analyticsBusy) return;
+        this._analyticsBusy = true;
+
+        var btn = document.getElementById('ct-analytics-btn');
+        btn.disabled = true;
+        document.getElementById('ct-analytics-empty').style.display = 'none';
+        document.getElementById('ct-analytics-body').style.display = 'none';
+
+        var statsEl = document.getElementById('ct-stats-row');
+        if (statsEl) statsEl.innerHTML = '<div class="ct-stat-box ct-skel" style="height:60px"></div>'.repeat(4);
+
+        var self = this;
+        Promise.all([
+          api('/api/v2/copytrader/wallets/' + encodeURIComponent(addr) + '/analytics'),
+          api('/api/v2/copytrader/wallets/' + encodeURIComponent(addr) + '/positions'),
+          api('/api/v2/copytrader/wallets/' + encodeURIComponent(addr) + '/activity?limit=15'),
+          api('/api/v2/copytrader/wallets/' + encodeURIComponent(addr) + '/closed-positions?limit=200'),
+        ]).then(function (results) {
+          self._analyticsBusy = false;
+          btn.disabled = false;
+          var metrics = results[0] || {};
+          if (metrics.metrics) metrics = metrics.metrics;
+          var positions = results[1].positions || [];
+          var activity = results[2].activity || [];
+          var closedData = results[3] || {};
+
+          self._lastPositions = positions.slice();
+          self._positionsPage = 1;
+          document.getElementById('ct-analytics-body').style.display = '';
+          self.switchAnalyticsTab('positions');
+          self._renderProfileHeader(metrics);
+          self._renderStatsRow(metrics);
+          self._renderSummary(metrics);
+          self._renderCatBars(metrics.category_distribution || {});
+          self._renderPositions(self._lastPositions);
+          self._renderActivity(activity);
+          self._renderClosedPositions(closedData);
+          if (window.lucide) lucide.createIcons();
+        }).catch(function (e) {
+          self._analyticsBusy = false;
+          btn.disabled = false;
+          document.getElementById('ct-analytics-empty').style.display = '';
+          document.getElementById('ct-analytics-empty').innerHTML =
+            '<i data-lucide="alert-triangle" style="display:block;margin:0 auto 10px;width:36px;height:36px;opacity:.4"></i>' +
+            '<div>' + escHtml(e.message || 'Error loading analytics') + '</div>';
+          if (window.lucide) lucide.createIcons();
+        });
+      },
+
+      _renderProfileHeader: function (m) {
+        var el = document.getElementById('ct-profile-header');
+        if (!el) return;
+        var addr = m.address || '';
+        var pmUrl = addr ? ('https://polymarket.com/profile/' + encodeURIComponent(addr)) : '#';
+        var score = Math.round(m.score || 0);
+        var sc = scoreClass(score);
+        var isBot = !!m.is_likely_bot;
+        var cat = m.primary_category || 'other';
+        var pnl = parseFloat(m.pnl_realized_usd || m.pnl_total_usd) || 0;
+        var gains = Math.max(pnl, 0);
+        var losses = Math.max(parseFloat(m.max_drawdown_usd) || 0, 1);
+        var totalBar = gains + losses;
+        var gainPct = totalBar > 0 ? Math.max(8, Math.round((gains / totalBar) * 100)) : 50;
+        var lossPct = totalBar > 0 ? Math.max(8, 100 - gainPct) : 50;
+        var scoreBgStyle = score >= 70
+          ? 'background:rgba(34,197,94,.28);color:#4ade80;border:1px solid rgba(34,197,94,.45)'
+          : score >= 45
+            ? 'background:rgba(245,158,11,.28);color:#fbbf24;border:1px solid rgba(245,158,11,.45)'
+            : 'background:rgba(239,68,68,.25);color:#f87171;border:1px solid rgba(239,68,68,.4)';
+        el.innerHTML =
+          '<div style="position:relative;display:inline-block;margin-bottom:20px">' +
+          '<div class="ct-profile-avatar">' + escHtml(avatarLetter(addr)) + '</div>' +
+
+          '</div>' +
+          '<div class="ct-profile-info">' +
+          '<div class="ct-profile-addr">' + escHtml(addr) + '</div>' +
+          '<div class="ct-profile-meta">' +
+          '<span class="ct-profile-badge ct-badge-cat"><i data-lucide="tag" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:3px"></i>' + escHtml(cat) + '</span>' +
+          (isBot ? '<span class="ct-profile-badge ct-badge-bot"><i data-lucide="bot" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:3px"></i>' + escHtml(t('copytrader.botWarn', 'Bot')) + '</span>' : '<span class="ct-profile-badge ct-badge-ok"><i data-lucide="shield-check" style="width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:3px"></i>' + escHtml(t('copytrader.human', 'Human')) + '</span>') +
+          '</div>' +
+          '</div>' +
+          '<div class="ct-profile-actions">' +
+          '<a class="ct-action-btn" href="' + escHtml(pmUrl) + '" target="_blank" rel="noopener noreferrer" style="padding:8px 14px">' +
+          '<i data-lucide="scan-eye"></i> ' + escHtml(t('copytrader.analytics.polymarket', 'Polymarket')) +
+          '</a>' +
+          '<button class="ct-action-btn primary' + (this._isSelfWallet(addr) ? ' disabled' : '') + '" ' + (this._isSelfWallet(addr) ? 'disabled title="' + escHtml(t('copytrader.selfFollowBlocked', 'Your own wallet cannot be followed')) + '"' : 'onclick="CT.openTaskModal(\'' + escHtml(addr) + '\')"') + ' style="padding:8px 14px">' +
+          '<i data-lucide="user-plus"></i> ' + escHtml(t('copytrader.action.follow', 'Follow')) +
+          '</button>' +
+          '</div>' +
+          '<div class="ct-profile-hero">' +
+          '<div class="ct-profile-hero-label">' + escHtml(t('copytrader.kpi.pnl', 'Realized PnL')) + '</div>' +
+          '<div class="ct-profile-hero-value ' + (pnl >= 0 ? 'pos' : 'neg') + '">' + escHtml(fmtSignedCompactUsd(pnl)) + '</div>' +
+          '<div class="ct-profile-bar">' +
+          '<div class="ct-profile-bar-pos" style="width:' + gainPct + '%"></div>' +
+          '<div class="ct-profile-bar-neg" style="width:' + lossPct + '%"></div>' +
+          '</div>' +
+          '<div class="ct-profile-hero-sub">' +
+          '<span>' + escHtml(t('copytrader.kpi.pnl', 'Realized PnL')) + ': ' + escHtml(fmtSignedCompactUsd(gains)) + '</span>' +
+          '<span>' + escHtml(t('copytrader.kpi.maxDrawdown', 'Max Drawdown')) + ': -' + escHtml(fmtCompactUsd(losses)) + '</span>' +
+          '</div>' +
+          '</div>';
+      },
+
+      _renderStatsRow: function (m) {
+        var el = document.getElementById('ct-stats-row');
+        if (!el) return;
+        var score = Math.round(m.score || 0);
+        var pnl = parseFloat(m.pnl_total_usd || m.pnl_realized_usd) || 0;
+        var wr = parseFloat(m.win_rate) || 0;
+        var t30 = m.trade_count_30d || 0;
+        var total = m.trade_count_total || 0;
+        var drawdown = parseFloat(m.max_drawdown_usd) || 0;
+        function box(label, val, cls) {
+          return '<div class="ct-stat-box"><div class="ct-stat-box-label">' + escHtml(label) + '</div>' +
+            '<div class="ct-stat-box-val ' + (cls || '') + '">' + escHtml(val) + '</div></div>';
+        }
+        el.innerHTML =
+          box(t('copytrader.kpi.winRate', 'Win Rate'), fmtPct(wr), wr >= 0.6 ? 'pos' : (wr >= 0.4 ? '' : 'neg')) +
+          box(t('copytrader.kpi.maxDrawdown', 'Max Drawdown'), drawdown > 0 ? '-$' + Math.abs(drawdown).toFixed(2) : '$0.00', drawdown > 5000 ? 'neg' : '') +
+          box(t('copytrader.kpi.trades30d', 'Trades 30d'), t30, t30 > 0 ? 'pos' : '') +
+          box(t('copytrader.kpi.totalTrades', 'Total Trades'), total, 'acc');
+      },
+
+      _renderSummary: function (m) {
+        var el = document.getElementById('ct-summary-content');
+        var detailsEl = document.getElementById('ct-details-echo');
+        var summaryCard = document.querySelector('.ct-summary-card');
+        var isBot = !!m.is_likely_bot;
+        var score = Math.round(m.score || 0);
+        var last = m.last_active_ts ? new Date(m.last_active_ts * 1000).toLocaleDateString() : '—';
+        var rows = [
+          [t('copytrader.analytics.primaryCat', 'Primary Category'), escHtml(m.primary_category || '—')],
+          [t('copytrader.analytics.avgSize', 'Avg Position Size'), '$' + (parseFloat(m.avg_position_size_usd) || 0).toFixed(2)],
+          [t('copytrader.analytics.lastActive', 'Last Active'), escHtml(last)],
+        ];
+        var html = (isBot ? '<div class="ct-bot-warn" style="margin-bottom:12px"><i data-lucide="bot"></i> ' + escHtml(t('copytrader.botWarn', 'Flagged as likely bot')) + '</div>' : '') +
+          '<div class="ct-summary-list">' +
+          rows.map(function (r) {
+            return '<div class="ct-summary-row"><div class="ct-summary-key">' + escHtml(r[0]) + '</div><div class="ct-summary-val">' + r[1] + '</div></div>';
+          }).join('') + '</div>';
+        el.innerHTML = html;
+        if (detailsEl) detailsEl.innerHTML = html;
+
+      },
+
+      _renderCatBars: function (dist) {
+        var el = document.getElementById('ct-cat-bars');
+        var keys = Object.keys(dist);
+        if (!keys.length) { el.innerHTML = '<span style="font-size:.8rem;color:var(--text-muted)">—</span>'; return; }
+        var max = Math.max.apply(null, keys.map(function (k) { return dist[k] || 0; }));
+        el.innerHTML = keys.sort(function (a, b) { return (dist[b] || 0) - (dist[a] || 0); }).map(function (cat) {
+          var v = dist[cat] || 0;
+          var pct = max > 0 ? Math.round(v / max * 100) : 0;
+          return '<div class="ct-cat-row">' +
+            '<div class="ct-cat-name">' + escHtml(cat) + '</div>' +
+            '<div class="ct-cat-bar-wrap"><div class="ct-cat-bar-fill" style="width:' + pct + '%"></div></div>' +
+            '<div class="ct-cat-pct">' + v + '</div></div>';
+        }).join('');
+      },
+
+      setPositionsPage: function (page) {
+        this._positionsPage = Math.max(1, parseInt(page, 10) || 1);
+        this._renderPositions(this._lastPositions || []);
+      },
+
+      _renderPositions: function (positions) {
+        var el = document.getElementById('ct-positions-content');
+        if (!positions.length) {
+          el.innerHTML = '<div style="font-size:.82rem;color:var(--text-muted);padding:12px 0">' + escHtml(t('copytrader.analytics.noPosn', 'No open positions')) + '</div>';
+          return;
+        }
+        var totalPages = Math.max(1, Math.ceil(positions.length / this._positionsPageSize));
+        if (this._positionsPage > totalPages) this._positionsPage = totalPages;
+        var start = (this._positionsPage - 1) * this._positionsPageSize;
+        var pageRows = positions.slice(start, start + this._positionsPageSize);
+        var footer = '<div class="ct-table-footer">' +
+          '<div class="ct-panel-note">' + escHtml((start + 1) + '-' + (start + pageRows.length) + ' / ' + positions.length) + '</div>' +
+          '<div class="ct-mini-pagination">' +
+          '<button class="ct-mini-page-btn" ' + (this._positionsPage <= 1 ? 'disabled' : 'onclick="CT.setPositionsPage(' + (this._positionsPage - 1) + ')"') + '>' + escHtml(t('copytrader.pagination.prev', 'Prev')) + '</button>' +
+          '<button class="ct-mini-page-btn active" disabled>' + this._positionsPage + '</button>' +
+          '<button class="ct-mini-page-btn" ' + (this._positionsPage >= totalPages ? 'disabled' : 'onclick="CT.setPositionsPage(' + (this._positionsPage + 1) + ')"') + '>' + escHtml(t('copytrader.pagination.next', 'Next')) + '</button>' +
+          '</div>' +
+          '</div>';
+        el.innerHTML = '<table class="ct-pos-table"><thead><tr>' +
+          '<th>' + escHtml(t('copytrader.pos.market', 'Market')) + '</th>' +
+          '<th>' + escHtml(t('copytrader.pos.outcome', 'Outcome')) + '</th>' +
+          '<th>' + escHtml(t('copytrader.pos.shares', 'Shares')) + '</th>' +
+          '<th>' + escHtml(t('copytrader.pos.entry', 'Entry')) + '</th>' +
+          '<th>' + escHtml(t('copytrader.pos.current', 'Current')) + '</th>' +
+          '<th>' + escHtml(t('copytrader.pos.value', 'Value')) + '</th>' +
+          '<th>' + escHtml(t('copytrader.pos.pnl', 'Est. PnL')) + '</th>' +
+          '</tr></thead><tbody>' +
+          pageRows.map(function (p) {
+            var outcome = (p.outcome || '').toUpperCase();
+            var cls = outcome === 'YES' ? 'ct-pos-outcome-yes' : (outcome === 'NO' ? 'ct-pos-outcome-no' : '');
+            var title = p.title || p.question || p.slug || p.eventSlug || p.conditionId || '—';
+            var shares = parseFloat(p.shares || p.size || 0).toFixed(2);
+            var avgPrice = parseFloat(p.avgPrice || p.avgEntryPrice || p.initialValue || 0);
+            var curPrice = parseFloat(p.price || p.currentPrice || 0);
+            var val = parseFloat(p.currentValue || 0).toFixed(2);
+            var estPnl = parseFloat(p.cashPnl || p.unrealizedPnl || 0);
+            return '<tr><td class="mono" title="' + escHtml(title) + '" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(title.slice(0, 40)) + '</td>' +
+              '<td class="' + cls + '">' + escHtml(outcome || '—') + '</td>' +
+              '<td>' + shares + '</td>' +
+              '<td>' + (avgPrice > 0 ? ('$' + avgPrice.toFixed(3)) : '—') + '</td>' +
+              '<td>' + (curPrice > 0 ? ('$' + curPrice.toFixed(3)) : '—') + '</td>' +
+              '<td>$' + val + '</td>' +
+              '<td class="' + (estPnl >= 0 ? 'ct-pos-outcome-yes' : 'ct-pos-outcome-no') + '">' + fmtUsd(estPnl) + '</td></tr>';
+          }).join('') +
+          '</tbody></table>' + footer;
+      },
+
+      _renderActivity: function (activity) {
+        var el = document.getElementById('ct-activity-content');
+        if (!activity.length) {
+          el.innerHTML = '<div style="font-size:.82rem;color:var(--text-muted);padding:12px 0">' + escHtml(t('copytrader.analytics.noActivity', 'No recent activity')) + '</div>';
+          return;
+        }
+        el.innerHTML = '<div class="ct-activity-list">' +
+          activity.slice(0, 15).map(function (a) {
+            var type = (a.type || a.action || 'buy').toLowerCase();
+            var isBuy = type.includes('buy') || type === 'BUY';
+            var cls = isBuy ? 'buy' : 'sell';
+            var mkt = a.question || a.title || a.conditionId || '—';
+            var amt = parseFloat(a.usdcSize || a.amount || 0).toFixed(2);
+            var ts = a.timestamp ? new Date(a.timestamp * 1000).toLocaleString() : '';
+            return '<div class="ct-activity-item">' +
+              '<div class="ct-activity-dot ' + cls + '"></div>' +
+              '<div class="ct-activity-info">' +
+              '<div class="ct-activity-mkt">' + escHtml(mkt.slice(0, 60)) + '</div>' +
+              '<div class="ct-activity-meta"><span>' + escHtml(type.toUpperCase()) + '</span><span>' + escHtml(ts) + '</span></div>' +
+              '</div>' +
+              '<div class="ct-activity-amt ' + cls + '">$' + amt + '</div>' +
+              '</div>';
+          }).join('') +
+          '</div>';
+      },
+
+      _renderClosedPositions: function (data) {
+        var summaryEl = document.getElementById('ct-closed-summary');
+        var el = document.getElementById('ct-closed-content');
+        if (!summaryEl || !el) return;
+        var rows = (data && data.closed_positions) || [];
+        var totalPnl = parseFloat((data && data.total_realized_pnl) || 0);
+        var wins = parseInt((data && data.wins) || 0, 10);
+        var losses = parseInt((data && data.losses) || 0, 10);
+        var wr = parseFloat((data && data.win_rate) || 0);
+        if (!rows.length) {
+          summaryEl.innerHTML = '';
+          el.innerHTML = '<div style="font-size:.82rem;color:var(--text-muted);padding:12px 0">' + escHtml(t('copytrader.analytics.noClosed', 'No closed positions found')) + '</div>';
+          return;
+        }
+        summaryEl.innerHTML =
+          '<span style="margin-right:16px"><b>' + escHtml(t('copytrader.analytics.totalRealized', 'Total Realized')) + ':</b> ' +
+          '<span class="' + (totalPnl >= 0 ? 'pos' : 'neg') + '">' + fmtUsd(totalPnl) + '</span></span>' +
+          '<span style="margin-right:16px"><b>' + escHtml(t('copytrader.kpi.winRate', 'Win Rate')) + ':</b> ' + fmtPct(wr) + '</span>' +
+          '<span>' + escHtml(wins + 'W / ' + losses + 'L') + '</span>';
+        el.innerHTML =
+          '<table class="ct-table" style="width:100%;border-collapse:collapse;font-size:12px">' +
+          '<thead><tr>' +
+          '<th style="text-align:left;padding:6px 8px">' + escHtml(t('copytrader.analytics.market', 'Market')) + '</th>' +
+          '<th style="text-align:left;padding:6px 8px">' + escHtml(t('copytrader.analytics.outcome', 'Outcome')) + '</th>' +
+          '<th style="text-align:right;padding:6px 8px">' + escHtml(t('copytrader.analytics.realizedPnl', 'Realized PnL')) + '</th>' +
+          '<th style="text-align:right;padding:6px 8px">' + escHtml(t('copytrader.analytics.closedDate', 'Closed')) + '</th>' +
+          '</tr></thead>' +
+          '<tbody>' +
+          rows.slice(0, 100).map(function (r) {
+            var pnl = parseFloat(r.realizedPnl || r.realized_pnl || 0);
+            var mkt = r.title || r.question || (r.conditionId || '').slice(0, 16) || '—';
+            var outcome = r.outcome || '—';
+            var ts = r.timestamp ? new Date(r.timestamp * 1000).toLocaleDateString() : (r.endDate || '');
+            return '<tr style="border-top:1px solid var(--border)">' +
+              '<td style="padding:5px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escHtml(mkt) + '">' + escHtml(mkt.slice(0, 50)) + '</td>' +
+              '<td style="padding:5px 8px">' + escHtml(outcome) + '</td>' +
+              '<td style="padding:5px 8px;text-align:right" class="' + (pnl >= 0 ? 'pos' : 'neg') + '">' + fmtUsd(pnl) + '</td>' +
+              '<td style="padding:5px 8px;text-align:right;font-size:.78rem;opacity:.65">' + escHtml(ts) + '</td>' +
+              '</tr>';
+          }).join('') +
+          '</tbody></table>';
+      },
+
+      /* ── TAB 3: TASKS ──────────────────────────────────────────────── */
+      loadTasks: function () {
+        if (this._tasksBusy) return;
+        this._tasksBusy = true;
+        var grid = document.getElementById('ct-task-grid');
+        grid.innerHTML = skel(3, 200);
+        var self = this;
+        Promise.all([
+          api('/api/v2/copytrader/tasks'),
+          api('/api/v2/copytrader/settings')
+        ]).then(function (res) {
+          self._tasksBusy = false;
+          var tasks = res[0].tasks || [];
+          self._hasTasks = tasks.length > 0;
+          var settings = res[1].settings || {};
+          self._applySettings(settings);
+          var lockBadge = document.getElementById('ct-tasks-lock-badge');
+          if (lockBadge) lockBadge.style.display = self._hasTasks ? 'none' : '';
+          var countEl = document.getElementById('ct-task-count');
+          if (countEl) countEl.textContent = '(' + tasks.length + ')';
+          if (!tasks.length) {
+            grid.innerHTML = '<div class="ct-empty-state" style="grid-column:1/-1">' +
+              '<i data-lucide="list-x" style="display:block;margin:0 auto 10px;width:36px;height:36px;opacity:.4"></i>' +
+              '<div>' + escHtml(t('copytrader.tasks.empty', 'No follow tasks. Click Add Follow Task to get started.')) + '</div></div>';
+            if (window.lucide) lucide.createIcons();
+            return;
+          }
+          grid.innerHTML = tasks.map(function (task) { return self._taskCard(task); }).join('');
+          if (window.lucide) lucide.createIcons();
+        }).catch(function (e) {
+          self._tasksBusy = false;
+          grid.innerHTML = '<div class="ct-empty-state" style="grid-column:1/-1"><i data-lucide="alert-triangle" style="display:block;margin:0 auto 10px;width:36px;height:36px;opacity:.4"></i><div>' + escHtml(e.message || 'Error') + '</div></div>';
+          if (window.lucide) lucide.createIcons();
+        });
+      },
+
+      _applySettings: function (settings) {
+        var cb = document.getElementById('ct-settings-enabled');
+        if (cb) cb.checked = !!settings.enabled;
+        var st = document.getElementById('ct-settings-status');
+        if (st) st.textContent = settings.enabled
+          ? t('copytrader.settings.active', 'Daemon active')
+          : t('copytrader.settings.inactive', 'Daemon inactive');
+      },
+
+      saveSettings: function () {
+        var enabled = document.getElementById('ct-settings-enabled').checked;
+        var self = this;
+        api('/api/v2/copytrader/settings', { method: 'PUT', body: { settings: { enabled: enabled } } })
+          .then(function (d) {
+            if (d.error) { toast(d.error, 'error'); return; }
+            var st = document.getElementById('ct-settings-status');
+            if (st) st.textContent = enabled
+              ? t('copytrader.settings.active', 'Daemon active')
+              : t('copytrader.settings.inactive', 'Daemon inactive');
+            toast(t('copytrader.toast.settingsSaved', 'Settings saved'), 'success');
+          })
+          .catch(function () { toast(t('copytrader.toast.settingsError', 'Failed to save settings'), 'error'); });
+      },
+
+      _taskCard: function (task) {
+        var id = task.id;
+        var rawAddr = task.wallet_address || '';
+        var label = escHtml(task.wallet_label || shortAddr(rawAddr));
+        var addr = escHtml(rawAddr);
+        var pmUrl = rawAddr ? 'https://polymarket.com/profile/' + encodeURIComponent(rawAddr) : '#';
+        var status = (task.status || 'stopped').toLowerCase();
+        var minScore = task.min_score || 60;
+        var maxPrice = task.max_price || 0.85;
+        var followSell = task.follow_sell !== false;
+        var cats = [];
+        try { cats = JSON.parse(task.categories || '[]'); } catch (_) { }
+        var lastTs = task.last_seen_trade_ts
+          ? new Date(task.last_seen_trade_ts * 1000).toLocaleString()
+          : t('copytrader.tasks.neverSeen', 'Not seen yet');
+
+        var catChips = cats.length
+          ? cats.map(function (c) { return '<span class="ct-cat-chip">' + escHtml(c) + '</span>'; }).join('')
+          : '<span style="font-size:.73rem;color:var(--text-muted)">' + escHtml(t('copytrader.tasks.allCats', 'All categories')) + '</span>';
+
+        // T418: pause/resume button only when running or paused
+        var pauseBtn = '';
+        if (status === 'running') {
+          pauseBtn =
+            '<button class="ct-action-btn" style="color:#f59e0b;border-color:rgba(245,158,11,.25)" onclick="CT.pauseTask(' + id + ',\'paused\')" title="' + escHtml(t('copytrader.action.pause', 'Pause')) + '">' +
+            '<i data-lucide="pause-circle"></i> ' + escHtml(t('copytrader.action.pause', 'Pause')) +
+            '</button>';
+        } else if (status === 'paused') {
+          pauseBtn =
+            '<button class="ct-action-btn" style="color:#22c55e;border-color:rgba(34,197,94,.25)" onclick="CT.pauseTask(' + id + ',\'running\')" title="' + escHtml(t('copytrader.action.resume', 'Resume')) + '">' +
+            '<i data-lucide="play-circle"></i> ' + escHtml(t('copytrader.action.resume', 'Resume')) +
+            '</button>';
+        }
+
+        return '<div class="ct-task-card ' + escHtml(status) + '" id="ct-task-' + id + '">' +
+          '<div class="ct-task-head">' +
+          '<div class="ct-task-info">' +
+          // T418: label as PM page link; remove duplicate full-address second line
+          '<div class="ct-task-label"><a href="' + escHtml(pmUrl) + '" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;border-bottom:1px dashed rgba(148,163,184,.35)" title="' + addr + '">' + label + ' <i data-lucide="external-link" style="width:10px;height:10px;vertical-align:middle;opacity:.55"></i></a></div>' +
+          '</div>' +
+          '<span class="ct-status-badge ' + escHtml(status) + '">' + escHtml(status) + '</span>' +
+          '</div>' +
+          '<div class="ct-task-cats">' + catChips + '</div>' +
+          '<div class="ct-task-params">' +
+          '<div class="ct-param-cell"><div class="ct-param-label">' + escHtml(t('copytrader.task.followMultiplier', 'Follow Multiplier')) + '</div><div class="ct-param-val">' + escHtml(t('copytrader.task.strategyDriven', 'Strategy-driven')) + '</div></div>' +
+          '<div class="ct-param-cell"><div class="ct-param-label">' + escHtml(t('copytrader.task.minScore', 'Min Score')) + '</div><div class="ct-param-val">' + minScore + '</div></div>' +
+          '<div class="ct-param-cell"><div class="ct-param-label">' + escHtml(t('copytrader.task.maxPrice', 'Max Price')) + '</div><div class="ct-param-val">' + maxPrice + '</div></div>' +
+          '<div class="ct-param-cell"><div class="ct-param-label">' + escHtml(t('copytrader.task.followSell', 'Mirror Sell')) + '</div><div class="ct-param-val">' + (followSell ? '&#10003;' : '&#10007;') + '</div></div>' +
+          '</div>' +
+          '<div class="ct-task-last"><i data-lucide="clock" style="width:12px;height:12px"></i> ' + escHtml(lastTs) + '</div>' +
+          '<div class="ct-task-actions">' +
+          pauseBtn +
+          '<button class="ct-action-btn" onclick="CT.editTask(' + id + ')">' +
+          '<i data-lucide="pencil"></i> ' + escHtml(t('copytrader.action.edit', 'Edit')) +
+          '</button>' +
+          '<button class="ct-action-btn" style="color:#ef4444;border-color:rgba(239,68,68,.25)" onclick="CT.deleteTask(' + id + ', \'' + escHtml(label) + '\')">' +
+          '<i data-lucide="trash-2"></i> ' + escHtml(t('copytrader.action.delete', 'Delete')) +
+          '</button>' +
+          '</div>' +
+          '</div>';
+      },
+
+      /* T418: pause / resume task */
+      pauseTask: function (taskId, newStatus) {
+        var self = this;
+        api('/api/v2/copytrader/tasks/' + taskId, { method: 'PATCH', body: { status: newStatus } })
+          .then(function (d) {
+            if (d.error || d.detail) {
+              toast((d.error || (typeof d.detail === 'string' ? d.detail : 'Error')), 'error');
+              return;
+            }
+            self._tasksBusy = false;
+            self.loadTasks();
+            var msg = newStatus === 'paused'
+              ? t('copytrader.toast.taskPaused', 'Task paused')
+              : t('copytrader.toast.taskResumed', 'Task resumed');
+            toast(msg, 'success');
+          })
+          .catch(function (e) {
+            toast(e.message || t('copytrader.toast.taskError', 'Failed to update task'), 'error');
+          });
+      },
+
+      /* ── task modal ────────────────────────────────────────────────── */
+      openTaskModal: async function (prefillAddr) {
+        await this._ensureFollowMultiplier();
+        this._modalTaskId = null;
+        document.getElementById('ct-modal-task-id').value = '';
+        document.getElementById('ct-modal-addr').value = prefillAddr || '';
+        document.getElementById('ct-modal-label').value = '';
+        document.getElementById('ct-modal-base-usdc').value = (this._followMultiplier || 1) + 'x';
+        document.getElementById('ct-modal-max-event').value = '1';
+        document.getElementById('ct-modal-min-score').value = '60';
+        document.getElementById('ct-modal-max-price').value = '0.85';
+        document.getElementById('ct-modal-follow-sell').checked = true;
+        document.getElementById('ct-modal-notes').value = '';
+        document.getElementById('ct-modal-err').textContent = '';
+        document.querySelectorAll('#ct-modal-cats .ct-modal-cat-chip').forEach(function (c) { c.classList.remove('selected'); });
+        var heading = document.getElementById('ct-modal-heading');
+        heading.innerHTML = '<i data-lucide="user-plus"></i> ' + escHtml(t('copytrader.modal.addTitle', 'Add Follow Task'));
+        document.getElementById('ct-modal-save-label').textContent = t('copytrader.modal.save', 'Save');
+        this._updateModalSelfGuard();
+        this._portalToBody('ct-task-modal');
+        document.getElementById('ct-task-modal').classList.add('open');
+        if (window.lucide) lucide.createIcons();
+        if (!prefillAddr) document.getElementById('ct-modal-addr').focus();
+      },
+
+      editTask: async function (taskId) {
+        var self = this;
+        await self._ensureFollowMultiplier();
+        api('/api/v2/copytrader/tasks').then(function (data) {
+          var task = (data.tasks || []).find(function (t) { return t.id == taskId; });
+          if (!task) { toast(t('copytrader.toast.taskNotFound', 'Task not found'), 'error'); return; }
+          self._modalTaskId = taskId;
+          document.getElementById('ct-modal-task-id').value = taskId;
+          document.getElementById('ct-modal-addr').value = task.wallet_address || '';
+          document.getElementById('ct-modal-label').value = task.wallet_label || '';
+          document.getElementById('ct-modal-base-usdc').value = task.base_usdc || 5;
+          document.getElementById('ct-modal-base-usdc').value = (self._followMultiplier || 1) + 'x';
+          document.getElementById('ct-modal-max-event').value = task.max_per_event || 1;
+          document.getElementById('ct-modal-min-score').value = task.min_score || 60;
+          document.getElementById('ct-modal-max-price').value = task.max_price || 0.85;
+          document.getElementById('ct-modal-follow-sell').checked = task.follow_sell !== false;
+          document.getElementById('ct-modal-notes').value = task.notes || '';
+          document.getElementById('ct-modal-err').textContent = '';
+          var cats = [];
+          try { cats = JSON.parse(task.categories || '[]'); } catch (_) { }
+          document.querySelectorAll('#ct-modal-cats .ct-modal-cat-chip').forEach(function (c) {
+            c.classList.toggle('selected', cats.indexOf(c.dataset.cat) >= 0);
+          });
+          var heading = document.getElementById('ct-modal-heading');
+          heading.innerHTML = '<i data-lucide="pencil"></i> ' + escHtml(t('copytrader.modal.editTitle', 'Edit Follow Task'));
+          document.getElementById('ct-modal-save-label').textContent = t('copytrader.modal.update', 'Update');
+          self._portalToBody('ct-task-modal');
+          document.getElementById('ct-task-modal').classList.add('open');
+          if (window.lucide) lucide.createIcons();
+        });
+      },
+
+      closeTaskModal: function () {
+        document.getElementById('ct-task-modal').classList.remove('open');
+      },
+
+      _updateModalSelfGuard: function () {
+        var addr = (document.getElementById('ct-modal-addr').value || '').trim();
+        var errEl = document.getElementById('ct-modal-err');
+        var saveBtn = document.getElementById('ct-modal-save-btn');
+        if (this._isSelfWallet(addr)) {
+          errEl.textContent = t('copytrader.selfFollowBlocked', 'Your own wallet cannot be followed');
+          saveBtn.disabled = true;
+          return true;
+        }
+        if (errEl.textContent === t('copytrader.selfFollowBlocked', 'Your own wallet cannot be followed')) {
+          errEl.textContent = '';
+        }
+        saveBtn.disabled = false;
+        return false;
+      },
+
+      saveTask: function () {
+        var addr = (document.getElementById('ct-modal-addr').value || '').trim();
+        var selfBlockedText = t('copytrader.selfFollowBlocked', 'Your own wallet cannot be followed');
+        if (!addr) {
+          document.getElementById('ct-modal-err').textContent = t('copytrader.modal.errAddr', 'Wallet address is required');
+          return;
+        }
+        if (this._isSelfWallet(addr)) {
+          document.getElementById('ct-modal-err').textContent = selfBlockedText;
+          return;
+        }
+        var selectedCats = [];
+        document.querySelectorAll('#ct-modal-cats .ct-modal-cat-chip.selected').forEach(function (c) {
+          selectedCats.push(c.dataset.cat);
+        });
+        var payload = {
+          wallet_address: addr,
+          wallet_label: document.getElementById('ct-modal-label').value.trim() || '',
+          categories: selectedCats,
+          base_usdc: 5,
+          max_per_event: parseInt(document.getElementById('ct-modal-max-event').value) || 1,
+          min_score: parseFloat(document.getElementById('ct-modal-min-score').value) || 60,
+          max_price: parseFloat(document.getElementById('ct-modal-max-price').value) || 0.85,
+          follow_sell: document.getElementById('ct-modal-follow-sell').checked,
+          notes: document.getElementById('ct-modal-notes').value.trim() || ''
+        };
+
+        var btn = document.getElementById('ct-modal-save-btn');
+        btn.disabled = true;
+        document.getElementById('ct-modal-err').textContent = '';
+        var self = this;
+        var taskId = self._modalTaskId;
+        var reqOpts = taskId
+          ? { method: 'PATCH', body: payload }
+          : { method: 'POST', body: payload };
+        var path = taskId
+          ? '/api/v2/copytrader/tasks/' + taskId
+          : '/api/v2/copytrader/tasks';
+        api(path, reqOpts)
+          .then(function (d) {
+            btn.disabled = false;
+            if (d.error || d.detail) {
+              document.getElementById('ct-modal-err').textContent = d.error || (typeof d.detail === 'string' ? d.detail : JSON.stringify(d.detail));
+              return;
+            }
+            self.closeTaskModal();
+            self._tasksBusy = false;
+            self._hasTasks = true;
+            var lockBadge = document.getElementById('ct-tasks-lock-badge');
+            if (lockBadge) lockBadge.style.display = 'none';
+            self.loadTasks();
+            toast(taskId
+              ? t('copytrader.toast.taskUpdated', 'Task updated')
+              : t('copytrader.toast.taskCreated', 'Follow task created'), 'success');
+          })
+          .catch(function (e) {
+            btn.disabled = false;
+            var msg = String((e && e.message) || 'Error');
+            if (msg === 'self_follow_not_allowed') msg = selfBlockedText;
+            document.getElementById('ct-modal-err').textContent = msg;
+          });
+      },
+
+      deleteTask: function (taskId, label) {
+        if (!confirm(t('copytrader.tasks.confirmDelete', 'Delete this follow task?') + '\n' + label)) return;
+        var self = this;
+        api('/api/v2/copytrader/tasks/' + taskId, { method: 'DELETE' })
+          .then(function (d) {
+            if (d.error) { toast(d.error, 'error'); return; }
+            self._tasksBusy = false;
+            self.loadTasks();
+            toast(t('copytrader.toast.taskDeleted', 'Task deleted'), 'success');
+          })
+          .catch(function () { toast(t('copytrader.toast.deleteError', 'Failed to delete task'), 'error'); });
+      }
+    };
+
+    /* category chip toggle */
+    document.getElementById('ct-modal-cats').addEventListener('click', function (e) {
+      var chip = e.target.closest('.ct-modal-cat-chip');
+      if (!chip) return;
+      chip.classList.toggle('selected');
+    });
+
+    /* close modal on overlay click */
+    document.getElementById('ct-task-modal').addEventListener('click', function (e) {
+      if (e.target === this) CT.closeTaskModal();
+    });
+
+    document.getElementById('ct-modal-addr').addEventListener('input', function () {
+      CT._updateModalSelfGuard();
+    });
+
+    document.addEventListener('click', function (e) {
+      var pop = document.getElementById('ct-filter-popover');
+      var trigger = document.getElementById('ct-filter-trigger');
+      if (!pop || !trigger) return;
+      if (pop.contains(e.target) || trigger.contains(e.target)) return;
+      CT.toggleDiscoverFilters(false);
+    });
+
+    /* init */
+    if (window.lucide) lucide.createIcons();
+    CT._updateSteps(1);
+    CT._syncDiscoverCategoryTabs();
+    CT._setMinPnlTier(document.getElementById('ct-f-min-pnl').value || '1');
+    CT.loadDefaultWallets();
+    // T504 Wave 6D: respect ?tab= deep-link on first paint and keep BACK button working.
+    try {
+      var initTab = (new URL(window.location.href)).searchParams.get('tab');
+      if (initTab && ['discover', 'analytics', 'tasks'].indexOf(initTab) >= 0 && initTab !== 'discover') {
+        // analytics requires walletSelected; tasks requires hasTasks — switchTab itself enforces.
+        // Defer one tick so loadDefaultWallets/health can populate guards.
+        setTimeout(function () { try { CT.switchTab(initTab); } catch (_) { } }, 80);
+      }
+    } catch (_) { }
+    window.addEventListener('popstate', function (ev) {
+      try {
+        var t2 = (new URL(window.location.href)).searchParams.get('tab') || 'discover';
+        if (t2 !== CT._currentTab) CT.switchTab(t2);
+      } catch (_) { }
+    });
+    Promise.all([
+      api('/api/v2/copytrader/health'),
+      CT.loadCategories(),
+      api('/api/v2/copytrader/tasks').then(function (d) { CT._hasTasks = (d.tasks || []).length > 0; var lb = document.getElementById('ct-tasks-lock-badge'); if (lb) lb.style.display = CT._hasTasks ? 'none' : ''; }).catch(function () { })
+    ]).then(function (res) {
+      var h = res[0] || {};
+      CT._selfWallet = (h.canonical_self_wallet || h.self_wallet || h.session_wallet || '').toLowerCase();
+    }).catch(function () { });
+  })();
+</script>
+{% endblock %}

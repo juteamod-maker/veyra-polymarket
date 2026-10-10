@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privy Direct Login</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --border: #374151;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --ok: #22c55e;
+      --warn: #f59e0b;
+      --err: #ef4444;
+      --accent: #38bdf8;
+    }
+    body {
+      margin: 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: radial-gradient(circle at top right, #1f2937, var(--bg) 40%);
+      color: var(--text);
+      padding: 18px;
+    }
+    h1 { margin: 0 0 12px; color: var(--accent); }
+    .card {
+      background: color-mix(in oklab, var(--card) 95%, #000 5%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    input {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px;
+      border-radius: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      background: #0369a1;
+      border: 0;
+      color: #fff;
+      padding: 9px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    button.secondary { background: #334155; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    pre {
+      background: #020617;
+      border: 1px solid #1f2937;
+      border-radius: 8px;
+      padding: 10px;
+      max-height: 380px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+    }
+    .ok { color: var(--ok); }
+    .warn { color: var(--warn); }
+    .err { color: var(--err); }
+    .muted { color: var(--muted); }
+  </style>
+</head>
+<body>
+  <h1>Privy Direct Login (SDK First)</h1>
+  <div class="card">
+    <p class="muted">This page uses the official Privy SDK flow first: login, server verify, optional signer attach through SDK hooks, then continue into the V2 app.</p>
+    <div class="row">
+      <label for="appId">Privy App ID</label>
+      <input id="appId" placeholder="cmo5hnu5k00xo0ci85noj2jc9" />
+    </div>
+    <div class="row">
+      <label for="signerId">Signer ID</label>
+      <input id="signerId" placeholder="gb1z4eawap7fto9khyvd14wy" />
+    </div>
+    <div class="row">
+      <label for="policyId">Policy ID</label>
+      <input id="policyId" placeholder="liaca23vzderr8vtsqxx95if" />
+    </div>
+    <div class="row">
+      <label for="embeddedOnly">Login Mode</label>
+      <label style="display:flex; align-items:center; gap:8px;">
+        <input id="embeddedOnly" type="checkbox" checked style="width:auto;" />
+        <span>Embedded-only (email + embedded wallet)</span>
+      </label>
+    </div>
+    <button id="btnBoot">1) Boot Privy SDK</button>
+    <button id="btnLogin" class="secondary" disabled>2) Login + Verify</button>
+    <button id="btnSigners" class="secondary" disabled>3) Attach Signer (SDK)</button>
+    <button id="btnToken" class="secondary" disabled>4) Dump Tokens</button>
+    <button id="btnReset" class="secondary" disabled>5) Reset Session</button>
+    <button id="btnContinue" class="secondary" disabled>6) Continue to Discover</button>
+  </div>
+
+  <div class="card">
+    <h3>Runtime</h3>
+    <pre id="out"></pre>
+  </div>
+
+  <div id="mount" style="display:none"></div>
+
+  <script>
+    (function () {
+      if (typeof globalThis.Buffer !== 'undefined') return;
+
+      class BufferPolyfill extends Uint8Array {
+        static from(input, encoding) {
+          if (input instanceof ArrayBuffer) {
+            return new BufferPolyfill(new Uint8Array(input));
+          }
+          if (ArrayBuffer.isView(input)) {
+            return new BufferPolyfill(new Uint8Array(input.buffer, input.byteOffset, input.byteLength));
+          }
+          if (Array.isArray(input)) {
+            return new BufferPolyfill(input);
+          }
+          const str = String(input ?? '');
+          const enc = String(encoding || 'utf8').toLowerCase();
+          if (enc === 'base64') {
+            const raw = atob(str);
+            const out = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i += 1) out[i] = raw.charCodeAt(i);
+            return new BufferPolyfill(out);
+          }
+          return new BufferPolyfill(new TextEncoder().encode(str));
+        }
+
+        static isBuffer(value) {
+          return value instanceof Uint8Array;
+        }
+
+        toString(encoding) {
+          const enc = String(encoding || 'utf8').toLowerCase();
+          if (enc === 'base64') {
+            let raw = '';
+            for (let i = 0; i < this.length; i += 1) raw += String.fromCharCode(this[i]);
+            return btoa(raw);
+          }
+          return new TextDecoder().decode(this);
+        }
+      }
+
+      globalThis.Buffer = BufferPolyfill;
+      if (typeof window !== 'undefined') window.Buffer = BufferPolyfill;
+    })();
+  </script>
+
+  <script type="module">
+    import { React, ReactDOMClient, PrivyReact } from '/v2/static/js/vendor/mfa_runtime_bundle.mjs';
+
+    const { useMemo, useState } = React;
+    const { createRoot } = ReactDOMClient;
+    const { PrivyProvider, usePrivy, useLogin, useSigners, useSessionSigners, useIdentityToken, getIdentityToken: getIdentityTokenGlobal } = PrivyReact;
+
+    const out = document.getElementById('out');
+    const appIdInput = document.getElementById('appId');
+    const signerIdInput = document.getElementById('signerId');
+    const policyIdInput = document.getElementById('policyId');
+    const embeddedOnlyInput = document.getElementById('embeddedOnly');
+    const btnBoot = document.getElementById('btnBoot');
+    const btnLogin = document.getElementById('btnLogin');
+    const btnSigners = document.getElementById('btnSigners');
+    const btnToken = document.getElementById('btnToken');
+    const btnReset = document.getElementById('btnReset');
+    const btnContinue = document.getElementById('btnContinue');
+
+    const STORE = 'privy_direct_probe_cfg_v1';
+    const cfgRaw = localStorage.getItem(STORE);
+    if (cfgRaw) {
+      try {
+        const c = JSON.parse(cfgRaw);
+        appIdInput.value = c.appId || '';
+        signerIdInput.value = c.signerId || '';
+        policyIdInput.value = c.policyId || '';
+      } catch (_) {}
+    }
+
+    let pageSignerConfig = { enabled: false, signer_id: '', policy_ids: [] };
+    let currentVerifyData = null;
+
+    async function prefillFromServerIfMissing() {
+      // Keep this page independent from business signer APIs, but always load signer capability flags.
+      try {
+        const resp = await fetch('/api/user/privy/config', { credentials: 'include', cache: 'no-store' });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const signer = (data && data.signer && typeof data.signer === 'object') ? data.signer : {};
+        pageSignerConfig = {
+          enabled: !!signer.enabled,
+          signer_id: String(signer.signer_id || ''),
+          policy_ids: Array.isArray(signer.policy_ids) ? signer.policy_ids : [],
+        };
+        if (!appIdInput.value.trim()) appIdInput.value = String(data && data.app_id ? data.app_id : '');
+        if (!signerIdInput.value.trim()) signerIdInput.value = String(signer.signer_id || '');
+        if (!policyIdInput.value.trim()) {
+          const ids = Array.isArray(signer.policy_ids) ? signer.policy_ids : [];
+          policyIdInput.value = String(ids[0] || '');
+        }
+      } catch (_) {}
+    }
+
+    prefillFromServerIfMissing();
+
+    function log(line, cls='') {
+      const prefix = new Date().toISOString().slice(11, 23);
+      const safe = String(line || '');
+      out.innerHTML += `<div class="${cls}">[${prefix}] ${safe.replace(/</g, '&lt;')}</div>`;
+      out.scrollTop = out.scrollHeight;
+    }
+
+    let exported = {
+      login: null,
+      addSigners: null,
+      addSessionSigners: null,
+      getAccessToken: null,
+      getIdentityToken: null,
+      applyAccessTokenOverride: null,
+      refreshUser: null,
+      logout: null,
+      user: null,
+      ready: false,
+      authenticated: false,
+    };
+
+    function setContinueEnabled(enabled) {
+      btnContinue.disabled = !enabled;
+    }
+
+    function setSignerEnabled(enabled) {
+      btnSigners.disabled = !enabled;
+    }
+
+    function shouldRetryAfterRefresh(err) {
+      const text = String((err && err.message) || err || '').toLowerCase();
+      return text.includes('wallets/authenticate')
+        || text.includes('invalid jwt')
+        || text.includes('authorization key')
+        || text.includes('no valid authorization keys');
+    }
+
+    function normalizeAccessToken(raw) {
+      const token = String(raw || '').trim().replace(/^\"|\"$/g, '');
+      if (!token) return '';
+      if (token.toLowerCase().startsWith('bearer ')) {
+        return token.slice(7).trim();
+      }
+      return token;
+    }
+
+    function decodeJwtPart(part) {
+      const b64 = String(part || '').replace(/-/g, '+').replace(/_/g, '/');
+      const pad = '='.repeat((4 - (b64.length % 4)) % 4);
+      return atob(b64 + pad);
+    }
+
+    function parseJwt(token) {
+      const jwt = normalizeAccessToken(token);
+      const parts = jwt.split('.');
+      if (parts.length !== 3) return null;
+      try {
+        const header = JSON.parse(decodeJwtPart(parts[0]));
+        const payload = JSON.parse(decodeJwtPart(parts[1]));
+        return { header, payload };
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function logJwksMatch(token, label) {
+      const appId = appIdInput.value.trim();
+      if (!appId) return;
+      const parsed = parseJwt(token);
+      if (!parsed) {
+        log(label + ' jwtParse=failed', 'warn');
+        return;
+      }
+
+      const kid = String(parsed.header && parsed.header.kid ? parsed.header.kid : '');
+      const alg = String(parsed.header && parsed.header.alg ? parsed.header.alg : '');
+      const iss = String(parsed.payload && parsed.payload.iss ? parsed.payload.iss : '');
+      const audRaw = parsed.payload ? parsed.payload.aud : '';
+      const aud = Array.isArray(audRaw) ? audRaw.join(',') : String(audRaw || '');
+      log(label + ' jwtHeader alg=' + alg + ' kid=' + kid, 'muted');
+      log(label + ' jwtClaims iss=' + iss + ' aud=' + aud, 'muted');
+
+      try {
+        const resp = await fetch('https://auth.privy.io/api/v1/apps/' + encodeURIComponent(appId) + '/jwks.json', { cache: 'no-store' });
+        const jwks = await resp.json();
+        const keys = Array.isArray(jwks && jwks.keys) ? jwks.keys : [];
+        const matched = keys.some((k) => String(k && k.kid ? k.kid : '') === kid);
+        log(label + ' jwksKidMatch=' + String(matched) + ' jwksKeyCount=' + keys.length, matched ? 'ok' : 'warn');
+      } catch (err) {
+        log(label + ' jwksFetchError=' + (err?.message || String(err)), 'warn');
+      }
+    }
+
+    async function readJsonSafe(resp) {
+      try {
+        return await resp.json();
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function resolvePrimaryWallet(candidateUser) {
+      if (!candidateUser || typeof candidateUser !== 'object') return '';
+      if (candidateUser.wallet && candidateUser.wallet.address) {
+        return String(candidateUser.wallet.address).toLowerCase();
+      }
+      const linked = Array.isArray(candidateUser.linkedAccounts)
+        ? candidateUser.linkedAccounts
+        : (Array.isArray(candidateUser.linked_accounts) ? candidateUser.linked_accounts : []);
+      const walletAccount = linked.find((item) => item && item.address);
+      return walletAccount && walletAccount.address ? String(walletAccount.address).toLowerCase() : '';
+    }
+
+    async function readAuthTokens() {
+      let accessToken = '';
+      let idToken = '';
+      for (let attempt = 0; attempt < 3 && !accessToken; attempt += 1) {
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 300));
+        try {
+          accessToken = exported.getAccessToken ? normalizeAccessToken(await exported.getAccessToken()) : '';
+        } catch (_) {
+          accessToken = '';
+        }
+      }
+      try {
+        idToken = exported.getIdentityToken ? normalizeAccessToken(await exported.getIdentityToken()) : '';
+      } catch (_) {
+        idToken = '';
+      }
+      return { accessToken, idToken };
+    }
+
+    async function doServerVerify(candidateUser, authTokens) {
+      const primaryWallet = resolvePrimaryWallet(candidateUser);
+      return fetch('/api/user/privy/verify', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(authTokens && authTokens.accessToken ? { 'Authorization': 'Bearer ' + authTokens.accessToken } : {}),
+          'privy-id-token': (authTokens && authTokens.idToken) || '',
+        },
+        body: JSON.stringify({
+          id_token: (authTokens && authTokens.idToken) || '',
+          identity_token: (authTokens && authTokens.idToken) || '',
+          access_token: (authTokens && authTokens.accessToken) || '',
+          wallet_address: primaryWallet,
+          user: candidateUser || {},
+        }),
+      });
+    }
+
+    async function syncSignerEnrollment(status, errorText) {
+      const payload = {
+        status,
+        signer_id: signerIdInput.value.trim(),
+        policy_ids: policyIdInput.value.trim() ? [policyIdInput.value.trim()] : [],
+        error: errorText || '',
+      };
+      const resp = await fetch('/api/user/privy/signer-enrollment', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await readJsonSafe(resp);
+      if (!resp.ok) {
+        const errMsg = (data && (data.message || data.error)) || ('signer enrollment sync failed (' + resp.status + ')');
+        throw new Error(errMsg);
+      }
+      return data || {};
+    }
+
+    function isSignerActionError(message) {
+      const text = String(message || '').toLowerCase();
+      return text.includes('signer')
+        || text.includes('authorization key')
+        || text.includes('session signer')
+        || text.includes('wallets/authenticate');
+    }
+
+    async function ensureServerSigner(verifyData) {
+      const signerId = signerIdInput.value.trim();
+      const policyId = policyIdInput.value.trim();
+      if (!signerId) return verifyData;
+
+      const currentStatus = String((verifyData && verifyData.privy_signer_status) || '').trim().toLowerCase();
+      const currentSignerId = String((verifyData && verifyData.privy_signer_id) || '').trim();
+      if (currentStatus === 'enrolled' && currentSignerId === signerId) {
+        log('Signer already enrolled for this user.', 'ok');
+        return verifyData;
+      }
+
+      const targetAddress = String((verifyData && verifyData.privy_embedded_wallet_address) || '').trim().toLowerCase();
+      const embeddedWalletId = String((verifyData && verifyData.privy_embedded_wallet_id) || '').trim();
+      if (!targetAddress || !embeddedWalletId) {
+        throw new Error('missing embedded wallet target for signer attach');
+      }
+
+      await syncSignerEnrollment('pending', '');
+      const signerPayload = [{
+        signerId,
+        policyIds: policyId ? [policyId] : [],
+      }];
+
+      const tryAddSigners = async () => {
+        let lastErr = null;
+
+        if (typeof exported.addSigners === 'function') {
+          try {
+            await exported.addSigners({ address: targetAddress, signers: signerPayload });
+            return true;
+          } catch (err) {
+            lastErr = err;
+            log('addSigners failed, trying addSessionSigners: ' + (err?.message || String(err)), 'warn');
+          }
+        }
+        if (typeof exported.addSessionSigners === 'function') {
+          try {
+            await exported.addSessionSigners({ address: targetAddress, signers: signerPayload });
+            return true;
+          } catch (err) {
+            lastErr = err;
+          }
+        }
+
+        if (lastErr) throw lastErr;
+        return false;
+      };
+
+      try {
+        const applied = await tryAddSigners();
+        if (!applied) throw new Error('signer runtime unavailable in current sdk bundle');
+        const synced = await syncSignerEnrollment('enrolled', '');
+        log('Signer attached through official SDK hooks.', 'ok');
+        return { ...verifyData, ...synced, privy_signer_id: signerId, privy_signer_status: 'enrolled' };
+      } catch (err) {
+        let rawMessage = String(err && err.message ? err.message : err || '');
+
+        if (shouldRetryAfterRefresh(rawMessage) && typeof exported.getIdentityToken === 'function') {
+          try {
+            const idToken = await exported.getIdentityToken();
+            if (idToken && typeof exported.applyAccessTokenOverride === 'function') {
+              exported.applyAccessTokenOverride(idToken);
+              log('Retrying signer attach with identity token fallback...', 'warn');
+              const retriedByIdentity = await tryAddSigners();
+              exported.applyAccessTokenOverride('');
+              if (retriedByIdentity) {
+                const synced = await syncSignerEnrollment('enrolled', '');
+                log('Signer attached through identity token fallback.', 'ok');
+                return { ...verifyData, ...synced, privy_signer_id: signerId, privy_signer_status: 'enrolled' };
+              }
+            }
+          } catch (retryErr) {
+            rawMessage = String(retryErr && retryErr.message ? retryErr.message : retryErr || rawMessage);
+            try {
+              exported.applyAccessTokenOverride('');
+            } catch (_) {}
+            err = retryErr;
+          }
+        }
+
+        if (shouldRetryAfterRefresh(rawMessage) && typeof exported.refreshUser === 'function') {
+          try {
+            log('Refreshing Privy user and retrying signer attach...', 'warn');
+            await exported.refreshUser();
+            await new Promise((resolve) => setTimeout(resolve, 350));
+            const retried = await tryAddSigners();
+            if (retried) {
+              const synced = await syncSignerEnrollment('enrolled', '');
+              log('Signer attached through official SDK hooks after refresh.', 'ok');
+              return { ...verifyData, ...synced, privy_signer_id: signerId, privy_signer_status: 'enrolled' };
+            }
+          } catch (retryErr) {
+            rawMessage = String(retryErr && retryErr.message ? retryErr.message : retryErr || rawMessage);
+            err = retryErr;
+          }
+        }
+
+        const normalized = rawMessage.toLowerCase();
+        const maybeAlreadyExists = normalized.includes('already') && (normalized.includes('signer') || normalized.includes('exist'));
+        if (maybeAlreadyExists) {
+          const synced = await syncSignerEnrollment('enrolled', '');
+          log('Signer was already attached on Privy side.', 'ok');
+          return { ...verifyData, ...synced, privy_signer_id: signerId, privy_signer_status: 'enrolled' };
+        }
+
+        try {
+          await syncSignerEnrollment('error', rawMessage);
+        } catch (_) {}
+        throw err;
+      }
+    }
+
+    async function completeSdkLogin(candidateUser) {
+      currentVerifyData = null;
+      setContinueEnabled(false);
+      setSignerEnabled(false);
+      log('Verifying backend session...', 'muted');
+      const authTokens = await readAuthTokens();
+      if (!authTokens.accessToken) {
+        throw new Error('missing Privy access token after login');
+      }
+
+      let resp = await doServerVerify(candidateUser, authTokens);
+      let data = await readJsonSafe(resp);
+
+      if (!resp.ok && resp.status === 401) {
+        const errText = String((data && (data.message || data.error)) || '').toLowerCase();
+        const shouldRefreshRetry = errText.includes('invalid jwt token provided')
+          || errText.includes('missing id_token')
+          || errText.includes('missing id_token or access_token');
+        if (shouldRefreshRetry && typeof exported.refreshUser === 'function') {
+          log('Refreshing Privy session and retrying server verify...', 'warn');
+          await exported.refreshUser();
+          const refreshedTokens = await readAuthTokens();
+          resp = await doServerVerify(candidateUser, refreshedTokens);
+          data = await readJsonSafe(resp);
+        }
+      }
+
+      if (!resp.ok) {
+        const errMsg = (data && (data.message || data.error)) || ('server verify failed (' + resp.status + ')');
+        throw new Error(errMsg);
+      }
+
+      currentVerifyData = data;
+      setContinueEnabled(true);
+  setSignerEnabled(true);
+      log('Server verify succeeded. Backend session established.', 'ok');
+
+      if (pageSignerConfig.enabled && signerIdInput.value.trim()) {
+        try {
+          currentVerifyData = await ensureServerSigner(currentVerifyData);
+        } catch (err) {
+          log('Login is usable, but signer attach still needs attention: ' + ((err && err.message) || String(err)), 'warn');
+          return;
+        }
+      }
+    }
+
+    function ProbeInner() {
+      const privy = usePrivy();
+      const identityTokenState = useIdentityToken ? useIdentityToken() : {};
+      const getAccessTokenRaw = (typeof privy.getAccessToken === 'function') ? privy.getAccessToken.bind(privy) : null;
+      const getAccessTokenNormalized = getAccessTokenRaw
+        ? async () => normalizeAccessToken(await getAccessTokenRaw())
+        : null;
+      const getIdentityTokenFromHook = (identityTokenState && typeof identityTokenState.getIdentityToken === 'function')
+        ? identityTokenState.getIdentityToken
+        : null;
+      const getIdentityToken =
+        (typeof privy.getIdentityToken === 'function' && privy.getIdentityToken.bind(privy))
+        || getIdentityTokenFromHook
+        || (typeof getIdentityTokenGlobal === 'function' ? getIdentityTokenGlobal : null)
+        || null;
+      const getIdentityTokenNormalized = getIdentityToken
+        ? async () => normalizeAccessToken(await getIdentityToken())
+        : null;
+
+      // Some runtimes may return "Bearer <jwt>"; signer APIs expect raw JWT.
+      if (getAccessTokenNormalized) {
+        privy.getAccessToken = getAccessTokenNormalized;
+      }
+
+      const { login } = useLogin({
+        onComplete: ({ user }) => {
+          log('Login completed. user.id=' + (user?.id || 'unknown'), 'ok');
+          completeSdkLogin(user).catch((err) => {
+            setSignerEnabled(false);
+            log('Login verify failed: ' + (err?.message || String(err)), 'err');
+          });
+        },
+        onError: (err) => {
+          log('Login error: ' + (err?.message || String(err)), 'err');
+        }
+      });
+
+      const signerState = useSigners ? useSigners() : {};
+      const sessionSignerState = useSessionSigners ? useSessionSigners() : {};
+
+      exported = {
+        login,
+        addSigners: (typeof signerState.addSigners === 'function') ? signerState.addSigners : null,
+        addSessionSigners: (typeof sessionSignerState.addSessionSigners === 'function') ? sessionSignerState.addSessionSigners : null,
+        getAccessToken: getAccessTokenNormalized,
+        getIdentityToken: getIdentityTokenNormalized,
+        applyAccessTokenOverride: (overrideToken) => {
+          if (!getAccessTokenRaw) return;
+          const normalized = normalizeAccessToken(overrideToken);
+          if (normalized) {
+            privy.getAccessToken = async () => normalized;
+          } else {
+            privy.getAccessToken = getAccessTokenNormalized;
+          }
+        },
+        refreshUser: (typeof privy.refreshUser === 'function') ? privy.refreshUser.bind(privy) : null,
+        logout: (typeof privy.logout === 'function') ? privy.logout.bind(privy) : null,
+        user: privy.user,
+        ready: !!privy.ready,
+        authenticated: !!privy.authenticated,
+      };
+
+      return React.createElement('div', null);
+    }
+
+    let mounted = false;
+
+    btnBoot.addEventListener('click', () => {
+      const appId = appIdInput.value.trim();
+      const signerId = signerIdInput.value.trim();
+      const policyId = policyIdInput.value.trim();
+      if (!appId) {
+        log('App ID is required.', 'err');
+        return;
+      }
+      localStorage.setItem(STORE, JSON.stringify({ appId, signerId, policyId }));
+
+      if (mounted) {
+        log('Already booted.', 'warn');
+        return;
+      }
+
+      const mountEl = document.getElementById('mount');
+      const root = createRoot(mountEl);
+      const embeddedOnly = !!embeddedOnlyInput.checked;
+      const loginMethods = embeddedOnly ? ['email'] : ['wallet', 'email'];
+      const appearance = embeddedOnly
+        ? {
+            theme: 'dark',
+            showWalletLoginFirst: false,
+            walletChainType: 'ethereum-only',
+          }
+        : {
+            theme: 'dark',
+            showWalletLoginFirst: true,
+            walletChainType: 'ethereum-only',
+            walletList: ['detected_ethereum_wallets', 'metamask', 'coinbase_wallet', 'rainbow'],
+          };
+      root.render(
+        React.createElement(
+          PrivyProvider,
+          {
+            appId,
+            config: {
+              appUrl: window.location.origin,
+              loginMethods,
+              embeddedWallets: {
+                ethereum: {
+                  createOnLogin: 'all-users',
+                },
+              },
+              appearance,
+            },
+          },
+          React.createElement(ProbeInner)
+        )
+      );
+      mounted = true;
+      btnLogin.disabled = false;
+      setSignerEnabled(false);
+      btnToken.disabled = false;
+      btnReset.disabled = false;
+      setContinueEnabled(false);
+      log('Privy SDK booted (standalone page). mode=' + (embeddedOnly ? 'embedded-only' : 'mixed'), 'ok');
+    });
+
+    btnLogin.addEventListener('click', async () => {
+      try {
+        if (!exported.login) {
+          log('login() is not available yet.', 'err');
+          return;
+        }
+        if (exported.authenticated && typeof exported.logout === 'function') {
+          log('Detected active session. Logging out before new login...', 'warn');
+          await exported.logout();
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+        await exported.login();
+        log('Login flow requested.', 'ok');
+      } catch (err) {
+        log('Login call failed: ' + (err?.message || String(err)), 'err');
+      }
+    });
+
+    btnReset.addEventListener('click', async () => {
+      try {
+        if (typeof exported.logout === 'function' && exported.authenticated) {
+          await exported.logout();
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          log('Session reset: logout completed.', 'ok');
+          return;
+        }
+        log('Session reset: no active login to clear.', 'muted');
+      } catch (err) {
+        log('Session reset failed: ' + (err?.message || String(err)), 'err');
+      }
+    });
+
+    btnToken.addEventListener('click', async () => {
+      try {
+        const accessToken = exported.getAccessToken ? await exported.getAccessToken() : null;
+        const accessTokenRaw = String(accessToken || '');
+        const idToken = exported.getIdentityToken ? await exported.getIdentityToken() : null;
+        const idTokenRaw = String(idToken || '');
+        const user = exported.user || null;
+        log('ready=' + exported.ready + ' authenticated=' + exported.authenticated, 'muted');
+        log('user=' + JSON.stringify(user || {}, null, 2), 'muted');
+        log('accessTokenShape=' + (accessToken ? `len=${accessTokenRaw.length} dots=${(accessTokenRaw.match(/\./g)||[]).length}` : 'null'), accessToken ? 'ok' : 'warn');
+        log('identityTokenShape=' + (idToken ? `len=${idTokenRaw.length} dots=${(idTokenRaw.match(/\./g)||[]).length}` : 'null'), idToken ? 'ok' : 'warn');
+        if (accessToken) log('accessTokenPrefix=' + accessTokenRaw.slice(0, 12), 'muted');
+        if (idToken) log('identityTokenPrefix=' + idTokenRaw.slice(0, 12), 'muted');
+        if (accessToken) await logJwksMatch(accessToken, 'accessToken');
+        if (idToken) await logJwksMatch(idToken, 'identityToken');
+      } catch (err) {
+        log('Token read failed: ' + (err?.message || String(err)), 'err');
+      }
+    });
+
+    btnSigners.addEventListener('click', async () => {
+      try {
+        if (!currentVerifyData) {
+          log('Attach signer is only available after login + verify succeeds.', 'err');
+          return;
+        }
+        currentVerifyData = await ensureServerSigner(currentVerifyData);
+        setContinueEnabled(true);
+      } catch (err) {
+        log('Signer attach failed: ' + (err?.message || String(err)), 'err');
+        log('Raw error object: ' + JSON.stringify(err || {}, Object.getOwnPropertyNames(err || {}), 2), 'warn');
+      }
+    });
+
+    btnContinue.addEventListener('click', async () => {
+      if (!currentVerifyData) {
+        log('Continue is only available after login + verify succeeds.', 'err');
+        return;
+      }
+      log('Redirecting to /v2/discover ...', 'ok');
+      window.location.href = '/v2/discover';
+    });
+  </script>
+</body>
+</html>

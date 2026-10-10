@@ -1,0 +1,12 @@
+{
+  "fixture.title": "フィクスチャー詳細",
+  "fixture.back": "戻る",
+  "fixture.fixtureName": "フィクスチャー",
+  "fixture.startDate": "開始日",
+  "fixture.empty": "このフィクスチャーには利用可能なマーケットがありません。",
+  "fixture.clv.title": "クロージングラインバリュー",
+  "fixture.clv.empty": "CLVデータがありません。",
+  "fixture.history.title": "履歴",
+  "fixture.history.empty": "取引履歴がありません。",
+  "fixture.settlement.title": "決済"
+}

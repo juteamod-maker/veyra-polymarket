@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block body_attrs %} data-requires-pm="0"{% endblock %}
+
+{% block title %}V e Y r a - {{ event.fixture.fixtureName if event.fixture else (sport_key + ' / ' + fixture_id) }}{%
+endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('fixture.title','Fixture') }} · {{ sport_key }}{% endblock %}
+
+{% block content %}
+{# T874 — OddsPapi 单 fixture 详情：CLV + history 折线图。所有数据来自本地 event_store JSON，
+零在线 API 调用。 #}
+<script defer src="/v2/static/js/vendor/chart.umd.min.js"></script>
+<style>
+    .vfi-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 6px 0 36px;
+    }
+
+    .vfi-hero {
+        background: linear-gradient(135deg, rgba(99, 102, 241, .10), rgba(245, 158, 11, .06) 60%, transparent);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .vfi-hero h1 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .vfi-hero .vfi-meta {
+        font-size: .82rem;
+        color: var(--text-muted);
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+    }
+
+    .vfi-card {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        background: var(--bg-card-solid);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .vfi-card-title {
+        font-weight: 600;
+        font-size: .95rem;
+        color: var(--text-primary);
+    }
+
+    .vfi-empty {
+        padding: 30px;
+        text-align: center;
+        color: var(--text-muted);
+        background: var(--bg-card-solid);
+        border: 1px dashed var(--border);
+        border-radius: 14px;
+    }
+
+    .vfi-chart-wrap {
+        position: relative;
+        height: 320px;
+    }
+
+    .vfi-clv-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 10px;
+    }
+
+    .vfi-clv-item {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: rgba(99, 102, 241, .04);
+    }
+
+    .vfi-clv-name {
+        font-size: .78rem;
+        color: var(--text-muted);
+        margin-bottom: 4px;
+    }
+
+    .vfi-clv-value {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .vfi-back {
+        font-size: .85rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        border: 1px solid var(--border);
+        padding: 4px 10px;
+        border-radius: 8px;
+    }
+
+    .vfi-back:hover {
+        color: var(--text-primary);
+        border-color: rgba(99, 102, 241, .45);
+    }
+
+    .vfi-settlement-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px 16px;
+        font-size: .88rem;
+    }
+
+    .vfi-settlement-row .lbl {
+        color: var(--text-muted);
+    }
+
+    .vfi-settlement-row .val {
+        color: var(--text-primary);
+        font-weight: 600;
+    }
+</style>
+
+<div class="vfi-wrap">
+    <div class="vfi-hero">
+        <h1>
+            {% if event.fixture %}{{ event.fixture.fixtureName or '' }}
+            {% elif event.fixtureName %}{{ event.fixtureName }}
+            {% else %}Fixture #{{ fixture_id }}{% endif %}
+        </h1>
+        <div class="vfi-meta">
+            <span><b>{{ sport_key }}</b></span>
+            <span>fid: <b>{{ fixture_id }}</b></span>
+            {% if event.tournament and event.tournament.tournamentName %}
+            <span>{{ event.tournament.tournamentName }}</span>
+            {% endif %}
+            {% if event.fixture and event.fixture.startDate %}
+            <span>{{ event.fixture.startDate }}</span>
+            {% endif %}
+            <a class="vfi-back" href="/futures" data-i18n="fixture.back">{{ i18n_dict.get('fixture.back','← Back')
+                }}</a>
+        </div>
+    </div>
+
+    {% if not has_event %}
+    <div class="vfi-empty" data-i18n="fixture.empty">
+        {{ i18n_dict.get('fixture.empty','No event_store snapshot found for this fixture. Trigger an enrich from Admin
+        V3 → OddsPapi Meta first.') }}
+    </div>
+    {% else %}
+
+    {# CLV — closing line value #}
+    <div class="vfi-card">
+        <div class="vfi-card-title" data-i18n="fixture.clv.title">{{ i18n_dict.get('fixture.clv.title','Closing Line
+            Value (CLV)') }}</div>
+        {% if event.clv %}
+        <div id="vfiClvGrid" class="vfi-clv-grid"></div>
+        {% else %}
+        <div class="vfi-empty" data-i18n="fixture.clv.empty">{{ i18n_dict.get('fixture.clv.empty','No CLV snapshot
+            attached yet.') }}</div>
+        {% endif %}
+    </div>
+
+    {# History — odds movement over time #}
+    <div class="vfi-card">
+        <div class="vfi-card-title" data-i18n="fixture.history.title">{{ i18n_dict.get('fixture.history.title','Odds
+            History') }}</div>
+        {% if event.history %}
+        <div class="vfi-chart-wrap">
+            <canvas id="vfiHistoryChart"></canvas>
+        </div>
+        {% else %}
+        <div class="vfi-empty" data-i18n="fixture.history.empty">{{ i18n_dict.get('fixture.history.empty','No odds
+            history snapshots stored yet.') }}</div>
+        {% endif %}
+    </div>
+
+    {# Settlement #}
+    {% if event.settlement %}
+    <div class="vfi-card">
+        <div class="vfi-card-title" data-i18n="fixture.settlement.title">{{
+            i18n_dict.get('fixture.settlement.title','Settlement Result') }}</div>
+        <div class="vfi-settlement-row">
+            {% for k, v in event.settlement.items() %}
+            <span class="lbl">{{ k }}</span><span class="val">{{ v }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+
+<script id="fixture-bootstrap"
+    type="application/json">{{ {"clv": (event.clv if event and event.clv else None), "history": (event.history if event and event.history else None)} | tojson | safe }}</script>
+<script>
+    (function () {
+        var boot = { clv: null, history: null };
+        try {
+            var el = document.getElementById('fixture-bootstrap');
+            if (el && el.textContent) boot = JSON.parse(el.textContent);
+        } catch (_) { }
+
+        function escHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+            });
+        }
+
+        // ── CLV grid ──
+        var clvGrid = document.getElementById('vfiClvGrid');
+        if (clvGrid && boot.clv) {
+            var entries = [];
+            if (Array.isArray(boot.clv)) {
+                // [{outcomeName, price/clv, ...}, ...]
+                boot.clv.forEach(function (it) {
+                    var name = it.outcomeName || it.name || it.label || it.market || '-';
+                    var val = it.clv != null ? it.clv : (it.price != null ? it.price : (it.value != null ? it.value : '-'));
+                    entries.push({ name: name, val: val });
+                });
+            } else if (typeof boot.clv === 'object') {
+                Object.keys(boot.clv).forEach(function (k) {
+                    entries.push({ name: k, val: boot.clv[k] });
+                });
+            }
+            clvGrid.innerHTML = entries.map(function (e) {
+                return '<div class="vfi-clv-item">' +
+                    '<div class="vfi-clv-name">' + escHtml(e.name) + '</div>' +
+                    '<div class="vfi-clv-value">' + escHtml(String(e.val)) + '</div>' +
+                    '</div>';
+            }).join('') || '<div class="vfi-empty">No data</div>';
+        }
+
+        // ── History chart ──
+        function tryDrawHistory() {
+            var canvas = document.getElementById('vfiHistoryChart');
+            if (!canvas) return;
+            if (typeof Chart === 'undefined') {
+                setTimeout(tryDrawHistory, 200);
+                return;
+            }
+            var hist = boot.history;
+            if (!hist) return;
+            // hist 格式：可能是 [{ts, snapshots:{outcomeName: price, ...}}, ...] 或扁平列表。
+            var arr = Array.isArray(hist) ? hist : [];
+            if (!arr.length) return;
+
+            // 推断 X 轴时间字段
+            var labels = arr.map(function (s) {
+                var ts = s.ts || s.timestamp || s.fetchedAt || s.fetched_at || s.time;
+                if (typeof ts === 'number' && ts < 1e12) ts = ts * 1000;
+                var d = new Date(ts);
+                return isNaN(d.getTime()) ? '' : d.toISOString().slice(11, 16) + ' ' + d.toISOString().slice(5, 10);
+            });
+
+            // 收集 outcome 名称 → series
+            var seriesMap = {};
+            arr.forEach(function (s) {
+                var snap = s.snapshots || s.outcomes || s.prices || s;
+                if (!snap || typeof snap !== 'object') return;
+                Object.keys(snap).forEach(function (k) {
+                    if (k === 'ts' || k === 'timestamp' || k === 'fetchedAt' || k === 'fetched_at' || k === 'time') return;
+                    var v = snap[k];
+                    if (typeof v !== 'number') return;
+                    if (!seriesMap[k]) seriesMap[k] = new Array(arr.length).fill(null);
+                });
+            });
+            arr.forEach(function (s, idx) {
+                var snap = s.snapshots || s.outcomes || s.prices || s;
+                Object.keys(seriesMap).forEach(function (k) {
+                    var v = snap ? snap[k] : null;
+                    seriesMap[k][idx] = (typeof v === 'number') ? v : null;
+                });
+            });
+
+            var palette = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+            var datasets = Object.keys(seriesMap).map(function (k, i) {
+                return {
+                    label: k,
+                    data: seriesMap[k],
+                    borderColor: palette[i % palette.length],
+                    backgroundColor: palette[i % palette.length] + '22',
+                    tension: 0.25,
+                    spanGaps: true,
+                    pointRadius: 2,
+                };
+            });
+
+            if (!datasets.length) return;
+
+            try {
+                new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: labels, datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: true, position: 'top' },
+                            tooltip: { mode: 'index', intersect: false },
+                        },
+                        scales: {
+                            x: { ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 8 } },
+                            y: { beginAtZero: false },
+                        },
+                    },
+                });
+            } catch (e) {
+                console.warn('[fixture] chart init failed', e);
+            }
+        }
+        tryDrawHistory();
+    })();
+</script>
+<script>
+    if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+        window.veyraI18n.registerPagePack('fixture_detail');
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('page.withdraw.title','Withdraw') }}{% endblock %}
+
+{% block content %}
+<script>document.body.setAttribute('data-requires-pm', '1');</script>
+
+<div class="v-page-shell v-page-shell-narrow">
+
+  <!-- T465B: Top "USDC Withdraw" intro card removed per UX cleanup. -->
+
+  <!-- HTMX vanilla runtime mount point -->
+  <div id="vp-withdraw-slot"></div>
+
+</div>
+
+<script src="/v2/static/js/runtime/htmx_pages/withdraw.js?v={{ asset_version }}" defer></script>
+{% endblock %}

@@ -1,0 +1,2 @@
+# Jinja2 templates — formatter breaks {{ }} expressions
+scripts/frontend/templates/**/*.html

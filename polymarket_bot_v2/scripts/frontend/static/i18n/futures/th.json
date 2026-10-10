@@ -1,0 +1,17 @@
+{
+  "futures.title": "ตลาดฟิวเจอร์ส",
+  "futures.subtitle": "เทรดตลาดฟิวเจอร์สบน Polymarket",
+  "futures.filter.sport": "กีฬา",
+  "futures.filter.all": "ทั้งหมด",
+  "futures.loading": "กำลังโหลดตลาดฟิวเจอร์ส…",
+  "futures.empty": "ไม่มีตลาดฟิวเจอร์สในขณะนี้",
+  "futures.error": "โหลดล้มเหลว กรุณาลองอีกครั้ง",
+  "futures.summary.results": "ผลลัพธ์",
+  "futures.card.ends": "สิ้นสุด",
+  "futures.drawer.close": "ปิด",
+  "futures.drawer.loading": "กำลังโหลดรายละเอียด…",
+  "futures.drawer.empty": "ไม่มีผลลัพธ์",
+  "futures.drawer.error": "โหลดรายละเอียดล้มเหลว",
+  "futures.drawer.subtitle": "รายละเอียดตลาด",
+  "futures.drawer.no_outcomes": "ไม่มีผลลัพธ์สำหรับตลาดนี้"
+}

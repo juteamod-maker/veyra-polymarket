@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "Points",
+  "leaderboard.col.earned": "Earned",
+  "leaderboard.col.joined": "joined",
+  "leaderboard.col.spent": "Spent",
+  "leaderboard.empty": "No users on the leaderboard yet — earn your first points by signing up and trading.",
+  "leaderboard.error": "Failed to load leaderboard. Please try again.",
+  "leaderboard.hero.sub": "Ranking of all VeYra users by points balance — earn points via signup, trades, daily login, referrals and more.",
+  "leaderboard.hero.title": "Points Leaderboard",
+  "leaderboard.joined.dayUnit": "d",
+  "leaderboard.joined.monthUnit": "mo",
+  "leaderboard.joined.today": "today",
+  "leaderboard.joined.yearUnit": "y",
+  "leaderboard.loading": "Loading leaderboard…",
+  "leaderboard.stat.balance": "Ranked Points",
+  "leaderboard.stat.earned": "Total Spent",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "Points Leaderboard",
+  "leaderboard.toolbar.note": "Live ranking · top 50 by current points balance",
+  "leaderboard.toolbar.refresh": "Refresh"
+}

@@ -1,0 +1,17 @@
+{
+  "futures.title": "先物市場",
+  "futures.subtitle": "Polymarketで先物市場を取引する。",
+  "futures.filter.sport": "スポーツ",
+  "futures.filter.all": "すべて",
+  "futures.loading": "先物市場を読み込み中…",
+  "futures.empty": "現在利用可能な先物市場はありません。",
+  "futures.error": "先物市場の読み込みに失敗しました。再試行してください。",
+  "futures.summary.results": "件の結果",
+  "futures.card.ends": "終了",
+  "futures.drawer.close": "閉じる",
+  "futures.drawer.loading": "市場詳細を読み込み中…",
+  "futures.drawer.empty": "利用可能な結果はありません。",
+  "futures.drawer.error": "詳細の読み込みに失敗しました。",
+  "futures.drawer.subtitle": "市場詳細",
+  "futures.drawer.no_outcomes": "この市場の結果はありません。"
+}

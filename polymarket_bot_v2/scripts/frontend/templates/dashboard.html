@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}V e Y r a - Overview{% endblock %}
+
+{% block head %}
+<style>
+  .card {
+    background: var(--bg-card-solid);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+  }
+
+  .metric-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+  }
+
+  .stat-value {
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-primary);
+  }
+
+  .stat-sm {
+    margin-top: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .text-cyan {
+    color: #22d3ee;
+  }
+
+  .text-red {
+    color: #ef4444;
+  }
+
+  .metric-risk {
+    color: #fbbf24;
+  }
+
+  .track-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .track-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+  }
+
+  .track-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .track-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .track-progress-wrap {
+    margin-top: 8px;
+    position: relative;
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    overflow: visible;
+    background: rgba(152, 162, 179, 0.18);
+  }
+
+  .track-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.25s ease;
+  }
+
+  .track-progress-marker {
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    width: 2px;
+    background: #ef4444;
+    border-radius: 2px;
+    transform: translateX(-1px);
+    opacity: 0.95;
+    pointer-events: none;
+  }
+
+  .track-stats {
+    margin-top: 8px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .track-loading {
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<script>
+  document.body.setAttribute('data-requires-pm', '1');
+  window.STANDALONE_PAGE = true;
+</script>
+
+<main class="v-page-shell">
+  <div class="tab-content active space-y-6" id="tab-overview">
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="stats-cards">
+      <div class="card" style="border-left:3px solid #06b6d4">
+        <div class="metric-label" data-i18n="dashboard.metric.nlv">{{ i18n_dict.get('dashboard.metric.nlv','Net
+          Liquidation Value (NLV)') }}</div>
+        <div class="stat-value text-cyan" id="s-nlv">-</div>
+      </div>
+      <div class="card">
+        <div class="metric-label" data-i18n="dashboard.metric.available">{{
+          i18n_dict.get('dashboard.metric.available','Available Balance') }}</div>
+        <div class="stat-sm text-white" id="s-balance">-</div>
+        <div class="text-xs text-gray-500 mt-1" id="s-deployed" data-i18n="dashboard.metric.deployedFallback">{{
+          i18n_dict.get('dashboard.metric.deployedFallback','Deployed: - · 0 positions') }}</div>
+      </div>
+      <div class="card">
+        <div class="metric-label" data-i18n="dashboard.totalPnl">{{ i18n_dict.get('dashboard.totalPnl','Total P&L') }}
+        </div>
+        <div class="stat-sm" id="s-total-pnl">-</div>
+        <div class="text-xs text-gray-500 mt-1" id="s-pnl-breakdown" data-i18n="dashboard.metric.pnlBreakdownFallback">
+          {{ i18n_dict.get('dashboard.metric.pnlBreakdownFallback','Realized: - · Unrealized: -') }}</div>
+        <div class="text-xs text-gray-500 mt-1" id="s-roi" data-i18n="dashboard.metric.roiFallback">{{
+          i18n_dict.get('dashboard.metric.roiFallback','ROI: - · Invested: -') }}</div>
+      </div>
+    </div>
+
+    <div class="card" id="risk-pause-panel" style="display:none; border-left:3px solid #ef4444">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <div class="text-sm font-semibold text-red flex items-center gap-2">
+            <span id="risk-pause-icon">●</span> <span data-i18n="dashboard.risk.pauseTitle">{{
+              i18n_dict.get('dashboard.risk.pauseTitle','Risk Control Paused') }}</span>
+          </div>
+          <div class="text-xs text-gray-400 mt-1" id="risk-pause-reason">-</div>
+          <div class="text-xs text-gray-500 mt-1" id="risk-pause-cats"></div>
+        </div>
+        <button id="btn-risk-resume" onclick="doRiskResume()" class="px-4 py-2 rounded text-sm font-bold"
+          style="background:#22c55e; color:#000; cursor:pointer" data-i18n="dashboard.risk.resumeBtn">
+          {{ i18n_dict.get('dashboard.risk.resumeBtn','Resume Trading') }}
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-3 md:grid-cols-6 gap-3" id="portfolio-metrics">
+      <div class="card text-center" style="padding:12px 8px">
+        <div class="metric-label" data-i18n="dashboard.todayPnl">{{ i18n_dict.get('dashboard.todayPnl','Today P&L') }}
+        </div>
+        <div class="stat-sm" id="m-today-pnl">-</div>
+      </div>
+      <div class="card text-center" style="padding:12px 8px">
+        <div class="metric-label" data-i18n="dashboard.weekPnl">{{ i18n_dict.get('dashboard.weekPnl','7-day P&L') }}
+        </div>
+        <div class="stat-sm" id="m-week-pnl">-</div>
+      </div>
+      <div class="card text-center" style="padding:12px 8px">
+        <div class="metric-label" data-i18n="dashboard.sharpe">{{ i18n_dict.get('dashboard.sharpe','Sharpe Ratio') }}
+        </div>
+        <div class="stat-sm" id="m-sharpe">-</div>
+      </div>
+      <div class="card text-center" style="padding:12px 8px">
+        <div class="metric-label" data-i18n="dashboard.maxDrawdown">{{ i18n_dict.get('dashboard.maxDrawdown','Max
+          Drawdown') }}</div>
+        <div class="stat-sm metric-risk" id="m-maxdd">-</div>
+      </div>
+      <div class="card text-center" style="padding:12px 8px">
+        <div class="metric-label" data-i18n="dashboard.winRate">{{ i18n_dict.get('dashboard.winRate','Win Rate') }}
+        </div>
+        <div class="stat-sm" id="m-winrate">-</div>
+      </div>
+      <div class="card text-center" style="padding:12px 8px">
+        <div class="metric-label" data-i18n="dashboard.capitalUtil">{{ i18n_dict.get('dashboard.capitalUtil','Capital
+          Utilization') }}</div>
+        <div class="stat-sm text-cyan" id="m-util">-</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="text-sm font-semibold text-gray-300 mb-4" data-i18n="dashboard.tracksDistribution">{{
+        i18n_dict.get('dashboard.tracksDistribution','Track Distribution') }}</h3>
+      <div class="track-grid" id="tracks-container">
+        <div class="track-loading" data-i18n="common.loading">{{ i18n_dict.get('common.loading','Loading...') }}</div>
+        <div class="track-loading" data-i18n="common.loading">{{ i18n_dict.get('common.loading','Loading...') }}</div>
+        <div class="track-loading" data-i18n="common.loading">{{ i18n_dict.get('common.loading','Loading...') }}</div>
+        <div class="track-loading" data-i18n="common.loading">{{ i18n_dict.get('common.loading','Loading...') }}</div>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/app.js?v={{ asset_version | default('0') }}"></script>
+<script src="/static/js/dashboard_overview_v2.js?v={{ asset_version | default('0') }}-t448"></script>
+<script>
+  // Load dashboard page-specific i18n pack
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('dashboard');
+  }
+  localStorage.setItem('polymarket_active_tab', 'overview');
+  if (typeof refresh === 'function') {
+    refresh();
+    setInterval(function () {
+      if (!document.hidden) refresh();
+    }, Math.max(45000, (typeof REFRESH_INTERVAL !== 'undefined' ? REFRESH_INTERVAL : 45000) || 45000));
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{
+  "leaderboard.col.balance": "Points",
+  "leaderboard.col.earned": "Gagnés",
+  "leaderboard.col.joined": "rejoint",
+  "leaderboard.col.spent": "Dépensés",
+  "leaderboard.empty": "Aucun utilisateur dans le classement — gagnez vos premiers points en vous inscrivant et en tradant.",
+  "leaderboard.error": "Échec du chargement du classement. Veuillez réessayer.",
+  "leaderboard.hero.sub": "Classement de tous les utilisateurs VeYra par solde de points — gagnez des points via l'inscription, les trades, la connexion quotidienne, les parrainages et plus encore.",
+  "leaderboard.hero.title": "Classement des points",
+  "leaderboard.joined.dayUnit": "j",
+  "leaderboard.joined.monthUnit": "mois",
+  "leaderboard.joined.today": "aujourd'hui",
+  "leaderboard.joined.yearUnit": "an(s)",
+  "leaderboard.loading": "Chargement du classement…",
+  "leaderboard.stat.balance": "Points du classement",
+  "leaderboard.stat.earned": "Dépenses totales",
+  "leaderboard.stat.users": "Top",
+  "leaderboard.title": "Classement des points",
+  "leaderboard.toolbar.note": "Classement en direct · top 50 par solde de points actuel",
+  "leaderboard.toolbar.refresh": "Actualiser"
+}

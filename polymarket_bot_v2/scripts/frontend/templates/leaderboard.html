@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block body_attrs %} data-requires-pm="1"{% endblock %}
+
+{% block title %}V e Y r a - {{ i18n_dict.get('leaderboard.title','Points Leaderboard') }}{% endblock %}
+{% block breadcrumb %}{{ i18n_dict.get('leaderboard.title','Points Leaderboard') }}{% endblock %}
+
+{% block content %}
+{# T610B — 积分排行榜（按 user_points.balance 排行；htmx + vanilla JS） #}
+<style>
+  .lb-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 6px 0 32px;
+  }
+
+  .lb-hero {
+    background: linear-gradient(135deg, rgba(245, 158, 11, .10), rgba(99, 102, 241, .06) 60%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .lb-hero h1 {
+    font-size: 1.6rem;
+    margin: 0;
+    color: var(--text-primary);
+    font-weight: 700;
+    letter-spacing: -.01em;
+  }
+
+  .lb-hero .lb-sub {
+    color: var(--text-muted);
+    font-size: .85rem;
+    margin-top: 4px;
+    max-width: 560px;
+  }
+
+  .lb-stats {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .lb-stat {
+    background: rgba(255, 255, 255, .02);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    min-width: 128px;
+  }
+
+  .lb-stat .lb-stat-k {
+    font-size: .7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .lb-stat .lb-stat-v {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 2px;
+  }
+
+  .lb-stat .lb-stat-v.lb-pos {
+    color: #10b981;
+  }
+
+  .lb-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .lb-toolbar .lb-toolbar-left {
+    color: var(--text-muted);
+    font-size: .78rem;
+  }
+
+  .lb-refresh-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: .78rem;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .lb-refresh-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    background: rgba(99, 102, 241, .08);
+  }
+
+  .lb-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 120px;
+  }
+
+  .lb-row {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    background: #1F2937;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px 18px;
+    transition: all .18s ease;
+  }
+
+  .lb-row:hover {
+    border-color: rgba(99, 102, 241, .55);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+    transform: translateY(-1px);
+  }
+
+  .lb-row.lb-top1 {
+    background: linear-gradient(120deg, rgba(245, 158, 11, .18), #1F2937 70%);
+    border-color: rgba(245, 158, 11, .55);
+  }
+
+  .lb-row.lb-top2 {
+    background: linear-gradient(120deg, rgba(203, 213, 225, .16), #1F2937 70%);
+    border-color: rgba(203, 213, 225, .4);
+  }
+
+  .lb-row.lb-top3 {
+    background: linear-gradient(120deg, rgba(217, 119, 6, .18), #1F2937 70%);
+    border-color: rgba(217, 119, 6, .4);
+  }
+
+  .lb-rank {
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #9CA3AF;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    min-width: 40px;
+    display: inline-block;
+  }
+
+  .lb-rank.lb-rank-top {
+    color: #fff;
+    background: linear-gradient(135deg, #F59E0B, #F97316);
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    border-radius: 50%;
+    display: inline-block;
+    font-size: 1rem;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, .4);
+  }
+
+  .lb-rank.lb-rank-2 {
+    background: linear-gradient(135deg, #cbd5e1, #94a3b8);
+    color: #0f172a;
+  }
+
+  .lb-rank.lb-rank-3 {
+    background: linear-gradient(135deg, #d97706, #b45309);
+    color: #fff;
+  }
+
+  .lb-user {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .lb-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    color: #fff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: .9rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .28);
+  }
+
+  .lb-uname {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .lb-uname-main {
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+  }
+
+  .lb-uname-sub {
+    font-size: .7rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-family: ui-monospace, SFMono-Regular, monospace;
+  }
+
+  .lb-metrics {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+
+  .lb-metric {
+    text-align: right;
+    min-width: 88px;
+  }
+
+  .lb-m-v {
+    font-weight: 700;
+    font-size: .98rem;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lb-m-v.lb-pos {
+    color: #10b981;
+  }
+
+  .lb-m-k {
+    font-size: .65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-top: 2px;
+  }
+
+  .lb-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+
+  .lb-empty .lb-empty-emoji {
+    font-size: 3rem;
+    margin-bottom: 10px;
+  }
+
+  .lb-loading {
+    color: var(--text-muted);
+    font-size: .78rem;
+    padding: 16px;
+    text-align: center;
+  }
+
+  @media (max-width: 720px) {
+    .lb-row {
+      grid-template-columns: 44px 1fr;
+      padding: 12px;
+      gap: 10px;
+    }
+
+    .lb-metrics {
+      grid-column: 1 / -1;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .lb-uname-main {
+      max-width: 160px;
+    }
+  }
+</style>
+
+<div class="lb-wrap">
+  <div class="lb-hero">
+    <div>
+      <h1>{{ i18n_dict.get('leaderboard.hero.title','Points Leaderboard') }}</h1>
+      <div class="lb-sub">{{ i18n_dict.get('leaderboard.hero.sub','Ranking of all VeYra users by points balance — earn
+        points via signup, trades, daily login, referrals and more.') }}</div>
+    </div>
+    <div class="lb-stats">
+      <div class="lb-stat">
+        <div class="lb-stat-k">{{ i18n_dict.get('leaderboard.stat.users','Total Users') }}</div>
+        <div class="lb-stat-v" id="lb-stat-users">—</div>
+      </div>
+      <div class="lb-stat">
+        <div class="lb-stat-k">{{ i18n_dict.get('leaderboard.stat.balance','Total Points') }}</div>
+        <div class="lb-stat-v" id="lb-stat-balance">—</div>
+      </div>
+      <div class="lb-stat">
+        <div class="lb-stat-k">{{ i18n_dict.get('leaderboard.stat.earned','Total Spent') }}</div>
+        <div class="lb-stat-v" id="lb-stat-spent">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lb-toolbar">
+    <div class="lb-toolbar-left">{{ i18n_dict.get('leaderboard.toolbar.note','Live ranking · top 50 by current points
+      balance') }}</div>
+    <button type="button" class="lb-refresh-btn" id="lb-refresh">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10" />
+        <polyline points="1 20 1 14 7 14" />
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+      </svg>
+      {{ i18n_dict.get('leaderboard.toolbar.refresh','Refresh') }}
+    </button>
+  </div>
+
+  <div class="lb-list" id="lb-list">
+    <div class="lb-loading" id="lb-loading">{{ i18n_dict.get('leaderboard.loading','Loading leaderboard…') }}</div>
+  </div>
+</div>
+
+<script id="lb-labels-data" type="application/json">
+{
+  "balance": "{{ i18n_dict.get('leaderboard.col.balance','Points') }}",
+  "spent":  "{{ i18n_dict.get('leaderboard.col.spent','Spent') }}",
+  "joined":  "{{ i18n_dict.get('leaderboard.col.joined','joined') }}",
+  "joinedToday": "{{ i18n_dict.get('leaderboard.joined.today','today') }}",
+  "joinedDayUnit": "{{ i18n_dict.get('leaderboard.joined.dayUnit','d') }}",
+  "joinedMonthUnit": "{{ i18n_dict.get('leaderboard.joined.monthUnit','mo') }}",
+  "joinedYearUnit": "{{ i18n_dict.get('leaderboard.joined.yearUnit','y') }}",
+  "empty":   "{{ i18n_dict.get('leaderboard.empty','No users on the leaderboard yet — earn your first points by signing up and trading.') }}",
+  "error":   "{{ i18n_dict.get('leaderboard.error','Failed to load leaderboard. Please try again.') }}"
+}
+</script>
+<script src="/v2/static/js/runtime/pages/leaderboard.js?v={{ asset_version | default('1') }}" defer></script>
+<script>
+  if (window.veyraI18n && typeof window.veyraI18n.registerPagePack === 'function') {
+    window.veyraI18n.registerPagePack('leaderboard');
+  }
+</script>
+{% endblock %}

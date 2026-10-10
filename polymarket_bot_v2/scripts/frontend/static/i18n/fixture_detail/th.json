@@ -1,0 +1,12 @@
+{
+  "fixture.title": "รายละเอียดการแข่งขัน",
+  "fixture.back": "กลับ",
+  "fixture.fixtureName": "การแข่งขัน",
+  "fixture.startDate": "วันที่เริ่ม",
+  "fixture.empty": "ไม่มีตลาดสำหรับการแข่งขันนี้",
+  "fixture.clv.title": "ค่า CLV",
+  "fixture.clv.empty": "ไม่มีข้อมูล CLV",
+  "fixture.history.title": "ประวัติ",
+  "fixture.history.empty": "ไม่มีประวัติการซื้อขาย",
+  "fixture.settlement.title": "การชำระ"
+}
