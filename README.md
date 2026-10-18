@@ -13,7 +13,7 @@ earn trading fees.**
 
 <div align="center">
 
-[网站 Site](https://veyra.trade) · [文档 Docs](./docs) · [X/Twitter](https://x.com/VeyraTrade)
+[网站 Site](https://demo.veyra.trade) · [文档 Docs](./docs) · [X/Twitter](https://x.com/VeyraTrade)
 
 </div>
 
